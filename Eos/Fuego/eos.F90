@@ -265,7 +265,7 @@ contains
 
   end subroutine eos_cp
 
-  subroutine eos_p_wb(state)
+AMREX_CUDA_FORT_DEVICE  subroutine eos_p_wb(state)
 
     implicit none
 
@@ -349,7 +349,7 @@ contains
 
   end subroutine eos_rp
 
-  subroutine eos_re(state)
+AMREX_CUDA_FORT_DEVICE subroutine eos_re(state)
 
     implicit none
 
