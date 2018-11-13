@@ -1,8 +1,11 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <AMReX_Gpu.H> 
 
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+extern "C"
+{
 
 #if defined(BL_FORT_USE_UPPERCASE)
 #define CKINDX CKINDX
@@ -285,11 +288,11 @@ void atomicWeight(double * restrict awt);
 void molecularWeight(double * restrict wt);
 void gibbs(double * restrict species, double * restrict tc);
 void helmholtz(double * restrict species, double * restrict tc);
-void speciesInternalEnergy(double * restrict species, double * restrict tc);
-void speciesEnthalpy(double * restrict species, double * restrict tc);
+AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double * restrict species, double * restrict tc);
+AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double * restrict species, double * restrict tc);
 void speciesEntropy(double * restrict species, double * restrict tc);
-void cp_R(double * restrict species, double * restrict tc);
-void cv_R(double * restrict species, double * restrict tc);
+AMREX_GPU_HOST_DEVICE void cp_R(double * restrict species, double * restrict tc);
+AMREX_GPU_HOST_DEVICE void cv_R(double * restrict species, double * restrict tc);
 void equilibriumConstants(double * restrict kc, double * restrict g_RT, double T);
 void productionRate(double * restrict wdot, double * restrict sc, double T);
 void comp_k_f(double * restrict tc, double invT, double * restrict k_f);
@@ -306,7 +309,7 @@ void CKSYME(int * kname, int * lenkname);
 void CKSYMS(int * kname, int * lenkname);
 void CKRP(int * ickwrk, double * restrict rckwrk, double * restrict ru, double * restrict ruc, double * restrict pa);
 void CKPX(double * restrict rho, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict P);
-void CKPY(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict P);
+AMREX_GPU_HOST_DEVICE void CKPY(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict P);
 void CKPC(double * restrict rho, double * restrict T, double * restrict c, int * iwrk, double * restrict rwrk, double * restrict P);
 void CKRHOX(double * restrict P, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict rho);
 void CKRHOY(double * restrict P, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict rho);
@@ -334,9 +337,9 @@ void CKHML(double * restrict T, int * iwrk, double * restrict rwrk, double * res
 void CKGML(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict gml);
 void CKAML(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict aml);
 void CKSML(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict sml);
-void CKCVMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms);
-void CKCPMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms);
-void CKUMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums);
+AMREX_GPU_HOST_DEVICE void CKCVMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms);
+AMREX_GPU_HOST_DEVICE void CKCPMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms);
+AMREX_GPU_HOST_DEVICE void CKUMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums);
 void CKHMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums);
 void CKGMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict gms);
 void CKAMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ams);
@@ -344,11 +347,11 @@ void CKSMS(double * restrict T, int * iwrk, double * restrict rwrk, double * res
 void CKCPBL(double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict cpbl);
 void CKCPBS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cpbs);
 void CKCVBL(double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict cpbl);
-void CKCVBS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cpbs);
+AMREX_GPU_HOST_DEVICE void CKCVBS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cpbs);
 void CKHBML(double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict hbml);
 void CKHBMS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict hbms);
 void CKUBML(double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict ubml);
-void CKUBMS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict ubms);
+AMREX_GPU_HOST_DEVICE void CKUBMS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict ubms);
 void CKSBML(double * restrict P, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict sbml);
 void CKSBMS(double * restrict P, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict sbms);
 void CKGBML(double * restrict P, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict gbml);
@@ -1041,7 +1044,7 @@ void CKPX(double * restrict rho, double * restrict T, double * restrict x, int *
 
 
 /*Compute P = rhoRT/W(y) */
-void CKPY(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict P)
+AMREX_GPU_HOST_DEVICE void CKPY(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict P)
 {
     double YOW = 0;/* for computing mean MW */
     YOW += y[0]*imw[0]; /*H2 */
@@ -1615,7 +1618,7 @@ void CKSML(double * restrict T, int * iwrk, double * restrict rwrk, double * res
 
 /*Returns the specific heats at constant volume */
 /*in mass units (Eq. 29) */
-void CKCVMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms)
+AMREX_GPU_HOST_DEVICE void CKCVMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cvms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1635,7 +1638,7 @@ void CKCVMS(double * restrict T, int * iwrk, double * restrict rwrk, double * re
 
 /*Returns the specific heats at constant pressure */
 /*in mass units (Eq. 26) */
-void CKCPMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cpms)
+AMREX_GPU_HOST_DEVICE void CKCPMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cpms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1654,7 +1657,7 @@ void CKCPMS(double * restrict T, int * iwrk, double * restrict rwrk, double * re
 
 
 /*Returns internal energy in mass units (Eq 30.) */
-void CKUMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums)
+AMREX_GPU_HOST_DEVICE void CKUMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1668,7 +1671,7 @@ void CKUMS(double * restrict T, int * iwrk, double * restrict rwrk, double * res
 
 
 /*Returns enthalpy in mass units (Eq 27.) */
-void CKHMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict hms)
+AMREX_GPU_HOST_DEVICE void CKHMS(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict hms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1822,7 +1825,7 @@ void CKCVBL(double * restrict T, double * restrict x, int * iwrk, double * restr
 
 
 /*Returns the mean specific heat at CV (Eq. 36) */
-void CKCVBS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cvbs)
+AMREX_GPU_HOST_DEVICE void CKCVBS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cvbs)
 {
     double result = 0; 
     double tT = *T; /*temporary temperature */
@@ -1906,7 +1909,7 @@ void CKUBML(double * restrict T, double * restrict x, int * iwrk, double * restr
 
 
 /*get mean internal energy in mass units */
-void CKUBMS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict ubms)
+AMREX_GPU_HOST_DEVICE void CKUBMS(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict ubms)
 {
     double result = 0;
     double tT = *T; /*temporary temperature */
@@ -5792,7 +5795,7 @@ void helmholtz(double * restrict species, double * restrict tc)
 
 /*compute Cv/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void cv_R(double * restrict species, double * restrict tc)
+AMREX_GPU_HOST_DEVICE void cv_R(double * restrict species, double * restrict tc)
 {
 
     /*temperature */
@@ -5934,7 +5937,7 @@ void cv_R(double * restrict species, double * restrict tc)
 
 /*compute Cp/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void cp_R(double * restrict species, double * restrict tc)
+AMREX_GPU_HOST_DEVICE void cp_R(double * restrict species, double * restrict tc)
 {
 
     /*temperature */
@@ -6076,7 +6079,7 @@ void cp_R(double * restrict species, double * restrict tc)
 
 /*compute the e/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void speciesInternalEnergy(double * restrict species, double * restrict tc)
+AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double * restrict species, double * restrict tc)
 {
 
     /*temperature */
@@ -6237,7 +6240,7 @@ void speciesInternalEnergy(double * restrict species, double * restrict tc)
 
 /*compute the h/(RT) at the given temperature (Eq 20) */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void speciesEnthalpy(double * restrict species, double * restrict tc)
+AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double * restrict species, double * restrict tc)
 {
 
     /*temperature */
@@ -7502,6 +7505,8 @@ void egtransetCOFTD(double* COFTD) {
     COFTD[71] = 3.26958506E-11;
 };
 
+/* Extern "C" */ 
+}
 /* End of file  */
 
 
