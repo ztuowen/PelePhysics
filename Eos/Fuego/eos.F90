@@ -14,9 +14,9 @@ module eos_module
   character (len=64) :: eos_name = "fuego"
   logical, save, private :: initialized = .false.
 
-  real(amrex_real), save, public :: smallT = 1.d-50
-  integer :: iwrk
-  real(amrex_real) :: rwrk
+  real(amrex_real), save, managed, public :: smallT = 1.d-50
+  integer, managed :: iwrk
+  real(amrex_real), managed :: rwrk
 
   public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui
   private :: nspecies, Ru, inv_mwt
@@ -97,7 +97,7 @@ contains
 
   end subroutine eos_init
 
-  subroutine eos_bottom(state)
+AMREX_CUDA_FORT_DEVICE  subroutine eos_bottom(state)
 
     use amrex_constants_module
     use amrex_error_module
@@ -276,7 +276,7 @@ AMREX_CUDA_FORT_DEVICE  subroutine eos_p_wb(state)
 
   end subroutine eos_p_wb
 
-  subroutine eos_wb(state)
+AMREX_CUDA_FORT_DEVICE  subroutine eos_wb(state)
 
     implicit none
 
