@@ -4,14 +4,14 @@ module eos_bind_module
 
   interface 
 
-    attributes(device,host) subroutine ckpy(rho, T, massfrac, iwrk, rwrk, p) &
+    attributes(device,host) subroutine ckpy_d(rho, T, massfrac, iwrk, rwrk, p) &
       bind(C,name="CKPY")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(inout) :: rho, T, massfrac(:), rwrk, p
       integer(c_int), intent(in) :: iwrk
     end subroutine ckpy
 
-    attributes(device,host) subroutine ckums(T, iwrk, rwk, ei) &
+    attributes(device,host) subroutine ckums_d(T, iwrk, rwk, ei) &
       bind(C,name="CKUMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(inout) :: ei(:)
@@ -19,7 +19,7 @@ module eos_bind_module
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckums
 
-    attributes(device,host) subroutine ckcpms(T, iwrk, rwk, cpi) &
+    attributes(device,host) subroutine ckcpms_d(T, iwrk, rwk, cpi) &
       bind(C,name="CKCPMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), value :: T, rwk
@@ -27,7 +27,7 @@ module eos_bind_module
       integer(c_int), value :: iwrk
     end subroutine ckcpms
 
-    attributes(device,host) subroutine ckhms(T, iwrk, rwk, hi) & 
+    attributes(device,host) subroutine ckhms_d(T, iwrk, rwk, hi) & 
       bind(C,name="CKHMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), value :: T, rwk
@@ -35,7 +35,7 @@ module eos_bind_module
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckhms
 
-    attributes(device,host) subroutine get_T_given_ey(e, massfrac, iwrk, rwrk, T , lierr) &
+    attributes(device,host) subroutine get_T_given_ey_d(e, massfrac, iwrk, rwrk, T , lierr) &
       bind(C,name="GET_T_GIVEN_EY")
       use iso_c_binding, only: c_double, c_int 
       real(c_double), value :: e, rwrk, T
