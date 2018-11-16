@@ -15,7 +15,7 @@ module actual_network
 
   implicit none
 
-  integer :: nspec, nelem, nreac, nfit, naux
+  integer, managed :: nspec, nelem, nreac, nfit, naux
   character (len=16), save, allocatable :: aux_names(:)
 
 contains

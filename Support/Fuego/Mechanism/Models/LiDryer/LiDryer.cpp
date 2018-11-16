@@ -4,9 +4,6 @@
 #include <cstdlib>
 #include <AMReX_Gpu.H> 
 
-extern "C"
-{
-
 #if defined(BL_FORT_USE_UPPERCASE)
 #define CKINDX CKINDX
 #define CKINIT CKINIT
@@ -275,7 +272,6 @@ extern "C"
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetEPS egtranseteps_
 #endif
-void egtransetEPS(double*  EPS);
 #if defined(BL_FORT_USE_UPPERCASE)
 #define egtransetSIG EGTRANSETSIG
 #elif defined(BL_FORT_USE_LOWERCASE)
@@ -285,6 +281,9 @@ void egtransetEPS(double*  EPS);
 #endif
 #define restrict 
 
+extern "C"
+{
+void egtransetEPS(double*  EPS);
 void egtransetSIG(double* SIG);
 void atomicWeight(double* restrict awt);
 void molecularWeight(double* restrict wt);
@@ -342,7 +341,7 @@ void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
 AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
 AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
-void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
+AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
 void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gms);
 void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ams);
 void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sms);
