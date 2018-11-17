@@ -125,9 +125,9 @@ module eos_type_module
     real(amrex_real) :: h
     real(amrex_real) :: s
     real(amrex_real) :: f
-    real(amrex_real),allocatable :: massfrac(:)
-    real(amrex_real),allocatable :: molefrac(:)
-    real(amrex_real),allocatable :: aux(:)
+    real(amrex_real):: massfrac(9)
+    real(amrex_real) :: molefrac(9)
+    real(amrex_real) :: aux(1)
 
     real(amrex_real) :: dpdT
     real(amrex_real) :: dpdr
@@ -142,33 +142,33 @@ module eos_type_module
 
     real(amrex_real) :: cv
     real(amrex_real) :: cp
-    real(amrex_real),allocatable :: cpi(:)
-    real(amrex_real),allocatable :: cvi(:)
-    real(amrex_real),allocatable :: hi(:)
-    real(amrex_real),allocatable :: ei(:)
-    real(amrex_real),allocatable :: si(:)
+    real(amrex_real):: cpi(9)
+    real(amrex_real):: cvi(9)
+    real(amrex_real):: hi(9)
+    real(amrex_real):: ei(9)
+    real(amrex_real):: si(9)
     real(amrex_real) :: wbar
-    real(amrex_real),allocatable :: mui(:)
-    real(amrex_real),allocatable :: Acti(:)
-    real(amrex_real),allocatable :: dedY(:)
-    real(amrex_real),allocatable :: dpdY(:)
-    real(amrex_real),allocatable :: dhdY(:)
+    real(amrex_real):: mui(9)
+    real(amrex_real):: Acti(9)
+    real(amrex_real):: dedY(9)
+    real(amrex_real):: dpdY(9)
+    real(amrex_real):: dhdY(9)
     real(amrex_real) :: gam1
     real(amrex_real) :: cs
 
     ! Quantities used for non-Ideal EOS
     real(amrex_real) :: am
     real(amrex_real) :: bm
-    real(amrex_real),allocatable :: damdYk(:)
-    real(amrex_real),allocatable :: d2amdYkdT(:)
-    real(amrex_real),allocatable :: dPdYk(:)
+    real(amrex_real):: damdYk(9)
+    real(amrex_real):: d2amdYkdT(9)
+    real(amrex_real):: dPdYk(9)
     real(amrex_real) :: damdT
     real(amrex_real) :: d2amdT2
     real(amrex_real) :: dpdtau
     real(amrex_real) :: Z
-    real(amrex_real),allocatable :: taui(:)
-    real(amrex_real),allocatable :: diP(:)
-    real(amrex_real),allocatable :: dijY(:,:)
+    real(amrex_real):: taui(9)
+    real(amrex_real):: diP(9)
+    real(amrex_real):: dijY(9,9)
 
   end type eos_t
 
@@ -185,90 +185,11 @@ contains
 
   subroutine eos_build(eos)
     type(eos_t), intent(inout) :: eos
-    if (.not. allocated(eos%massfrac)) then
-       allocate(eos%massfrac(nspec))
-    endif
-    if (.not. allocated(eos%cpi)) then
-       allocate(eos%cpi(nspec))
-    endif
-    if (.not. allocated(eos%cvi)) then
-       allocate(eos%cvi(nspec))
-    endif
-    if (.not. allocated(eos%hi)) then
-       allocate(eos%hi(nspec))
-    endif
-    if (.not. allocated(eos%ei)) then
-       allocate(eos%ei(nspec))
-    endif
-    if (.not. allocated(eos%molefrac)) then
-       allocate(eos%molefrac(nspec))
-    endif
-    if (.not. allocated(eos%aux)) then
-       allocate(eos%aux(naux))
-    endif
-    if (.not. allocated(eos%dedY)) then
-       allocate(eos%dedY(nspec))
-    endif
-    if (.not. allocated(eos%dpdY)) then
-       allocate(eos%dpdY(nspec))
-    endif
-    if (.not. allocated(eos%dhdY)) then
-       allocate(eos%dhdY(nspec))
-    endif
-    if (.not. allocated(eos%dhdY)) then
-       allocate(eos%dhdY(nspec))
-    endif
-    if (.not. allocated(eos%mui)) then
-       allocate(eos%mui(nspec))
-    end if
-    if (.not. allocated(eos%damdYk)) then
-       allocate(eos%damdYk(nspec))
-    endif
-    if(.not.allocated(eos%d2amdYkdT)) then
-       allocate(eos%d2amdYkdT(nspec))
-    end if
-    if(.not.allocated(eos%dPdYk)) then
-       allocate(eos%dPdYk(nspec))
-    end if
-    if (.not.allocated(eos%Acti)) then
-       allocate(eos%Acti(nspec))
-    end if
-    if(.not.allocated(eos%si)) then
-       allocate(eos%si(nspec))
-    end if
-    if(.not.allocated(eos%taui)) then 
-       allocate(eos%taui(nspec))
-    end if
-    if(.not.allocated(eos%diP)) then
-       allocate(eos%diP(nspec))
-    end if
-    if(.not.allocated(eos%dijY)) then
-       allocate(eos%dijY(nspec,nspec))
-    end if
 
   end subroutine eos_build
-  
+ 
   subroutine eos_destroy(eos)
     type(eos_t), intent(inout) :: eos
-    deallocate(eos%massfrac)
-    deallocate(eos%cpi)
-    deallocate(eos%cvi)
-    deallocate(eos%hi)
-    deallocate(eos%ei)
-    deallocate(eos%molefrac)
-    deallocate(eos%dedY)
-    deallocate(eos%dpdY)
-    deallocate(eos%dhdY)
-    deallocate(eos%aux)
-    deallocate(eos%damdYk)
-    deallocate(eos%mui)
-    deallocate(eos%d2amdYkdT)
-    deallocate(eos%dPdYk)
-    deallocate(eos%Acti)
-    deallocate(eos%si)
-    deallocate(eos%taui)
-    deallocate(eos%diP)
-    deallocate(eos%dijY)
 
   end subroutine eos_destroy
   

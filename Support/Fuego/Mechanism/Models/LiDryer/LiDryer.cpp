@@ -13,7 +13,7 @@
 #define CKSYMS CKSYMS
 #define CKRP CKRP
 #define CKPX CKPX
-#define CKPY CKPY
+// #define CKPY CKPY
 #define CKPC CKPC
 #define CKRHOX CKRHOX
 #define CKRHOY CKRHOY
@@ -43,7 +43,7 @@
 #define CKSML CKSML
 #define CKCVMS CKCVMS
 #define CKCPMS CKCPMS
-#define CKUMS CKUMS
+//#define CKUMS CKUMS
 #define CKHMS CKHMS
 #define CKGMS CKGMS
 #define CKAMS CKAMS
@@ -86,7 +86,7 @@
 #define VCKPY VCKPY
 #define VCKWYR VCKWYR
 #define VCKYTX VCKYTX
-#define GET_T_GIVEN_EY GET_T_GIVEN_EY
+//#define GET_T_GIVEN_EY GET_T_GIVEN_EY
 #define GET_T_GIVEN_HY GET_T_GIVEN_HY
 #define GET_REACTION_MAP GET_REACTION_MAP
 #define GET_CRITPARAMS GET_CRITPARAMS
@@ -99,7 +99,7 @@
 #define CKSYMS cksyms
 #define CKRP ckrp
 #define CKPX ckpx
-#define CKPY ckpy
+// #define CKPY ckpy
 #define CKPC ckpc
 #define CKRHOX ckrhox
 #define CKRHOY ckrhoy
@@ -129,7 +129,7 @@
 #define CKSML cksml
 #define CKCVMS ckcvms
 #define CKCPMS ckcpms
-#define CKUMS ckums
+//#define CKUMS ckums
 #define CKHMS ckhms
 #define CKGMS ckgms
 #define CKAMS ckams
@@ -172,7 +172,7 @@
 #define VCKPY vckpy
 #define VCKWYR vckwyr
 #define VCKYTX vckytx
-#define GET_T_GIVEN_EY get_t_given_ey
+//#define GET_T_GIVEN_EY get_t_given_ey
 #define GET_T_GIVEN_HY get_t_given_hy
 #define GET_REACTION_MAP get_reaction_map
 #define GET_CRITPARAMS get_critparams
@@ -185,7 +185,7 @@
 #define CKSYMS cksyms_
 #define CKRP ckrp_
 #define CKPX ckpx_
-#define CKPY ckpy_
+//#define CKPY ckpy_
 #define CKPC ckpc_
 #define CKRHOX ckrhox_
 #define CKRHOY ckrhoy_
@@ -215,7 +215,7 @@
 #define CKSML cksml_
 #define CKCVMS ckcvms_
 #define CKCPMS ckcpms_
-#define CKUMS ckums_
+//#define CKUMS ckums_
 #define CKHMS ckhms_
 #define CKGMS ckgms_
 #define CKAMS ckams_
@@ -258,7 +258,7 @@
 #define VCKPY vckpy_
 #define VCKWYR vckwyr_
 #define VCKYTX vckytx_
-#define GET_T_GIVEN_EY get_t_given_ey_
+//#define GET_T_GIVEN_EY get_t_given_ey_
 #define GET_T_GIVEN_HY get_t_given_hy_
 #define GET_REACTION_MAP get_reaction_map_
 #define GET_CRITPARAMS get_critparams_
@@ -401,7 +401,7 @@ void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* 
                 double* restrict tc,double* restrict invT,double* restrict T);
 
 /* Inverse molecular weights */
-__constant__ const double imw[9] = {
+__managed__ double imw[9] = {
     1.0 / 2.015940,  /*H2 */
     1.0 / 31.998800,  /*O2 */
     1.0 / 18.015340,  /*H2O */
