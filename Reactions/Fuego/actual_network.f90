@@ -15,18 +15,17 @@ module actual_network
 
   implicit none
 
-  integer, managed :: nspec, nelem, nreac, nfit, naux
+  integer, save   :: nspec, nelem, nreac, nfit, naux
   character (len=16), save, allocatable :: aux_names(:)
 
 contains
   
   subroutine actual_network_init
-
     if (.not. chemistry_initialized)  call chemistry_init()
     call ckindx(iwrk,rwrk,nelem,nspec,nreac,nfit)
     nspecies = nspec
-    naux = 0
-    allocate(aux_names(naux))
+    naux     = 0 
+   allocate(aux_names(naux))
 
   end subroutine actual_network_init
 

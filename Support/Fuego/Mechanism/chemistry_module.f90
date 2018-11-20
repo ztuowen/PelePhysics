@@ -17,7 +17,7 @@ module chemistry_module
 
   real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
 
-  real(amrex_real), managed , save :: Ru, Ruc, Patm, rwrk
+  real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
 contains
