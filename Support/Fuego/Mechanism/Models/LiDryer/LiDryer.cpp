@@ -338,7 +338,8 @@ void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gml);
 void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict aml);
 void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sml);
-AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
+AMREX_GPU_HOST void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
+AMREX_GPU_DEVICE void CKCVMS_D(double* restrict T, int *iwrk, double* restrict rwrk, double* restrict cvms); 
 AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
 AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
 AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
@@ -401,7 +402,11 @@ void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* 
                 double* restrict tc,double* restrict invT,double* restrict T);
 
 /* Inverse molecular weights */
+#ifdef AMREX_USE_CUDA
 __managed__ double imw[9] = {
+#else
+static const double imw[9] = {
+#endif
     1.0 / 2.015940,  /*H2 */
     1.0 / 31.998800,  /*O2 */
     1.0 / 18.015340,  /*H2O */
@@ -1619,7 +1624,25 @@ void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*Returns the specific heats at constant volume */
 /*in mass units (Eq. 29) */
-AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
+AMREX_GPU_HOST void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
+{
+//    return;
+    double tT = *T; /*temporary temperature */
+    double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
+    cv_R(cvms, tc);
+//    for(int i =0; i < 9; i++) cvms[i] = 1.0; 
+    /*multiply by R/molecularweight */
+    cvms[0] *= 4.124383662212169e+07; /*H2 */
+    cvms[1] *= 2.598381814318037e+06; /*O2 */
+    cvms[2] *= 4.615239012974499e+06; /*H2O */
+    cvms[3] *= 8.248767324424338e+07; /*H */
+    cvms[4] *= 5.196763628636074e+06; /*O */
+    cvms[5] *= 4.888768810227566e+06; /*OH */
+    cvms[6] *= 2.519031701678171e+06; /*HO2 */
+    cvms[7] *= 2.444384405113783e+06; /*H2O2 */
+    cvms[8] *= 2.968047434442088e+06; /*N2 */
+}
+AMREX_GPU_DEVICE void CKCVMS_D(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1636,7 +1659,6 @@ AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restric
     cvms[8] *= 2.968047434442088e+06; /*N2 */
 }
 
-
 /*Returns the specific heats at constant pressure */
 /*in mass units (Eq. 26) */
 AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpms)
@@ -1644,7 +1666,8 @@ AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restric
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
     cp_R(cpms, tc);
-    /*multiply by R/molecularweight */
+ //    return;
+   /*multiply by R/molecularweight */
     cpms[0] *= 4.124383662212169e+07; /*H2 */
     cpms[1] *= 2.598381814318037e+06; /*O2 */
     cpms[2] *= 4.615239012974499e+06; /*H2O */

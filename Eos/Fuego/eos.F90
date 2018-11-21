@@ -36,7 +36,7 @@ contains
   subroutine eos_init(small_temp, small_dens)
 
     use extern_probin_module
-    use parallel
+!    use amrex_parallel_module
     use iso_c_binding, only : c_double, c_size_t
 
     implicit none
@@ -99,7 +99,7 @@ contains
 
   end subroutine eos_init
 
-  attributes(device)  subroutine eos_bottom_d(state)
+  AMREX_DEVICE  subroutine eos_bottom_d(state)
 
     use amrex_constants_module
     use amrex_error_module
@@ -134,7 +134,7 @@ contains
 
   end subroutine eos_bottom_d
 
-  attributes(host)  subroutine eos_bottom(state)
+  AMREX_CUDA_FORT_HOST  subroutine eos_bottom(state)
 
     use amrex_constants_module
     use amrex_error_module
@@ -142,11 +142,19 @@ contains
 
     type (eos_t), intent(inout) :: state
     real(amrex_real) :: Cvx
-
-    call ckcvms(state % T, iwrk, rwrk, state % cvi)  ! erg/gi.K
-    call ckcpms(state % T, iwrk, rwrk, state % cpi)  ! erg/gi.K
-    call ckhms(state % T, iwrk, rwrk, state % hi)    ! erg/gi
-
+    integer :: iwk
+    real(amrex_real) :: rwk
+    
+!    state % T = state % T*2 
+    print*, "In eos_bottom"!, state % T 
+    call ckcvms(state % T, iwk, rwk, state % cvi)  ! erg/gi.K
+    !state % cvi = 1.d0
+    !state % cvi = state % cvi * 2
+    print*, "After CKCVMS"!, state % cvi 
+    call ckcpms(state % T, iwk, rwk, state % cpi)  ! erg/gi.K
+    print*, "After CKCPMS"!, state % cpi
+    call ckhms(state % T, iwk, rwk, state % hi)    ! erg/gi
+    print*, "After CKHMS" 
     state % cv = sum(state % massfrac(:) * state % cvi(:)) ! erg/g.K
     state % cp = sum(state % massfrac(:) * state % cpi(:)) ! erg/g.K
     state % h  = sum(state % massfrac(:) * state %  hi(:)) ! erg/g
@@ -313,7 +321,7 @@ contains
 
   end subroutine eos_p_wb
 
- attributes(device) subroutine eos_wb_d(state)
+ AMREX_DEVICE subroutine eos_wb_d(state)
 
     implicit none
 
@@ -323,7 +331,7 @@ contains
 
   end subroutine eos_wb_d
 
-  attributes(host) subroutine eos_wb(state)
+  AMREX_CUDA_FORT_HOST subroutine eos_wb(state)
 
     implicit none
 
@@ -396,7 +404,7 @@ contains
 
   end subroutine eos_rp
 
-  attributes(device) subroutine eos_re_d(state)
+  AMREX_DEVICE subroutine eos_re_d(state)
 
     implicit none
 

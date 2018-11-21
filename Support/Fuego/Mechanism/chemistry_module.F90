@@ -15,7 +15,11 @@ module chemistry_module
   integer, parameter :: L_spec_name = 16 ! Each species name has at most 8 characters
   character*(L_spec_name), allocatable, save :: spec_names(:)
 
+#ifdef AMREX_USE_CUDA
   real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
+#else
+  real(amrex_real), allocatable, save :: molecular_weight(:), inv_mwt(:)
+#endif
 
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
