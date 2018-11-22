@@ -1,3 +1,5 @@
+#include "mechanism.h"
+
 module actual_reactor_module
 
   use amrex_fort_module, only : amrex_real
@@ -12,7 +14,7 @@ module actual_reactor_module
   type (eos_t) :: eos_state
   !$omp threadprivate(vodeVec,cdot,rhoydot_ext,rhoedot_ext,rhoe_init,time_init,iloc,jloc,kloc,eos_state)
 
-  real(amrex_real), private :: y(10), dy(10), pres_atm, t, ydot(10)
+  real(amrex_real), private :: yPJ(NN), dyPJ(NN), pres_MKS, t, ei(NSP), cvi(NSP), cv
 
   interface
      subroutine dydt (t, pres, y, dy) bind(C, name='dydt')
@@ -125,6 +127,9 @@ contains
 
     call eos_re(eos_state)
 
+    pres_MKS = eos_state % p / 1.d1
+    t = 0.d0
+    
     if (always_new_j) call setfirst(.true.)
 
     MF = vode_MF
@@ -143,35 +148,6 @@ contains
     jloc = react_state_in % j
     kloc = react_state_in % k
 
-    
-    y(2:nspec+1) = eos_state % massfrac(1:nspec)
-    y(1) = eos_state%T
-
-    print *,'fort T',eos_state%T
-    do N=1,nspec
-       print *,'fort y ',N,y(N)
-    enddo
-    print *,'fort sum:',sum(y)
-    pres_atm = eos_state % p / 1.d1 ! to MKS
-    t = 0.d0
-    print *,'fort p ',eos_state%p
-    print *,'fort p_atm ',pres_atm
-    print *,'fort t ',t
-    
-    call dydt(t, pres_atm, y, dy)
-    dy(nspec+1) = -sum(dy(2:nspec))
-
-    call f_rhs(neq, t, vodeVec, ydot, voderpar, vodeipar)
-    
-    do N=1,nspec-1
-       print *,'fort dy ',N,dy(N+1),ydot(N) / eos_state % rho
-    enddo
-    print *,'fort sum:',sum(dy(2:nspec+1))
-    
-    print *, 'done'
-    stop
-
-    
     ! Vode: istate
     ! in:  1: init, 2: continue (no change), 3: continue (w/changes)
     ! out: 1: nothing was done, 2: success
@@ -274,30 +250,35 @@ contains
     integer,         intent(in)  :: neq, ipar(*)
     real(amrex_real), intent(in)  :: y(neq), time, rpar(*)
     real(amrex_real), intent(out) :: ydot(neq)
-    integer         :: n
-    real(amrex_real) :: rhoInv
+    integer         :: n, lierr
+    real(amrex_real) :: rhoInv, e, rho
 
-    eos_state % rho = sum(y(1:nspec))
-    rhoInv = 1.d0 / eos_state % rho
-    eos_state % massfrac(1:nspec) = y(1:nspec) * rhoInv
-    eos_state % T = y(neq) ! guess
-    eos_state % e = (rhoe_init + (time - time_init) * rhoedot_ext) * rhoInv
-    call eos_re(eos_state)
+    rho = sum(y(1:nspec))
+    rhoInv = 1.d0 / rho    
+    yPJ(2:nspec+1) = y(1:nspec) * rhoInv
+    yPJ(1) = y(neq) ! Tguess
 
-    call eos_get_activity(eos_state)
-
-    ! void dydt (const double t, const double pres, const double * __restrict__ y, double * __restrict__ dy) {
-
+    e = (rhoe_init + (time - time_init) * rhoedot_ext) * rhoInv
+    call get_T_given_eY(e, yPJ(2:nspec+1), iwrk, rwrk, yPJ(1), lierr)
+    if (lierr .ne. 0) then
+       print *, 'EOS: get_T_given_eY failed, T, e, Y = ', &
+            yPJ(1), e, yPJ(2:nspec+1)
+    end if
+    call ckums(yPJ(1), iwrk, rwrk, ei)
+    call ckcvms(yPJ(1), iwrk, rwrk, cvi)
+    cv = sum(yPJ(2:nspec+1) * cvi(1:nspec))
     
     
-    call ckwc(eos_state % T, eos_state % Acti, iwrk, rwrk, cdot)
+    call dydt(t, pres_MKS, yPJ, dyPJ)
+    dyPJ(nspec+1) = -sum(dyPJ(2:nspec))
 
     ydot(neq) = rhoedot_ext
     do n=1,nspec
-       ydot(n) = cdot(n) * molecular_weight(n) + rhoYdot_ext(n)
-       ydot(neq) = ydot(neq) - eos_state%ei(n)*ydot(n)
-    end do
-    ydot(neq) = ydot(neq)/(eos_state%rho * eos_state%cv)
+       ydot(n) = dyPJ(n+1) * rho + rhoYdot_ext(n)
+       ydot(neq) = ydot(neq) - ei(n)*ydot(n)
+    enddo
+    ydot(neq) = ydot(neq)/(rho * cv)
+
   end subroutine f_rhs
 
 

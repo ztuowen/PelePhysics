@@ -1,14 +1,3 @@
-! An "null" network.  This provides the properties of a set of non-reacting species.
-!
-! nspec            -- the number of species
-! naux             -- the number of auxiliary variables
-!
-! spec_names       -- the name of the species
-!
-! aux_names        -- the name of the auxiliary variable
-!
-! molec_wt         -- molecular weight of species
-
 module actual_network
 
   use chemistry_module, only : nspecies, chemistry_init, chemistry_close, chemistry_initialized, spec_names, elem_names, rwrk, iwrk

@@ -70,6 +70,7 @@ ifdef Chemistry_Model
   ifeq ($(Reactions_dir), PyJac)
     PYJAC_DIR = $(CHEM_HOME)/PyJac
     VPATH_LOCATIONS   += $(PYJAC_DIR)
+    INCLUDE_LOCATIONS += $(PYJAC_DIR)
     include $(PYJAC_DIR)/Make.package
   endif
 endif
