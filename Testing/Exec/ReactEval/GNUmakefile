@@ -11,6 +11,7 @@ FCOMP	   = gfortran
 USE_MPI    = FALSE
 USE_MPI    = TRUE
 USE_OMP    = TRUE
+USE_OMP    = FALSE
 
 FUEGO_GAS  = TRUE
 
@@ -29,6 +30,7 @@ ifeq ($(FUEGO_GAS), TRUE)
   #Chemistry_Model = grimech30-noArN
   #Chemistry_Model = drm19
   Reactions_dir   = Fuego
+  Reactions_dir   = PyJac
   Transport_dir   = Simple
 else
   Eos_dir       = GammaLaw

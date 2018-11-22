@@ -67,6 +67,11 @@ ifdef Chemistry_Model
   VPATH_LOCATIONS += $(CHEM_HOME)
   Bpack += $(CHEM_HOME)/Make.package
   Blocs += $(CHEM_HOME)
+  ifeq ($(Reactions_dir), PyJac)
+    PYJAC_DIR = $(CHEM_HOME)/PyJac
+    VPATH_LOCATIONS   += $(PYJAC_DIR)
+    include $(PYJAC_DIR)/Make.package
+  endif
 endif
 
 # Transport
