@@ -8,23 +8,17 @@ contains
 
   subroutine extern_init(name,namlen) bind(C, name="extern_init")
 
-    use network
     use eos_module
     use transport_module
 
     integer :: namlen
     integer :: name(namlen)
 
-    real(amrex_real) :: small_temp = 1.d-200
-    real(amrex_real) :: small_dens = 1.d-200
-
     ! initialize the external runtime parameters in
     ! extern_probin_module
     call runtime_init(name,namlen)
 
-    call network_init()
-
-    call eos_init(small_temp, small_dens)
+    call eos_init()
 
     call transport_init()
 
@@ -42,13 +36,13 @@ contains
 
   subroutine get_num_spec(nspec_out) bind(C, name="get_num_spec")
 
-    use network, only : nspec
+    use chemistry_module, only : nspecies
 
     implicit none
 
     integer, intent(out) :: nspec_out
 
-    nspec_out = nspec
+    nspec_out = nspecies
 
   end subroutine get_num_spec
 
@@ -61,7 +55,7 @@ contains
        bind(C, name="initialize_data")
 
     use amrex_constants_module, only: M_PI, HALF, ONE, TWO, ZERO
-    use network, only: nspec
+    use chemistry_module, only: nspecies
 
     implicit none
 
@@ -70,12 +64,12 @@ contains
     integer         , intent(in   ) ::   t_lo(3),  t_hi(3)
     real(amrex_real), intent(in   ) ::     dx(3)
     real(amrex_real), intent(in   ) ::    plo(3),   phi(3)
-    real(amrex_real), intent(inout) :: massfrac(mf_lo(1):mf_hi(1),mf_lo(2):mf_hi(2),mf_lo(3):mf_hi(3),nspec)
+    real(amrex_real), intent(inout) :: massfrac(mf_lo(1):mf_hi(1),mf_lo(2):mf_hi(2),mf_lo(3):mf_hi(3),nspecies)
     real(amrex_real), intent(inout) :: temperature(t_lo(1):t_hi(1),t_lo(2):t_hi(2),t_lo(3):t_hi(3))
 
     ! local variables
     integer          :: i, j, k, n
-    real(amrex_real) :: Temp_lo, Temp_hi, dTemp, P(3), L(3), x, y, z, Y_lo(nspec), Y_hi(nspec)
+    real(amrex_real) :: Temp_lo, Temp_hi, dTemp, P(3), L(3), x, y, z, Y_lo(nspecies), Y_hi(nspecies)
     real(amrex_real) :: sum
 
     Temp_lo = 500.d0
@@ -84,7 +78,7 @@ contains
 
     Y_lo(:) = ZERO
     Y_lo(1) = ONE
-    Y_hi(:) = ONE / nspec
+    Y_hi(:) = ONE / nspecies
     
     L(:) = phi(:) - plo(:)
     P(:) = L(:) / 4
@@ -100,10 +94,10 @@ contains
              massfrac(i,j,k,:) = Y_lo(:) + (Y_hi(:)-Y_lo(:))*x/L(1)
 
              sum = ZERO
-             do n=1,nspec-1
+             do n=1,nspecies-1
                 sum = sum + massfrac(i,j,k,n)
              enddo
-             massfrac(i,j,k,nspec) = ONE - sum
+             massfrac(i,j,k,nspecies) = ONE - sum
 
           end do
        end do
@@ -117,7 +111,7 @@ contains
        cp,          cp_lo, cp_hi) &
        bind(C, name="get_cp")
 
-    use network, only: nspec
+    use chemistry_module, only: nspecies
     use eos_type_module
     use eos_module
 
@@ -127,7 +121,7 @@ contains
     integer         , intent(in   ) ::  mf_lo(3), mf_hi(3)
     integer         , intent(in   ) ::   t_lo(3),  t_hi(3)
     integer         , intent(in   ) ::  cp_lo(3), cp_hi(3)
-    real(amrex_real), intent(inout) :: massfrac(mf_lo(1):mf_hi(1),mf_lo(2):mf_hi(2),mf_lo(3):mf_hi(3),nspec)
+    real(amrex_real), intent(inout) :: massfrac(mf_lo(1):mf_hi(1),mf_lo(2):mf_hi(2),mf_lo(3):mf_hi(3),nspecies)
     real(amrex_real), intent(inout) :: temperature(t_lo(1):t_hi(1),t_lo(2):t_hi(2),t_lo(3):t_hi(3))
     real(amrex_real), intent(  out) :: cp(cp_lo(1):cp_hi(1),cp_lo(2):cp_hi(2),cp_lo(3):cp_hi(3))
 
@@ -143,7 +137,7 @@ contains
           do i = lo(1),hi(1)
 
              eos_state % T        = temperature(i,j,k)
-             eos_state % massfrac = massfrac(i,j,k,1:nspec)
+             eos_state % massfrac = massfrac(i,j,k,1:nspecies)
 
              call eos_cp(eos_state)
 
