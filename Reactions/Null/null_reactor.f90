@@ -1,4 +1,4 @@
-module actual_reactor_module
+module reactor_module
 
   use amrex_fort_module, only : amrex_real
   use react_type_module
@@ -7,33 +7,33 @@ module actual_reactor_module
 
 contains
 
-  subroutine actual_reactor_init()
+  subroutine reactor_init()
 
     !nothing needed here
 
-  end subroutine actual_reactor_init
+  end subroutine reactor_init
 
 
-  subroutine actual_reactor_close()
+  subroutine reactor_close()
 
     ! nothing needed here
 
-  end subroutine actual_reactor_close
+  end subroutine reactor_close
 
 
-  function actual_ok_to_react(state)
+  function ok_to_react(state)
 
     implicit none
 
     type (react_t),intent(in) :: state
-    logical                   :: actual_ok_to_react
+    logical                   :: ok_to_react
 
-    actual_ok_to_react = .true.
+    ok_to_react = .true.
 
-  end function actual_ok_to_react
+  end function ok_to_react
 
 
-  function actual_react_null(react_state_in, react_state_out, dt_react, time) result(stat)
+  function react_null(react_state_in, react_state_out, dt_react, time) result(stat)
     
     type(react_t),   intent(in   ) :: react_state_in
     type(react_t),   intent(inout) :: react_state_out
@@ -44,10 +44,10 @@ contains
     stat % cost_value = 0.d0
     stat % reactions_succesful = .true.
 
-  end function actual_react_null
+  end function react_null
 
 
-  function actual_react(react_state_in, react_state_out, dt_react, time) result(stat)
+  function react(react_state_in, react_state_out, dt_react, time) result(stat)
     
     use eos_module
 
@@ -56,9 +56,9 @@ contains
     real(amrex_real), intent(in   ) :: dt_react, time
     type(reaction_stat_t)          :: stat
 
-    stat = actual_react_null(react_state_in, react_state_out, dt_react, time)
+    stat = react_null(react_state_in, react_state_out, dt_react, time)
 
-  end function actual_react
+  end function react
 
 
-end module actual_reactor_module
+end module reactor_module

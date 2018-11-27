@@ -50,7 +50,7 @@ module eos_module
 
 contains
 
-subroutine actual_eos_init
+subroutine eos_init
 
   implicit none
   integer :: i,j,k
@@ -90,7 +90,7 @@ subroutine actual_eos_init
 
   end do
   
-end subroutine actual_eos_init
+end subroutine eos_init
 
 subroutine eos_init(small_temp, small_dens)
 
@@ -123,7 +123,7 @@ subroutine eos_init(small_temp, small_dens)
 
   ! Set up any specific parameters or initialization steps required by the EOS we are using.
 
-  call actual_eos_init
+  call eos_init
 
   if (present(small_temp)) then
      if (small_temp < mintemp) then

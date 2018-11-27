@@ -1,14 +1,9 @@
-! This is a constant gamma equation of state
-!
-! This a simplified version of the more general eos_gamma_general.
-!
-
 module eos_module
 
   use amrex_fort_module, only : amrex_real
   use amrex_constants_module
   use eos_type_module
-  use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names
 
   implicit none
   character (len=64) :: eos_name = "fuego"
@@ -31,67 +26,11 @@ module eos_module
 
 contains
 
-  subroutine eos_init(small_temp, small_dens)
-
-    use extern_probin_module
-    use parallel
-    use iso_c_binding, only : c_double, c_size_t
+  subroutine eos_init()
 
     implicit none
 
-    real(amrex_real), optional :: small_temp
-    real(amrex_real), optional :: small_dens
-
-    integer (kind=c_size_t) :: nelem
-
-    nelem = 1
-    call amrex_array_init_snan(mintemp,nelem)
-    call amrex_array_init_snan(maxtemp,nelem)
-    call amrex_array_init_snan(mindens,nelem)
-    call amrex_array_init_snan(maxdens,nelem)
-    call amrex_array_init_snan(minmassfrac,nelem)
-    call amrex_array_init_snan(maxmassfrac,nelem)
-    call amrex_array_init_snan(mine,nelem)
-    call amrex_array_init_snan(maxe,nelem)
-    call amrex_array_init_snan(minp,nelem)
-    call amrex_array_init_snan(maxp,nelem)
-    call amrex_array_init_snan(mins,nelem)
-    call amrex_array_init_snan(maxs,nelem)
-    call amrex_array_init_snan(minh,nelem)
-    call amrex_array_init_snan(maxh,nelem)
-
-    mintemp     = 1.d-200
-    maxtemp     = 1.d200
-    mindens     = 1.d-200
-    maxdens     = 1.d200
-    minmassfrac = 1.d-200
-    maxmassfrac = 1.d0
-    mine        = -1.d200
-    maxe        = +1.d200
-    minp        = 1.d-200
-    maxp        = +1.d200
-    mins        = -1.d200
-    maxs        = +1.d200
-    minh        = -1.d200
-    maxh        = +1.d200
-
     if (.not. chemistry_initialized)  call chemistry_init()
-
-    if (present(small_temp)) then
-       if (small_temp < mintemp) then
-          small_temp = mintemp
-       else
-          mintemp = small_temp
-       endif
-    endif
-
-    if (present(small_dens)) then
-       if (small_dens < mindens) then
-          small_dens = mindens
-       else
-          mindens = small_dens
-       endif
-    endif
 
     initialized = .true.
 
