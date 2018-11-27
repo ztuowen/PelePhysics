@@ -67,7 +67,7 @@ module eos_bind_module
     AMREX_CUDA_FORT_HOST subroutine ckums(T, iwrk, rwk, ei) &
       bind(C,name="CKUMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), intent(out) :: ei(*)
+      real(c_double), intent(inout) :: ei(*)
       real(c_double), intent(in) :: T, rwk
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckums
@@ -76,7 +76,7 @@ module eos_bind_module
       bind(C,name="CKCPMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(in) :: T, rwk
-      real(c_double), intent(out) :: cpi(*) 
+      real(c_double), intent(inout) :: cpi(*) 
       integer(c_int), intent(in) :: iwrk
     end subroutine ckcpms
 
@@ -84,7 +84,7 @@ module eos_bind_module
       bind(C,name="CKHMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(in) :: T, rwk
-      real(c_double), intent(out) :: hi(*)
+      real(c_double), intent(inout) :: hi(*)
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckhms
 
