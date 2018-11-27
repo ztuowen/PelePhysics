@@ -99,6 +99,7 @@ contains
 
   end subroutine eos_init
 
+#ifdef AMREX_USE_CUDA
   AMREX_DEVICE  subroutine eos_bottom_d(state)
 
     use amrex_constants_module
@@ -133,6 +134,7 @@ contains
     state % dPdr = 0.d0
 
   end subroutine eos_bottom_d
+#endif
 
   AMREX_CUDA_FORT_HOST  subroutine eos_bottom(state)
 
@@ -145,16 +147,9 @@ contains
     integer :: iwk
     real(amrex_real) :: rwk
     
-!    state % T = state % T*2 
-    print*, "In eos_bottom"!, state % T 
     call ckcvms(state % T, iwk, rwk, state % cvi)  ! erg/gi.K
-    !state % cvi = 1.d0
-    !state % cvi = state % cvi * 2
-    print*, "After CKCVMS"!, state % cvi 
     call ckcpms(state % T, iwk, rwk, state % cpi)  ! erg/gi.K
-    print*, "After CKCPMS"!, state % cpi
     call ckhms(state % T, iwk, rwk, state % hi)    ! erg/gi
-    print*, "After CKHMS" 
     state % cv = sum(state % massfrac(:) * state % cvi(:)) ! erg/g.K
     state % cp = sum(state % massfrac(:) * state % cpi(:)) ! erg/g.K
     state % h  = sum(state % massfrac(:) * state %  hi(:)) ! erg/g
@@ -321,15 +316,16 @@ contains
 
   end subroutine eos_p_wb
 
+#ifdef AMREX_USE_CUDA
  AMREX_DEVICE subroutine eos_wb_d(state)
 
     implicit none
 
     type (eos_t), intent(inout) :: state
 
-            state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
 
   end subroutine eos_wb_d
+#endif
 
   AMREX_CUDA_FORT_HOST subroutine eos_wb(state)
 
@@ -377,9 +373,7 @@ contains
     implicit none
 
     type (eos_t), intent(inout) :: state
-
     call eos_wb(state)
-
     call ckrhoy(state % p,state % T,state % massfrac,iwrk,rwrk,state % rho)
     call ckums(state % T, iwrk, rwrk, state % ei)
     state % e = sum(state % massfrac(:) * state % ei(:))
@@ -404,6 +398,7 @@ contains
 
   end subroutine eos_rp
 
+#ifdef AMREX_USE_CUDA
   AMREX_DEVICE subroutine eos_re_d(state)
 
     implicit none
@@ -426,6 +421,7 @@ contains
     call eos_bottom_d(state)
 
   end subroutine eos_re_d
+#endif
 
    subroutine eos_re(state)
 

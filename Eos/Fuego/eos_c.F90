@@ -3,7 +3,7 @@ module eos_bind_module
   use amrex_fort_module, only: amrex_real
   implicit none 
 
-
+#ifdef AMREX_USE_CUDA
   !device interface
   interface 
     AMREX_DEVICE subroutine ckpy_d(rho, T, massfrac, iwrk, rwrk, p) &
@@ -53,7 +53,7 @@ module eos_bind_module
       integer(c_int), intent(in) :: i 
     end subroutine ckcvms_d
   end interface  
-
+#endif
   !host interface
   interface 
 
@@ -67,39 +67,40 @@ module eos_bind_module
     AMREX_CUDA_FORT_HOST subroutine ckums(T, iwrk, rwk, ei) &
       bind(C,name="CKUMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), intent(inout) :: ei(*)
-      real(c_double), value :: T, rwk
+      real(c_double), intent(out) :: ei(*)
+      real(c_double), intent(in) :: T, rwk
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckums
 
     AMREX_CUDA_FORT_HOST subroutine ckcpms(T, iwrk, rwk, cpi) &
       bind(C,name="CKCPMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, rwk
-      real(c_double), intent(inout) :: cpi(*) 
+      real(c_double), intent(in) :: T, rwk
+      real(c_double), intent(out) :: cpi(*) 
       integer(c_int), intent(in) :: iwrk
     end subroutine ckcpms
 
     AMREX_CUDA_FORT_HOST subroutine ckhms(T, iwrk, rwk, hi) & 
       bind(C,name="CKHMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, rwk
-      real(c_double), intent(inout) :: hi(*)
+      real(c_double), intent(in) :: T, rwk
+      real(c_double), intent(out) :: hi(*)
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckhms
 
     AMREX_CUDA_FORT_HOST subroutine get_T_given_ey(e, massfrac, iwrk, rwrk, T , lierr) &
       bind(C,name="GET_T_GIVEN_EY")
       use iso_c_binding, only: c_double, c_int 
-      real(c_double), value :: e, rwrk, T
-      real(c_double),  intent(inout) :: massfrac(*)
-      integer(c_int), intent(in) :: iwrk, lierr
+      real(c_double), intent(in)  :: e, rwrk
+      real(c_double),  intent(inout) :: T, massfrac(*)
+      integer(c_int), intent(in) :: iwrk
+      integer(c_int), intent(out) :: lierr
     end subroutine get_T_given_ey
  
     AMREX_CUDA_FORT_HOST subroutine ckcvms(T, i, r, cvms) &
       bind(C, name="CKCVMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, r
+      real(c_double), intent(in) :: T, r
       real(c_double), intent(inout) :: cvms(*)
       integer(c_int), intent(in) :: i 
     end subroutine ckcvms

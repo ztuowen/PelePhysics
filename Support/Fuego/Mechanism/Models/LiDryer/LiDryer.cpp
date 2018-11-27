@@ -6109,7 +6109,6 @@ AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double
     /*temperature */
     double T = tc[1];
     double invT = 1 / T;
-
     /*species with midpoint at T=1000 kelvin */
     if (T < 1000) {
         /*species 0: H2 */
