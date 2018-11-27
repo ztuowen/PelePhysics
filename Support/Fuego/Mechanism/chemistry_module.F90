@@ -22,16 +22,16 @@ module chemistry_module
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
+  integer, private :: names(nspecies * L_spec_name)
+  
 contains
 
   subroutine chemistry_init()
     integer :: nfit, i, ic, ii
     real(amrex_real) :: T0
-    integer, allocatable :: names(:)
 
     call ckinit()
 
-    allocate(names(nspecies*L_spec_name))  
     call cksyms(names, L_spec_name) 
 
     ic = 1
@@ -41,8 +41,6 @@ contains
           ic = ic+1
        end do
     end do
-
-    deallocate(names)
 
     call ckwt(iwrk, rwrk, molecular_weight)
     inv_mwt = 1.d0 / molecular_weight

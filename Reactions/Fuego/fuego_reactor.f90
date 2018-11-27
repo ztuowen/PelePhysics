@@ -6,7 +6,7 @@ module reactor_module
   use eos_type_module
 
   implicit none
-  real(amrex_real), private, allocatable :: vodeVec(:),cdot(:),rhoydot_ext(:)
+  real(amrex_real), private :: vodeVec(nspecies+1),cdot(nspecies),rhoydot_ext(nspecies)
   real(amrex_real), private:: rhoedot_ext, rhoe_init, time_init
   integer,private :: iloc, jloc, kloc
   type (eos_t) :: eos_state
@@ -35,9 +35,6 @@ contains
     call vode_init(neq,verbose,itol,rtol,atol,order,&
          maxstep,use_ajac,save_ajac,always_new_j,stiff)
 
-    allocate(vodeVec(neq))
-    allocate(cdot(nspecies))
-    allocate(rhoydot_ext(nspecies))
     call build(eos_state)
 
   end subroutine reactor_init
@@ -45,35 +42,9 @@ contains
 
   subroutine reactor_close()
 
-    deallocate(vodeVec)
-    deallocate(cdot)
-    deallocate(rhoydot_ext)
     call destroy(eos_state)
    
   end subroutine reactor_close
-
-
-  function ok_to_react(state)
-
-    use extern_probin_module, only: react_T_min, react_T_max, react_rho_min, react_rho_max
-
-    implicit none
-
-    type (react_t),intent(in) :: state
-    logical                   :: ok_to_react
-    real(amrex_real)           :: rho
-
-    ok_to_react = .true.
-
-    rho = sum(state % rhoY)
-    if (state % T   < react_T_min   .or. state % T   > react_T_max .or. &
-        rho         < react_rho_min .or. rho         > react_rho_max) then
-
-       ok_to_react = .false.
-
-    endif
-
-  end function ok_to_react
 
 
   function react_null(react_state_in, react_state_out, dt_react, time)

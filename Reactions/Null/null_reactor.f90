@@ -21,18 +21,6 @@ contains
   end subroutine reactor_close
 
 
-  function ok_to_react(state)
-
-    implicit none
-
-    type (react_t),intent(in) :: state
-    logical                   :: ok_to_react
-
-    ok_to_react = .true.
-
-  end function ok_to_react
-
-
   function react_null(react_state_in, react_state_out, dt_react, time) result(stat)
     
     type(react_t),   intent(in   ) :: react_state_in
