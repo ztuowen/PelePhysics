@@ -5,6 +5,7 @@
 
 module eos_module
 
+  use chemistry_module, only : nspecies, nelements, naux
   use amrex_fort_module, only : amrex_real
   use eos_type_module
 
@@ -14,29 +15,22 @@ module eos_module
 
   real(amrex_real), save :: gamma_const
 
-  integer, parameter :: nelements = 1
-  integer, parameter :: L_elem_name = 3 ! Each element name has at most 3 characters
+  integer, parameter :: L_elem_name = 1
   character*(L_elem_name), save :: elem_names(nelements)
 
-  integer, parameter :: nspecies = 1
-  integer, parameter :: L_spec_name = 16 ! Each species name has at most 8 characters
+  integer, parameter :: L_spec_name = 16
   character*(L_spec_name), save :: spec_names(nspecies)
 
   public :: eos_init, eos_xty, eos_ytx, eos_ytx_vec, eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui
 
 contains
 
-  subroutine eos_init(small_temp, small_dens)
+  subroutine eos_init()
 
-    !use extern_probin_module
-    !use parallel
     use extern_probin_module, only: eos_gamma
     use iso_c_binding, only : c_double, c_size_t
 
     implicit none
-
-    real(amrex_real), optional :: small_temp
-    real(amrex_real), optional :: small_dens
 
     ! constant ratio of specific heats
     if (eos_gamma .gt. 0.d0) then
@@ -48,31 +42,16 @@ contains
     elem_names(1) = "X"
     spec_names(1) = "X"
 
-    mintemp     = 1.d-200
-    maxtemp     = 1.d200
-    mindens     = 1.d-200
-    maxdens     = 1.d200
-    minmassfrac = 1.d-200
-    maxmassfrac = 1.d0 + 1.d-12
-    mine        = 1.d-200
-    maxe        = 1.d200
-    minp        = 1.d-200
-    maxp        = 1.d200
-    mins        = 1.d-200
-    maxs        = 1.d200
-    minh        = 1.d-200
-    maxh        = 1.d200
-
   end subroutine eos_init
 
   subroutine eos_wb(state)
 
-    use network, only: molec_wt
+    use chemistry_module, only: molecular_weight
     implicit none
 
     type (eos_t), intent(inout) :: state
 
-    state % wbar = 1.d0 / sum(state % massfrac(:) / molec_wt(:))
+    state % wbar = 1.d0 / sum(state % massfrac(:) / molecular_weight(:))
 
   end subroutine eos_wb
 
@@ -80,7 +59,6 @@ contains
 
     use amrex_constants_module
     use fundamental_constants_module, only: k_B, n_A
-    use network, only: molec_wt
 
     implicit none
 
@@ -352,7 +330,7 @@ contains
 
     use amrex_constants_module
     use fundamental_constants_module, only: k_B, n_A
-    use network, only: molec_wt
+    use chemistry_module, only: molecular_weight
 
     implicit none
 
@@ -374,7 +352,7 @@ contains
        do k = low(3)-1, high(3) + 1
           do j = low(2)-1, high(2) + 1
              do i = low(1)-1, high(1) + 1
-                hi(i,j,k,n) = R / ((1.d0 / sum(mass(i,j,k,:) / molec_wt(:))) * (gamma_const - ONE)) * T(i,j,k) * gamma_const
+                hi(i,j,k,n) = R / ((1.d0 / sum(mass(i,j,k,:) / molecular_weight(:))) * (gamma_const - ONE)) * T(i,j,k) * gamma_const
              enddo
           enddo
        enddo
