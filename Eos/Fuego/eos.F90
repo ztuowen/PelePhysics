@@ -323,6 +323,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
+    state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
 
   end subroutine eos_wb_d
 #endif
@@ -333,7 +334,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-            state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+    state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
 
   end subroutine eos_wb
 

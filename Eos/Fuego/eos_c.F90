@@ -9,7 +9,8 @@ module eos_bind_module
     AMREX_DEVICE subroutine ckpy_d(rho, T, massfrac, iwrk, rwrk, p) &
       bind(C,name="CKPY")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), intent(inout) :: rho, T, massfrac(*), rwrk, p
+      real(c_double), intent(inout) :: rho, T, massfrac(*), p
+      real(c_double), intent(in) :: rwrk
       integer(c_int), intent(in) :: iwrk
     end subroutine ckpy_d
 
@@ -24,7 +25,7 @@ module eos_bind_module
     AMREX_DEVICE subroutine ckcpms_d(T, iwrk, rwk, cpi) &
       bind(C,name="CKCPMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, rwk
+      real(c_double), intent(in) :: T, rwk
       real(c_double), intent(inout) :: cpi(*) 
       integer(c_int), intent(in) :: iwrk
     end subroutine ckcpms_d
@@ -32,7 +33,7 @@ module eos_bind_module
     AMREX_DEVICE subroutine ckhms_d(T, iwrk, rwk, hi) & 
       bind(C,name="CKHMS")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, rwk
+      real(c_double), intent(in) :: T, rwk
       real(c_double), intent(inout) :: hi(*)
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckhms_d
@@ -40,15 +41,15 @@ module eos_bind_module
     AMREX_DEVICE subroutine get_T_given_ey_d(e, massfrac, iwrk, rwrk, T , lierr) &
       bind(C,name="GET_T_GIVEN_EY")
       use iso_c_binding, only: c_double, c_int 
-      real(c_double), value :: e, rwrk, T
-      real(c_double),  intent(inout) :: massfrac(*)
+      real(c_double), intent(in) :: e, rwrk
+      real(c_double),  intent(inout) :: T,  massfrac(*)
       integer(c_int), intent(in) :: iwrk, lierr
     end subroutine get_T_given_ey_d
    
     AMREX_DEVICE subroutine ckcvms_d(T, i, r, cvms) &
       bind(C, name="CKCVMS_D")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), value :: T, r
+      real(c_double), intent(in) :: T, r
       real(c_double), intent(inout) :: cvms(*)
       integer(c_int), intent(in) :: i 
     end subroutine ckcvms_d
@@ -60,7 +61,8 @@ module eos_bind_module
     AMREX_CUDA_FORT_HOST subroutine ckpy(rho, T, massfrac, iwrk, rwrk, p) &
       bind(C,name="CKPY")
       use iso_c_binding, only: c_double, c_int
-      real(c_double), intent(inout) :: rho, T, massfrac(*), rwrk, p
+      real(c_double), intent(inout) :: rho, T, massfrac(*), p
+      real(c_double), intent(in) :: rwrk
       integer(c_int), intent(in) :: iwrk
     end subroutine ckpy
 
