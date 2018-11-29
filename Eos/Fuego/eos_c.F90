@@ -18,7 +18,7 @@ module eos_bind_module
       bind(C,name="CKUMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(inout) :: ei(*)
-      real(c_double), value :: T, rwk
+      real(c_double), intent(in) :: T, rwk
       integer(c_int), intent(in) :: iwrk 
     end subroutine ckums_d
 

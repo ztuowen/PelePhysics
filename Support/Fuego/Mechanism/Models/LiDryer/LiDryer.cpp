@@ -417,8 +417,6 @@ static const double imw[9] = {
     1.0 / 34.014740,  /*H2O2 */
     1.0 / 28.013400};  /*N2 */
 
-
-
 static double fwd_A[21], fwd_beta[21], fwd_Ea[21];
 static double low_A[21], low_beta[21], low_Ea[21];
 static double rev_A[21], rev_beta[21], rev_Ea[21];
@@ -1692,6 +1690,7 @@ AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict
         ums[i] *= RT*imw[i];
     }
 }
+
 
 
 /*Returns enthalpy in mass units (Eq 27.) */

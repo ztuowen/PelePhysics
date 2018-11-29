@@ -407,14 +407,9 @@ contains
     type (eos_t), intent(inout) :: state
 
     integer :: lierr
-
     call eos_wb_d(state)
 
     call get_T_given_eY_d(state % e, state % massfrac, iwrk, rwrk, state % T, lierr)
-!    if (lierr .ne. 0) then
-!       print *, 'EOS: get_T_given_eY failed, T, e, Y = ', &
-!            state % T, state % e, state % massfrac
-!    end if
     state % T = max(state % T, smallT)
     call ckums_d(state % T, iwrk, rwrk, state % ei)
     call ckpy_d(state % rho, state % T, state % massfrac, iwrk, rwrk, state % p)
