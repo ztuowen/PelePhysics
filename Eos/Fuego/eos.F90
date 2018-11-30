@@ -16,11 +16,14 @@ module eos_module
   character (len=64) :: eos_name = "fuego"
   logical, save, private :: initialized = .false.
 
-  real(amrex_real), save, public, parameter :: smallT = 1.d-50
+  real(amrex_real), public, parameter :: smallT = 1.d-50
   integer, parameter :: iwrk = 0
   real(amrex_real), parameter :: rwrk = 1.0d0
 
-  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_re_d, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui
+  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui
+#ifdef AMREX_USE_CUDA
+  public  :: eos_re_d
+#endif
   private :: nspecies, Ru, inv_mwt
 
   interface
@@ -252,7 +255,7 @@ contains
     implicit none
 
     double precision, intent(in) :: T
-    double precision, intent(in), dimension(1:Nsp) :: hi
+    double precision, intent(inout), dimension(1:Nsp) :: hi
     integer, intent(in) :: Nsp
 
     call ckhms(T,iwrk,rwrk,hi(:))
