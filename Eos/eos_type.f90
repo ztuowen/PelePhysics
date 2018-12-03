@@ -125,9 +125,9 @@ module eos_type_module
     real(amrex_real) :: h
     real(amrex_real) :: s
     real(amrex_real) :: f
-    real(amrex_real):: massfrac(9)
-    real(amrex_real) :: molefrac(9)
-    real(amrex_real) :: aux(1)
+    real(amrex_real), dimension(9) :: massfrac
+    real(amrex_real), dimension(9) :: molefrac
+    real(amrex_real), dimension(1) :: aux
 
     real(amrex_real) :: dpdT
     real(amrex_real) :: dpdr
@@ -142,33 +142,33 @@ module eos_type_module
 
     real(amrex_real) :: cv
     real(amrex_real) :: cp
-    real(amrex_real):: cpi(9)
-    real(amrex_real):: cvi(9)
-    real(amrex_real):: hi(9)
-    real(amrex_real):: ei(9)
-    real(amrex_real):: si(9)
+    real(amrex_real), dimension(9) :: cpi
+    real(amrex_real), dimension(9) :: cvi
+    real(amrex_real), dimension(9) :: hi
+    real(amrex_real), dimension(9) :: ei
+    real(amrex_real), dimension(9) :: si
     real(amrex_real) :: wbar
-    real(amrex_real):: mui(9)
-    real(amrex_real):: Acti(9)
-    real(amrex_real):: dedY(9)
-    real(amrex_real):: dpdY(9)
-    real(amrex_real):: dhdY(9)
+    real(amrex_real), dimension(9) :: mui
+    real(amrex_real), dimension(9) :: Acti
+    real(amrex_real), dimension(9) :: dedY
+    real(amrex_real), dimension(9) :: dpdY
+    real(amrex_real), dimension(9) :: dhdY
     real(amrex_real) :: gam1
     real(amrex_real) :: cs
 
     ! Quantities used for non-Ideal EOS
     real(amrex_real) :: am
     real(amrex_real) :: bm
-    real(amrex_real):: damdYk(9)
-    real(amrex_real):: d2amdYkdT(9)
-    real(amrex_real):: dPdYk(9)
+    real(amrex_real), dimension(9)  :: damdYk
+    real(amrex_real), dimension(9)  :: d2amdYkdT
+    real(amrex_real), dimension(9)  :: dPdYk
     real(amrex_real) :: damdT
     real(amrex_real) :: d2amdT2
     real(amrex_real) :: dpdtau
     real(amrex_real) :: Z
-    real(amrex_real):: taui(9)
-    real(amrex_real):: diP(9)
-    real(amrex_real):: dijY(9,9)
+    real(amrex_real), dimension(9)  :: taui
+    real(amrex_real), dimension(9)  :: diP
+    real(amrex_real), dimension(9,9):: dijY
 
   end type eos_t
 
