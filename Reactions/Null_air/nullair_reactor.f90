@@ -21,18 +21,6 @@ contains
   end subroutine actual_reactor_close
 
 
-  function actual_ok_to_react(state)
-
-    implicit none
-
-    type (react_t),intent(in) :: state
-    logical                   :: actual_ok_to_react
-
-    actual_ok_to_react = .true.
-
-  end function actual_ok_to_react
-
-
   function actual_react_null(react_state_in, react_state_out, dt_react, time) result(stat)
     
     type(react_t),   intent(in   ) :: react_state_in

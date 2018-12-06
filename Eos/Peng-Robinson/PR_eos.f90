@@ -8,7 +8,7 @@
 !!$  Internal energy, enthalpy, Cp, Cv are calculated using departure functions
 !!$  from ideal gas values
 
-module actual_eos_module
+module eos_module
 
   use amrex_fort_module, only : amrex_real
   use amrex_constants_module
@@ -42,7 +42,7 @@ module actual_eos_module
 
 contains
 
-subroutine actual_eos_init
+subroutine eos_init
 
   implicit none
   integer :: ix, iy
@@ -75,9 +75,9 @@ subroutine actual_eos_init
 ! Precompute Bi Ai (without inclusion of the accentric factor based correction)
 !!$ call preComputeAiBi
  
-end subroutine actual_eos_init
+end subroutine eos_init
 
-subroutine actual_eos(input, state)
+subroutine eos(input, state)
 
  implicit none
 
@@ -236,7 +236,7 @@ subroutine actual_eos(input, state)
 !!$ ! in general system (not yet supported)
 !!$ state % dPdr = ZERO
 
-end subroutine actual_eos
+end subroutine eos
 !===================================================!
 ! Compute the EOS species attractive and repulsive  !
 ! EOS parameters - dependent on critical properties !
@@ -908,5 +908,5 @@ subroutine PR_EOS_GetSpeedOfSound(state)
 
 end subroutine PR_EOS_GetSpeedOfSound
 
-end module actual_eos_module
+end module eos_module
 

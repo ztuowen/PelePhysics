@@ -14,6 +14,7 @@ USE_OMP    = TRUE
 USE_REACT  = FALSE
 
 FUEGO_GAS  = FALSE
+FUEGO_GAS  = TRUE
 
 # define the location of the PELE_PHYSICS top directory
 PELE_PHYSICS_HOME    := ../../..
@@ -30,9 +31,11 @@ ifeq ($(FUEGO_GAS), TRUE)
   #Chemistry_Model = grimech30-noArN
   #Chemistry_Model = drm19
   Reactions_dir   = Fuego
+  Transport_dir   = Constant
+  Transport_dir   = EGLib
   Transport_dir   = Simple
 else
-  Chemistry_Model =
+  #Chemistry_Model =
   Eos_dir       = GammaLaw
   Reactions_dir = Null
   Transport_dir = Constant

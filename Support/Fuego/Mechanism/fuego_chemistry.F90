@@ -1,19 +1,26 @@
 module chemistry_module
 
+#include "mechanism.h"
+
   use amrex_fort_module, only : amrex_real
+
   implicit none
 
-  integer, save :: nelements   ! number of elements
-  integer, save :: nspecies    ! number of species
-  integer, save :: nreactions  ! number of reactions
+  integer, parameter :: naux = 0   ! number of auxiliary components
+  integer, parameter :: nspecies = NUM_SPECIES
+  integer, parameter :: nreactions = NUM_REACTIONS
+  integer, parameter :: nelements = NUM_ELEMENTS
 
   logical, save :: chemistry_initialized = .false.
 
   integer, parameter :: L_elem_name = 3 ! Each element name has at most 3 characters
   character*(L_elem_name), allocatable, save :: elem_names(:)
 
-  integer, parameter :: L_spec_name = 16 ! Each species name has at most 8 characters
+  integer, parameter :: L_spec_name = 16 ! Each species name has at most 16 characters
   character*(L_spec_name), allocatable, save :: spec_names(:)
+
+  integer, parameter :: L_aux_name = 16 ! Each aux name has at most 16 characters
+  character*(L_aux_name), allocatable, save :: aux_names(:)
 
 #ifdef AMREX_USE_CUDA
   real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
@@ -21,9 +28,12 @@ module chemistry_module
   real(amrex_real), allocatable, save :: molecular_weight(:), inv_mwt(:)
 #endif
 
+
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
+  integer, private :: names(nspecies * L_spec_name)
+  
 contains
 
   subroutine chemistry_init()
@@ -34,6 +44,7 @@ contains
     call ckinit()
     call ckindx(iwrk, rwrk, nelements, nspecies, nreactions, nfit)
 
+    allocate(aux_names(naux))
     allocate(elem_names(nelements))
     allocate(spec_names(nspecies))
     allocate(molecular_weight(nspecies))
@@ -74,8 +85,8 @@ contains
 
 
   subroutine chemistry_close()
-    deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
     call ckfinalize()
+    deallocate(elem_names,spec_names,aux_names,molecular_weight,inv_mwt)
   end subroutine chemistry_close
 
 

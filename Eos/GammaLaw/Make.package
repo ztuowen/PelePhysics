@@ -1,1 +1,1 @@
-F90EXE_sources += eos.F90
+f90EXE_sources += gammaLaw_eos.f90

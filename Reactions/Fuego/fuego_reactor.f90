@@ -1,12 +1,12 @@
-module actual_reactor_module
+module reactor_module
 
   use amrex_fort_module, only : amrex_real
-  use network, only: nspec, spec_names
+  use chemistry_module, only: nspecies, spec_names
   use react_type_module
   use eos_type_module
 
   implicit none
-  real(amrex_real), private, allocatable :: vodeVec(:),cdot(:),rhoydot_ext(:)
+  real(amrex_real), private :: vodeVec(nspecies+1),cdot(nspecies),rhoydot_ext(nspecies)
   real(amrex_real), private:: rhoedot_ext, rhoe_init, time_init
   integer,private :: iloc, jloc, kloc
   type (eos_t) :: eos_state
@@ -14,14 +14,14 @@ module actual_reactor_module
 
 contains
 
-  subroutine actual_reactor_init()
+  subroutine reactor_init()
 
     use vode_module, only : vode_init
     integer :: neq, verbose, itol, order, maxstep
     real(amrex_real) :: rtol, atol
     logical :: use_ajac, save_ajac, always_new_j, stiff
 
-    neq = nspec + 1
+    neq = nspecies + 1
     verbose = 0
     itol = 1
     order = 2
@@ -35,62 +35,33 @@ contains
     call vode_init(neq,verbose,itol,rtol,atol,order,&
          maxstep,use_ajac,save_ajac,always_new_j,stiff)
 
-    allocate(vodeVec(neq))
-    allocate(cdot(nspec))
-    allocate(rhoydot_ext(nspec))
     call build(eos_state)
 
-  end subroutine actual_reactor_init
+  end subroutine reactor_init
 
 
-  subroutine actual_reactor_close()
+  subroutine reactor_close()
 
-    deallocate(vodeVec)
-    deallocate(cdot)
-    deallocate(rhoydot_ext)
     call destroy(eos_state)
    
-  end subroutine actual_reactor_close
+  end subroutine reactor_close
 
 
-  function actual_ok_to_react(state)
-
-    use extern_probin_module, only: react_T_min, react_T_max, react_rho_min, react_rho_max
-
-    implicit none
-
-    type (react_t),intent(in) :: state
-    logical                   :: actual_ok_to_react
-    real(amrex_real)           :: rho
-
-    actual_ok_to_react = .true.
-
-    rho = sum(state % rhoY)
-    if (state % T   < react_T_min   .or. state % T   > react_T_max .or. &
-        rho         < react_rho_min .or. rho         > react_rho_max) then
-
-       actual_ok_to_react = .false.
-
-    endif
-
-  end function actual_ok_to_react
-
-
-  function actual_react_null(react_state_in, react_state_out, dt_react, time)
+  function react_null(react_state_in, react_state_out, dt_react, time)
     
     type(react_t),   intent(in   ) :: react_state_in
     type(react_t),   intent(inout) :: react_state_out
     real(amrex_real), intent(in   ) :: dt_react, time
-    type(reaction_stat_t)          :: actual_react_null
+    type(reaction_stat_t)          :: react_null
 
     react_state_out = react_state_in
-    actual_react_null % cost_value = 0.d0
-    actual_react_null % reactions_succesful = .true.
+    react_null % cost_value = 0.d0
+    react_null % reactions_succesful = .true.
 
-  end function actual_react_null
+  end function react_null
 
 
-  function actual_react(react_state_in, react_state_out, dt_react, time)
+  function react(react_state_in, react_state_out, dt_react, time)
     
     use amrex_error_module
     use vode_module, only : verbose, itol, rtol, atol, vode_MF=>MF, always_new_j, &
@@ -100,7 +71,7 @@ contains
     type(react_t),   intent(in   ) :: react_state_in
     type(react_t),   intent(inout) :: react_state_out
     real(amrex_real), intent(in   ) :: dt_react, time
-    type(reaction_stat_t)          :: actual_react
+    type(reaction_stat_t)          :: react
 
     external dvode
 
@@ -111,7 +82,7 @@ contains
     eos_state % rho = sum(react_state_in % rhoY(:))
     eos_state % T = react_state_in % T
     rhoInv = 1.d0 / eos_state % rho
-    eos_state % massfrac(1:nspec) = react_state_in % rhoY(1:nspec) * rhoInv
+    eos_state % massfrac(1:nspecies) = react_state_in % rhoY(1:nspecies) * rhoInv
     eos_state % e = react_state_in % e
 
     call eos_re(eos_state)
@@ -121,14 +92,14 @@ contains
     MF = vode_MF
     vodeTime = time
     vodeEndTime = time + dt_react
-    neq = nspec + 1
+    neq = nspecies + 1
 
-    vodeVec(1:nspec) = react_state_in % rhoY(:)
+    vodeVec(1:nspecies) = react_state_in % rhoY(:)
     vodeVec(neq) = eos_state % T
 
     rhoe_init = eos_state % e  *  eos_state % rho
     rhoedot_ext = react_state_in % rhoedot_ext
-    rhoydot_ext(1:nspec) = react_state_in % rhoydot_ext(1:nspec)
+    rhoydot_ext(1:nspecies) = react_state_in % rhoydot_ext(1:nspecies)
     time_init = time
     iloc = react_state_in % i
     jloc = react_state_in % j
@@ -161,7 +132,7 @@ contains
        write(6,*) ' number of Newton failures = ',vodeiwork(21)
        if (istate.eq.-4 .or. istate.eq.-5) then
           ifail = vodeiwork(16)
-          if (ifail .eq. nspec+1) then
+          if (ifail .eq. nspecies+1) then
              write(6,*) '   T has the largest error'
           else
              write(6,*) '   spec with largest error = ', trim(spec_names(ifail))
@@ -171,24 +142,24 @@ contains
 
     if (istate > 0) then
 
-       actual_react % reactions_succesful = .true.
-       actual_react % cost_value = DBLE(vodeiwork(12)) ! number of f evaluations
+       react % reactions_succesful = .true.
+       react % cost_value = DBLE(vodeiwork(12)) ! number of f evaluations
 
-       eos_state % rho = sum(vodeVec(1:nspec))
+       eos_state % rho = sum(vodeVec(1:nspecies))
        eos_state % T = vodeVec(neq)
        rhoInv = 1.d0 / eos_state % rho
-       eos_state % massfrac(1:nspec) = vodeVec(1:nspec) * rhoInv
+       eos_state % massfrac(1:nspecies) = vodeVec(1:nspecies) * rhoInv
        eos_state % e = (rhoe_init  +  dt_react*rhoedot_ext)/eos_state % rho
        call eos_re(eos_state)
 
-       react_state_out % rhoY(:) = vodeVec(1:nspec)
+       react_state_out % rhoY(:) = vodeVec(1:nspecies)
        react_state_out % rho = eos_state % rho
        react_state_out % T = eos_state % T
        react_state_out % e = eos_state % e
 
     else
 
-       actual_react % reactions_succesful = .false.
+       react % reactions_succesful = .false.
 
        print *,'vode failed at',react_state_in % i,react_state_in % j,react_state_in % k
        print *,'input state:'
@@ -197,7 +168,7 @@ contains
        print *,'rho',react_state_in%rho
        print *,'rhoY',react_state_in%rhoY
        print *,'rhoe forcing',react_state_in%rhoedot_ext
-       print *,'rhoY forcing',react_state_in%rhoydot_ext(1:nspec)
+       print *,'rhoY forcing',react_state_in%rhoydot_ext(1:nspecies)
 
        write(6,*) '......dvode data:'
        write(6,*) ' last successful step size = ',voderwork(11)
@@ -213,7 +184,7 @@ contains
        write(6,*) ' number of Newton failures = ',vodeiwork(21)
        if (istate.eq.-4 .or. istate.eq.-5) then
           ifail = vodeiwork(16)
-          if (ifail .eq. nspec+1) then
+          if (ifail .eq. nspecies+1) then
              write(6,*) '   T has the largest error'
           else
              write(6,*) '   spec with largest error = ', trim(spec_names(ifail))
@@ -221,13 +192,13 @@ contains
        end if
 
        print *,'Final T',vodeVec(neq)
-       print *,'Final rhoY',vodeVec(1:nspec)
+       print *,'Final rhoY',vodeVec(1:nspecies)
 
        call amrex_error('vode failed')
 
     end if
 
-  end function actual_react
+  end function react
 
 
   subroutine f_rhs(neq, time, y, ydot, rpar, ipar)
@@ -239,9 +210,9 @@ contains
     integer         :: n
     real(amrex_real) :: rhoInv
 
-    eos_state % rho = sum(y(1:nspec))
+    eos_state % rho = sum(y(1:nspecies))
     rhoInv = 1.d0 / eos_state % rho
-    eos_state % massfrac(1:nspec) = y(1:nspec) * rhoInv
+    eos_state % massfrac(1:nspecies) = y(1:nspecies) * rhoInv
     eos_state % T = y(neq) ! guess
     eos_state % e = (rhoe_init + (time - time_init) * rhoedot_ext) * rhoInv
     call eos_re(eos_state)
@@ -251,7 +222,7 @@ contains
     call ckwc(eos_state % T, eos_state % Acti, iwrk, rwrk, cdot)
 
     ydot(neq) = rhoedot_ext
-    do n=1,nspec
+    do n=1,nspecies
        ydot(n) = cdot(n) * molecular_weight(n) + rhoYdot_ext(n)
        ydot(neq) = ydot(neq) - eos_state%ei(n)*ydot(n)
     end do
@@ -270,4 +241,4 @@ contains
 
   end subroutine f_jac
 
-end module actual_reactor_module
+end module reactor_module
