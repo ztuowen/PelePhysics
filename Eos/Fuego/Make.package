@@ -1,2 +1,2 @@
-F90EXE_sources += eos.F90
+f90EXE_sources += fuego_eos.f90
 F90EXE_sources += eos_c.F90

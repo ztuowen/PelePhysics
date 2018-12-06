@@ -1,55 +1,40 @@
 module chemistry_module
 
+#include "mechanism.h"
   use amrex_fort_module, only : amrex_real
+
   implicit none
 
-  integer, save :: nelements   ! number of elements
-  integer, save :: nspecies    ! number of species
-  integer, save :: nreactions  ! number of reactions
+  integer, parameter :: naux = 0   ! number of auxiliary components
+  integer, parameter :: nspecies = NSP   ! number of species
+  integer, parameter :: nreactions = FWD_RATES ! number of reactions
 
   logical, save :: chemistry_initialized = .false.
 
-  integer, parameter :: L_elem_name = 3 ! Each element name has at most 3 characters
-  character*(L_elem_name), allocatable, save :: elem_names(:)
+  integer, parameter :: L_spec_name = 16 ! Each species name has at most 16 characters
+  character*(L_spec_name), save :: spec_names(nspecies)
 
-  integer, parameter :: L_spec_name = 16 ! Each species name has at most 8 characters
-  character*(L_spec_name), allocatable, save :: spec_names(:)
+  integer, parameter :: L_aux_name = 16 ! Each aux name has at most 16 characters
+  character*(L_aux_name), save :: aux_names(naux)
 
 #ifdef AMREX_USE_CUDA
-  real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
+  real(amrex_real), managed, save :: molecular_weight(nspecies), inv_mwt(nspecies)
 #else
-  real(amrex_real), allocatable, save :: molecular_weight(:), inv_mwt(:)
+  real(amrex_real), save :: molecular_weight(nspecies), inv_mwt(nspecies)
 #endif
 
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
+  integer, private :: names(nspecies * L_spec_name)
+  
 contains
 
   subroutine chemistry_init()
     integer :: nfit, i, ic, ii
     real(amrex_real) :: T0
-    integer, allocatable :: names(:)
 
     call ckinit()
-    call ckindx(iwrk, rwrk, nelements, nspecies, nreactions, nfit)
-
-    allocate(elem_names(nelements))
-    allocate(spec_names(nspecies))
-    allocate(molecular_weight(nspecies))
-    allocate(inv_mwt(nspecies))
-
-    allocate(names(nspecies*L_spec_name))  
-
-    call cksyme(names, L_elem_name) 
-
-    ic = 1
-    do i = 1, nelements
-       do ii=1, L_elem_name
-          elem_names(i)(ii:ii) = char(names(ic))
-          ic = ic + 1
-       end do
-    end do
 
     call cksyms(names, L_spec_name) 
 
@@ -60,8 +45,6 @@ contains
           ic = ic+1
        end do
     end do
-
-    deallocate(names)
 
     call ckwt(iwrk, rwrk, molecular_weight)
     inv_mwt = 1.d0 / molecular_weight
@@ -74,7 +57,6 @@ contains
 
 
   subroutine chemistry_close()
-    deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
     call ckfinalize()
   end subroutine chemistry_close
 
