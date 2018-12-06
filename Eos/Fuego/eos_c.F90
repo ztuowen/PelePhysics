@@ -10,7 +10,7 @@ module eos_bind_module
       bind(C,name="CKPY")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(inout) :: rho, T, p
-      real(c_double), intent(inout), dimension(9) :: massfrac
+      real(c_double), intent(inout), dimension(*) :: massfrac
       real(c_double), intent(in) :: rwrk
       integer(c_int), intent(in) :: iwrk
     end subroutine ckpy_d
