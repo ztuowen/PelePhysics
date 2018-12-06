@@ -60,6 +60,28 @@ class FMC(Application):
         for line in lines:
             outputFile.write(line)
             outputFile.write('\n')
+
+        definesFile = self._openOutput('mechanism.h')
+        nReactions = len(mechanism.reaction())
+        nElements = len(mechanism.element())
+        nSpecies = len(mechanism.species())
+        definesFile.write("#ifndef MECHANISM_h\n")
+        definesFile.write("#define MECHANISM_h\n")
+        definesFile.write("#if 0\n")
+        definesFile.write("/* Elements \n")
+        for i,e in enumerate(mechanism.element()):
+            definesFile.write("%d %s\n" % (i,e.symbol))
+        definesFile.write("*/\n")
+        definesFile.write("/* Species \n")
+        for i,s in enumerate(mechanism.species()):
+            definesFile.write("%d %s\n" % (i,s.symbol))
+        definesFile.write("*/\n")
+        definesFile.write("#endif\n")
+        definesFile.write("#define NUM_ELEMENTS %d\n" % nElements)
+        definesFile.write("#define NUM_SPECIES %d\n" % nSpecies)
+        definesFile.write("#define NUM_REACTIONS %d\n" % nReactions)
+        definesFile.write("#endif\n")
+        
         print "... done (%g sec)" % timer.stop()
 
         return

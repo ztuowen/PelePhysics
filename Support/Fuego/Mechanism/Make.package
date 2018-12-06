@@ -1,6 +1,6 @@
 ifdef Chemistry_Model
-  F90EXE_sources += chemistry_module.F90
+  F90EXE_sources += fuego_chemistry.F90
   CEXE_headers   += ReactionData.H
 else
-  f90EXE_sources += chemistry_module_null.f90
+  f90EXE_sources += null_chemistry.f90
 endif

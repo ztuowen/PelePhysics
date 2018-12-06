@@ -1,13 +1,14 @@
 module chemistry_module
 
 #include "mechanism.h"
+
   use amrex_fort_module, only : amrex_real
 
   implicit none
 
   integer, parameter :: naux = 0   ! number of auxiliary components
-  integer, parameter :: nspecies = NSP   ! number of species
-  integer, parameter :: nreactions = FWD_RATES ! number of reactions
+  integer, parameter :: nspecies = NUM_SPECIES
+  integer, parameter :: nreactions = NUM_REACTIONS
 
   logical, save :: chemistry_initialized = .false.
 
