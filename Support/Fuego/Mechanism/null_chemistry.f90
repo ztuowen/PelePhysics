@@ -18,7 +18,7 @@ module chemistry_module
 
   real(amrex_real), save :: molecular_weight(nspecies), inv_mwt(nspecies)
 
-  real(amrex_real), save :: Ru, Ruc, Patm
+  real(amrex_real), parameter :: Ru=8.31451d+07, Ruc=1.98721558317399615845, Patm=1.01325d+06
 
 contains
 

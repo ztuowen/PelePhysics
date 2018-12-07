@@ -28,9 +28,9 @@ module chemistry_module
   real(amrex_real), allocatable, save :: molecular_weight(:), inv_mwt(:)
 #endif
 
-
-  real(amrex_real), save :: Ru, Ruc, Patm, rwrk
-  integer, save          :: iwrk
+  real(amrex_real), parameter :: Ru=8.31451d7, Ruc=1.98721558317399615845d0, Patm=1.01325d6
+  real(amrex_real), save :: rwrk=1.d0
+  integer, save          :: iwrk=1
 
   integer, private :: names(nspecies * L_spec_name)
   
@@ -42,7 +42,6 @@ contains
     integer, allocatable :: names(:)
 
     call ckinit()
-    call ckindx(iwrk, rwrk, nelements, nspecies, nreactions, nfit)
 
     allocate(aux_names(naux))
     allocate(elem_names(nelements))
@@ -76,8 +75,6 @@ contains
 
     call ckwt(iwrk, rwrk, molecular_weight)
     inv_mwt = 1.d0 / molecular_weight
-
-    call ckrp(iwrk, rwrk, Ru, Ruc, Patm)
 
     chemistry_initialized = .true.
 

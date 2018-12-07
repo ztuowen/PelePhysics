@@ -4,8 +4,7 @@ module eos_module
   use amrex_constants_module
   use eos_type_module
   use eos_bind_module
-  use chemistry_module, only : nspecies, inv_mwt, chemistry_init, chemistry_initialized, spec_names
-  use chem_params_module, only : Ru
+  use chemistry_module, only : nspecies, inv_mwt, Ru, chemistry_init, chemistry_initialized, spec_names
 
   implicit none
   character (len=64) :: eos_name = "fuego"
@@ -19,7 +18,6 @@ module eos_module
 #ifdef AMREX_USE_CUDA
   public  :: eos_re_d
 #endif
-  private :: nspecies, Ru, inv_mwt
 
   interface
      subroutine amrex_array_init_snan (p, nelem) bind(C,name="amrex_array_init_snan")
