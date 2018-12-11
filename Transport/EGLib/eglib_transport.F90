@@ -74,7 +74,7 @@ contains
     npts_egz = 0
 
   end subroutine destroy_internal
-#if 0 
+
   subroutine get_transport_coeffs( &
        lo,hi, &
        massfrac,    mf_lo, mf_hi, &
@@ -152,74 +152,7 @@ contains
     call destroy(coeff)
 
   end subroutine get_transport_coeffs
-#endif 
-
-  subroutine get_transport_coeffs(nc, &
-       lo,   hi, &
-       q,    q_lo,  q_hi, &
-       c,    c_lo,  c_hi) &
-       bind(C, name="get_transport_coeffs")
-
-    use chemistry_module, only: nspecies
-    use amrex_fort_module, only : amrex_real
-    use meth_params_module, only: QVAR, QFS, QTEMP, QRHO
-    use eos_module
-
-    implicit none
-
-    integer         , intent(in   ) ::    nc 
-    integer         , intent(in   ) ::    lo(3),   hi(3)
-    integer         , intent(in   ) ::  q_lo(3), q_hi(3)
-    integer         , intent(in   ) ::  c_lo(3), c_hi(3)
-    real (kind=amrex_real), intent(in   ) :: q(q_lo(1):q_hi(1),q_lo(2):q_hi(2),q_lo(3):q_hi(3),QVAR)
-    real (kind=amrex_real), intent(inout) :: c(c_lo(1):c_hi(1),c_lo(2):c_hi(2),c_lo(3):c_hi(3),nc)
-
-    ! local variables
-    integer      :: i, j, k, n, np
-    type (wtr_t) :: which_trans
-    type (trv_t) :: coeff
-
-    np = hi(1)-lo(1)+1
-    call build(coeff,np)
-
-    which_trans % wtr_get_xi    = .true.
-    which_trans % wtr_get_mu    = .true.
-    which_trans % wtr_get_lam   = .true.
-    which_trans % wtr_get_Ddiag = .true.
-
-    do k = lo(3),hi(3)
-       do j = lo(2),hi(2)
-
-          do i=1,np
-             coeff%eos_state(i)%massfrac(1:nspecies) = q(lo(1)+i-1,j,k,QFS:QFS+nspecies-1)
-          end do
-
-          do i=lo(1),hi(1)
-             coeff%eos_state(i-lo(1)+1)%T = q(i,j,k,QTEMP)
-             coeff%eos_state(i-lo(1)+1)%rho = q(i,j,k,QRHO)
-          end do
-
-          call transport(which_trans, coeff)
-
-!I think this is correct. TODO check with Marc 
-          do i=lo(1),hi(1)
-             c(i,j,k,nspecies+1)  = coeff %  mu(i-lo(1)+1)
-             c(i,j,k,nspecies+2)  = coeff %  xi(i-lo(1)+1)
-             c(i,j,k,nspecies+3) = coeff % lam(i-lo(1)+1)
-          end do
-          do n=1,nspecies
-             do i=lo(1),hi(1)
-                c(i,j,k,n) = coeff % Ddiag(i-lo(1)+1,n)
-             end do
-          end do
-
-       end do
-    end do
-
-    call destroy(coeff)
-
-  end subroutine get_transport_coeffs
-
+  
   subroutine transport(which, coeff)
 
     use amrex_error_module
