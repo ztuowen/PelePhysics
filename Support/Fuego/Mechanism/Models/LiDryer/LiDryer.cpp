@@ -400,7 +400,9 @@ void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi
 void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* restrict sc,
                 double* restrict k_f_s,double* restrict Kc_s,
                 double* restrict tc,double* restrict invT,double* restrict T);
-
+AMREX_GPU_HOST_DEVICE
+void get_imw(double* neww);
+ 
 /* Inverse molecular weights */
 #ifdef AMREX_USE_CUDA
 __managed__ double imw[9] = {
@@ -443,6 +445,11 @@ void GET_REACTION_MAP(int *rmap)
     }
 }
 
+AMREX_GPU_HOST_DEVICE
+void get_imw(double *imw_new){
+#pragma unroll
+    for(int i = 0; i<9; ++i) imw_new[i] = imw[i]; 
+}
 
 #include <ReactionData.H>
 double* GetParamPtr(int                reaction_id,
