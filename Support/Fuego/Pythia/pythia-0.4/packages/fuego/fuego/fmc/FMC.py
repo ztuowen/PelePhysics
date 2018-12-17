@@ -88,7 +88,7 @@ class FMC(Application):
             pyre.properties.str("thermo", default=""),
             pyre.properties.str("trans", default=""),
             pyre.properties.str("input", default=""),
-            pyre.properties.str("output", default="c"),
+            pyre.properties.str("output", default="f"),
             ]
 
 
