@@ -21,7 +21,6 @@ convrate_*
 # AMReX build directories
 d/
 o/
-f/
 extern.f90
 AMReX_buildInfo.cpp
 tmp_build_dir/
@@ -31,7 +30,6 @@ tmp_build_dir/
 *.exe
 *.agr
 *.par
-
 
 # Run output
 *.p3d
