@@ -357,7 +357,7 @@ class FPickler(CMill):
         #self._ckmmwy(mechanism)
         #self._ckmmwx(mechanism)
         #self._ckmmwc(mechanism)
-        #self._ckytx(mechanism)
+        self._ckytx(mechanism)
         self._vckytx(mechanism)
         #self._ckytcp(mechanism)
         #self._ckytcr(mechanism)
@@ -382,7 +382,7 @@ class FPickler(CMill):
         #self._ckcvms(mechanism)
         #self._ckcpms(mechanism)
         #self._ckums(mechanism)
-        #self._ckhms(mechanism)
+        self._ckhms(mechanism)
         self._vckhms(mechanism)
         #self._ckgms(mechanism)
         #self._ckams(mechanism)
@@ -454,6 +454,8 @@ class FPickler(CMill):
             'module fuego_module',
             '  implicit none',
             '  private',
+            '  public :: ckytx',
+            '  public :: ckhms',
             '  public :: vckytx',
             '  public :: vckhms',
             ]
@@ -467,6 +469,7 @@ class FPickler(CMill):
 
     def _end_module(self):
         self._rep += [
+            '',
             'end module fuego_module'
             ]
         return
@@ -1951,41 +1954,48 @@ class FPickler(CMill):
 
     #    return
  
-    #def _ckhms(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Returns enthalpy in mass units (Eq 27.)'))
-    #    self._write('void CKHMS'+sym+'(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict hms)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckhms(self, mechanism):
+        species = self.species
+        nSpec = len(species)
+        self._write()
+        self._write('! Returns enthalpy in mass units (Eq 27.)')
+        self._write('subroutine ckhms'+sym+'(T, iwrk, rwrk, hms)')
+        self._indent()
 
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    self._write(
-    #        'double RT = %g*tT; ' % (R*kelvin*mole/erg)
-    #        + self.line('R*T'))
-    #    
-    #    # call routine
-    #    self._write('speciesEnthalpy(hms, tc);')
-    #    
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('hms[i] *= RT*imw[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._outdent()
+        # get temperature cache
+        self._write('double precision, intent(in) :: T')
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: hms(%d)' % nSpec)
+        self._write()
+        self._write('double precision :: tT, RT')
+        self._write('double precision :: tc(5), h(%d)' % nSpec)
+        self._write('integer :: i')
+        self._write()
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+        self._write(
+            'RT = %g*tT ' % (R*kelvin*mole/erg)
+            + '! R*T')
+        
+        # call routine
+        self._write()
+        self._write('call speciesEnthalpy(hms, tc)')
+        self._write()
+        self._write('do i=1, %d' % (nSpec))
+        self._indent()
+        self._write('hms(i) = hms(i) * (RT*imw(i))')
+        self._outdent()
+        self._write('end do')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
-
-    #    return
+        return
 
     def _vckhms(self, mechanism):
         species = self.species
@@ -2031,6 +2041,7 @@ class FPickler(CMill):
         self._write('end do')
 
         self._outdent()
+        self._write()
         self._write('end subroutine')
 
         return
@@ -3389,45 +3400,44 @@ class FPickler(CMill):
 
     #    return 
  
-    #def _ckytx(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line(
-    #        'convert y[species] (mass fracs) to x[species] (mole fracs)'))
-    #    self._write('void CKYTX'+sym+'(double * restrict y, int * iwrk, double * restrict rwrk, double * restrict x)')
-    #    self._write('{')
-    #    self._indent()
-
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write('double YOW = 0;')
-    #    self._write('double tmp[%d];' % (nSpec))
-    #    self._write('')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('tmp[i] = y[i]*imw[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('YOW += tmp[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('')
-    #    self._write('double YOWINV = 1.0/YOW;')
-    #    self._write('')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('x[i] = y[i]*imw[i]*YOWINV;')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
-    #    return 
+    def _ckytx(self, mechanism):
+        species = self.species
+        nSpec = len(species)
+        self._write()
+        self._write('! convert y[species] (mass fracs) to x[species] (mole fracs)')
+        self._write('subroutine ckytx'+sym+'(y, iwrk, rwrk, x)')
+        self._indent()
+        self._write('double precision, intent(in) :: y(%d)' % (nSpec))
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: x(%d)' % (nSpec))
+        self._write()
+        self._write('double precision :: YOW, YOWINV')
+        self._write('double precision :: tmp(%d)' % (nSpec))
+        self._write('integer :: i')
+        self._write()
+        self._write('do i=1, %d' % (nSpec))
+        self._indent()
+        self._write('tmp(i) = y(i)*imw(i)')
+        self._outdent()
+        self._write('end do')
+        self._write('do i=1, %d' % (nSpec))
+        self._indent()
+        self._write('YOW = YOW + tmp(i)')
+        self._outdent()
+        self._write('end do')
+        self._write()
+        self._write('YOWINV = 1.d0/YOW')
+        self._write()
+        self._write('do i=1, %d' % (nSpec))
+        self._indent()
+        self._write('x(i) = y(i)*imw(i)*YOWINV')
+        self._outdent()
+        self._write('end do')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return 
  
     def _vckytx(self, mechanism):
         species = self.species
@@ -3478,7 +3488,8 @@ class FPickler(CMill):
         self._outdent()
         self._write('end do')
         self._outdent()
-        self._write('end subroutine vckytx')
+        self._write()
+        self._write('end subroutine')
         return 
  
     #def _ckytcp(self, mechanism):
@@ -6986,9 +6997,8 @@ class FPickler(CMill):
             self._outdent()
             self._write('end if')
             
-        self._write('return')
         self._outdent()
-
+        self._write()
         self._write('end subroutine')
 
         return
