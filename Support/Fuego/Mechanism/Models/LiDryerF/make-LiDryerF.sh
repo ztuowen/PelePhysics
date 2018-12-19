@@ -19,3 +19,5 @@ echo Compiling ${FINALFILE}...
 #          ${HEADERDIR}/header.end > ${FINALFILE}
 cat ${CHEMC} > ${FINALFILE}
 rm -f ${CHEMC} ${CHEMLK} ${LOG} 
+sed -i.bak '/\/\*/d' ${FINALFILE}
+rm ${FINALFILE}.bak
