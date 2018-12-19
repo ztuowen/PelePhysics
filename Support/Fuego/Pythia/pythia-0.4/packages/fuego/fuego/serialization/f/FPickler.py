@@ -2023,7 +2023,8 @@ class FPickler(CMill):
         self._indent()
         self._write('do i=1, np')
         self._indent()
-        self._write('hms(i,n) = hms(i,n) * (%g * T(i) * imw(n))' % (R*kelvin*mole/erg))
+        expression = format((R*kelvin*mole/erg), 'g')
+        self._write('hms(i,n) = hms(i,n) * (%s * T(i) * imw(n))' % expression.replace("e", "d"))
         self._outdent()
         self._write('end do')
         self._outdent()
@@ -6965,7 +6966,7 @@ class FPickler(CMill):
             self._indent()
 
             for species, lowRange, highRange in speciesList:
-                self._write('! species %d: %s' % (species.id, species.symbol))
+                self._write('! species %d: %s' % ((species.id + 1), species.symbol))
                 self._write('species(%d) = &' % (species.id + 1))
                 self._indent()
                 expressionGenerator(lowRange.parameters)
@@ -6976,7 +6977,7 @@ class FPickler(CMill):
             self._indent()
 
             for species, lowRange, highRange in speciesList:
-                self._write('!species %d: %s' % (species.id, species.symbol))
+                self._write('!species %d: %s' % ((species.id + 1), species.symbol))
                 self._write('species(%d) = &' % (species.id + 1))
                 self._indent()
                 expressionGenerator(highRange.parameters)
@@ -8375,12 +8376,12 @@ class FPickler(CMill):
 
 
     def _enthalpyNASA(self, parameters):
-        self._write('%+15.8e &' % parameters[0])
-        self._write('%+15.8e * tc(2) &' % (parameters[1]/2))
-        self._write('%+15.8e * tc(3) &' % (parameters[2]/3))
-        self._write('%+15.8e * tc(4) &' % (parameters[3]/4))
-        self._write('%+15.8e * tc(5) &' % (parameters[4]/5))
-        self._write('%+15.8e * invT' % (parameters[5]))
+        self._write('%s &' % ('%+15.8e' % parameters[0]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(2)' % (parameters[1]/2)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(3)' % (parameters[2]/3)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(4)' % (parameters[3]/4)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(5)' % (parameters[4]/5)).replace("e", "d"))
+        self._write('%s' % ('%+15.8e * invT' % (parameters[5])).replace("e", "d"))
         return
 
 
