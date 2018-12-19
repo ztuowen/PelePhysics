@@ -380,7 +380,7 @@ class FPickler(CMill):
         #self._cksml(mechanism)
         
         self._ckcvms(mechanism)
-        #self._ckcpms(mechanism)
+        self._ckcpms(mechanism)
         #self._ckums(mechanism)
         self._ckhms(mechanism)
         self._vckhms(mechanism)
@@ -455,6 +455,7 @@ class FPickler(CMill):
             '',
             '  implicit none',
             '  private',
+            '  public :: ckcpms',
             '  public :: ckcvms',
             '  public :: ckytx',
             '  public :: ckhms',
@@ -1118,7 +1119,7 @@ class FPickler(CMill):
         #self._gibbs(speciesInfo)
         #self._helmholtz(speciesInfo)
         self._cv(speciesInfo)
-        #self._cp(speciesInfo)
+        self._cp(speciesInfo)
         #self._speciesInternalEnergy(speciesInfo)
         self._speciesEnthalpy(speciesInfo)
         #self._speciesEntropy(speciesInfo)
@@ -2169,40 +2170,48 @@ class FPickler(CMill):
 
         return
 
-    #def _ckcpms(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Returns the specific heats at constant pressure'))
-    #    self._write(self.line('in mass units (Eq. 26)'))
-    #    self._write('void CKCPMS'+sym+'(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict cpms)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckcpms(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Returns the specific heats at constant pressure')
+        self._write('! in mass units (Eq. 26)')
+        self._write('subroutine ckcpms'+sym+'(T, iwrk, rwrk, cpms)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: T')
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: cpms(%d)' % nSpec)
+        self._write()
+        self._write('double precision :: tc(5)')
+        self._write('double precision :: tT')
+        self._write()
 
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    
-    #    # call routine
-    #    self._write('cp_R(cpms, tc);')
-    #    
+        # get temperature cache
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+        
+        # call routine
+        self._write()
+        self._write('call cp_R(cpms, tc)')
+        self._write()
+        
+        # convert cp/R to cp with mass units
+        self._write('! multiply by R/molecularweight')
+        for species in self.species:
+            ROW = format((R*kelvin*mole/erg) / species.weight, '20.15e').replace("e", "d")
+            self._write('cpms(%d) = cpms(%d) * %s ' % (
+                species.id + 1, species.id + 1, ROW) + '! %s' % species.symbol)
+       
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    # convert cp/R to cp with mass units
-    #    self._write(self.line('multiply by R/molecularweight'))
-    #    for species in self.species:
-    #        ROW = (R*kelvin*mole/erg) / species.weight
-    #        self._write('cpms[%d] *= %20.15e; ' % (
-    #            species.id, ROW) + self.line('%s' % species.symbol))
-
-    #   
-    #    self._outdent()
-
-    #    self._write('}')
-
-    #    return
+        return
 
     #def _cksms(self, mechanism):
     #    self._write()
@@ -6877,15 +6886,15 @@ class FPickler(CMill):
 
         return
 
-    #def _cp(self, speciesInfo):
+    def _cp(self, speciesInfo):
 
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('compute Cp/R at the given temperature'))
-    #    self._write(self.line('tc contains precomputed powers of T, tc[0] = log(T)'))
-    #    self._generateThermoRoutine("cp_R", self._cpNASA, speciesInfo)
+        self._write()
+        self._write()
+        self._write('! compute Cp/R at the given temperature')
+        self._write('! tc contains precomputed powers of T, tc[0] = log(T)')
+        self._generateThermoRoutine("cp_R", self._cpNASA, speciesInfo)
 
-    #    return
+        return
 
     #def _dcvpdT(self, speciesInfo):
 
@@ -6940,7 +6949,6 @@ class FPickler(CMill):
     def _speciesEnthalpy(self, speciesInfo):
 
         self._write()
-        self._write()
         self._write('! compute the h/(RT) at the given temperature (Eq 20)')
         self._write('! tc contains precomputed powers of T, tc(1) = log(T)')
         self._generateThermoRoutine("speciesEnthalpy", self._enthalpyNASA, speciesInfo, 1)
@@ -6953,8 +6961,6 @@ class FPickler(CMill):
         lowT, highT, midpoints = speciesInfo
         
         self._write('subroutine %s(species, tc)' % name)
-        self._write()
-
         self._indent()
 
         # declarations
@@ -8381,13 +8387,13 @@ class FPickler(CMill):
 
     #    return dG
 
-    #def _cpNASA(self, parameters):
-    #    self._write('%+15.8e' % parameters[0])
-    #    self._write('%+15.8e * tc[1]' % parameters[1])
-    #    self._write('%+15.8e * tc[2]' % parameters[2])
-    #    self._write('%+15.8e * tc[3]' % parameters[3])
-    #    self._write('%+15.8e * tc[4];' % parameters[4])
-    #    return
+    def _cpNASA(self, parameters):
+        self._write('%s &' % ('%+15.8e' % parameters[0]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(1)' % parameters[1]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(2)' % parameters[2]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(3)' % parameters[3]).replace("e", "d"))
+        self._write('%s' % ('%+15.8e * tc(4)' % parameters[4]).replace("e", "d"))
+        return
 
     #def _dcpdTNASA(self, parameters):
     #    self._write('%+15.8e' % parameters[1])
