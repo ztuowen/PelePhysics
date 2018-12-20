@@ -4,6 +4,7 @@ module fuego_module
   private
   public :: ckcpms
   public :: ckcvms
+  public :: ckxty
   public :: ckytx
   public :: ckhms
   public :: vckytx
@@ -82,6 +83,43 @@ subroutine vckytx(np, y, iwrk, rwrk, x)
             x(i,n) = x(i,n) * YOW(i)
         end do
     end do
+
+end subroutine
+
+! convert x[species] (mole fracs) to y[species] (mass fracs)
+subroutine ckxty(x, iwrk, rwrk, y)
+
+    double precision, intent(in) :: x(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: y(9)
+
+    double precision :: XW, XWinv
+
+    XW = 0.d0 ! See Eq 4, 9 in CK Manual
+
+    ! Compute mean molecular wt first
+    XW = XW + (x(1) * 2.01594000d+00) ! H2
+    XW = XW + (x(2) * 3.19988000d+01) ! O2
+    XW = XW + (x(3) * 1.80153400d+01) ! H2O
+    XW = XW + (x(4) * 1.00797000d+00) ! H
+    XW = XW + (x(5) * 1.59994000d+01) ! O
+    XW = XW + (x(6) * 1.70073700d+01) ! OH
+    XW = XW + (x(7) * 3.30067700d+01) ! HO2
+    XW = XW + (x(8) * 3.40147400d+01) ! H2O2
+    XW = XW + (x(9) * 2.80134000d+01) ! N2
+
+    ! Now compute conversion
+    XWinv = 1.d0/XW
+    y(1) = x(1) * 2.01594000d+00 * XWinv 
+    y(2) = x(2) * 3.19988000d+01 * XWinv 
+    y(3) = x(3) * 1.80153400d+01 * XWinv 
+    y(4) = x(4) * 1.00797000d+00 * XWinv 
+    y(5) = x(5) * 1.59994000d+01 * XWinv 
+    y(6) = x(6) * 1.70073700d+01 * XWinv 
+    y(7) = x(7) * 3.30067700d+01 * XWinv 
+    y(8) = x(8) * 3.40147400d+01 * XWinv 
+    y(9) = x(9) * 2.80134000d+01 * XWinv 
 
 end subroutine
 
