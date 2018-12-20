@@ -10,6 +10,7 @@ module fuego_module
   public :: vckytx
   public :: vckhms
   public :: ckcvbs
+  public :: ckcpbs
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -133,8 +134,7 @@ subroutine ckcvms(T, iwrk, rwrk, cvms)
     double precision, intent(in) :: rwrk
     double precision, intent(inout) :: cvms(9)
 
-    double precision :: tc(5)
-    double precision :: tT
+    double precision :: tT, tc(5)
 
     tT = T ! temporary temperature
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
@@ -163,8 +163,7 @@ subroutine ckcpms(T, iwrk, rwrk, cpms)
     double precision, intent(in) :: rwrk
     double precision, intent(inout) :: cpms(9)
 
-    double precision :: tc(5)
-    double precision :: tT
+    double precision :: tT, tc(5)
 
     tT = T ! temporary temperature
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
@@ -245,6 +244,39 @@ subroutine vckhms(np, T, iwrk, rwrk, hms)
             hms(i,n) = hms(i,n) * ( 8.31451000d+07 * T(i) * imw(n))
         end do
     end do
+
+end subroutine
+
+! Returns the mean specific heat at CP (Eq. 34)
+subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
+
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: cpbs
+
+    double precision :: cpor(9)
+    double precision :: tresult(9)
+    double precision :: tT, tc(5)
+    double precision :: res
+    integer :: i
+
+    res = 0.d0
+
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+
+    call cp_R(cpor, tc)
+
+    do i=1, 9
+        tresult(i) = cpor(i) * y(i) * imw(i)
+    end do
+    do i=1, 9
+        res = res + tresult(i)
+    end do
+
+    cpbs = res * 8.31451000d+07
 
 end subroutine
 
