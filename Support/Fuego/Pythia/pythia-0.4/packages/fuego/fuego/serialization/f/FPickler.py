@@ -396,7 +396,7 @@ class FPickler(CMill):
         #self._ckhbml(mechanism)
         #self._ckhbms(mechanism)
         #self._ckubml(mechanism)
-        #self._ckubms(mechanism)
+        self._ckubms(mechanism)
         #self._cksbml(mechanism)
         #self._cksbms(mechanism)
         #self._ckgbml(mechanism)
@@ -441,7 +441,7 @@ class FPickler(CMill):
         self._thermo(mechanism)
         #self._molecularWeight(mechanism)
         #self._atomicWeight(mechanism)
-        #self._T_given_ey(mechanism)
+        self._T_given_ey(mechanism)
         #self._T_given_hy(mechanism)
         #self._getCriticalParameters(mechanism)
         #self._trans(mechanism)
@@ -466,6 +466,7 @@ class FPickler(CMill):
             '  public :: vckytx',
             '  public :: vckhms',
             '  public :: ckcvbs',
+            '  public :: ckubms',
             '  public :: ckcpbs',
             '  public :: ckpy',
             ]
@@ -2598,50 +2599,57 @@ class FPickler(CMill):
 
     #    return
  
-    #def _ckubms(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('get mean internal energy in mass units'))
-    #    self._write('void CKUBMS'+sym+'(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict ubms)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckubms(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! get mean internal energy in mass units')
+        self._write('subroutine ckubms'+sym+'(T, y, iwrk, rwrk, ubms)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(out) :: ubms')
+        self._write()
+        self._write('double precision :: ums(%d)' % nSpec + ' ! temporary energy array')
+        self._write('double precision :: res')
+        self._write('double precision :: RT, tT, tc(5)')
+        self._write()
+        self._write('res = 0.d0')
+        self._write()
+        
+        # get temperature cache
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+       
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write('RT =%s * tT ' % expression + '! R*T')
+        
+        # call routine
+        self._write()
+        self._write('call speciesInternalEnergy(ums, tc)')
+        self._write()
 
-    #    self._write('double result = 0;')
-    #    
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    self._write(
-    #        'double ums[%d]; ' % self.nSpecies + self.line(' temporary energy array'))
-    #    
-    #    self._write(
-    #        'double RT = %g*tT; ' % (R*kelvin*mole/erg)
-    #        + self.line('R*T'))
-    #    
-    #    # call routine
-    #    self._write('speciesInternalEnergy(ums, tc);')
+        # convert e/RT to e with mass units
+        self._write('! perform dot product + scaling by wt')
+        for species in self.species:
+            self._write('res = res + (y(%d) * ums(%d) * imw(%d)) ' % (
+                species.id + 1, species.id + 1, species.id + 1)
+                        + '! %s' % species.symbol)
 
-    #    # convert e/RT to e with mass units
-    #    self._write(self.line('perform dot product + scaling by wt'))
-    #    for species in self.species:
-    #        self._write('result += y[%d]*ums[%d]*imw[%d]; ' % (
-    #            species.id, species.id, species.id)
-    #                    + self.line('%s' % species.symbol))
-
-    #    
-    #    self._write()
-    #    # finally, multiply by RT
-    #    self._write('*ubms = result * RT;')
-    #    
-    #    self._outdent()
-
-    #    self._write('}')
-    #    
-    #    return
+        self._write()
+        # finally, multiply by RT
+        self._write('ubms = res * RT')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        
+        return
  
     #def _cksbml(self, mechanism):
     #    self._write()
@@ -8512,70 +8520,100 @@ class FPickler(CMill):
     #    self._write('%+15.8e ;' % (parameters[6]))
     #    return
 
-    #def _T_given_ey(self, mechanism):
-    #    self._write(self.line(' get temperature given internal energy in mass units and mass fracs'))
-    #    self._write('void GET_T_GIVEN_EY(double * restrict e, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict t, int * ierr)')
-    #    self._write('{')
-    #    self._write('#ifdef CONVERGENCE')
-    #    self._indent()
-    #    self._write('const int maxiter = 5000;')
-    #    self._write('const double tol  = 1.e-12;')
-    #    self._outdent()
-    #    self._write('#else')
-    #    self._indent()
-    #    self._write('const int maxiter = 200;')
-    #    self._write('const double tol  = 1.e-6;')
-    #    self._outdent()
-    #    self._write('#endif')
-    #    self._indent()
-    #    self._write('double ein  = *e;')
-    #    self._write('double tmin = 90;'+self.line('max lower bound for thermo def'))
-    #    self._write('double tmax = 4000;'+self.line('min upper bound for thermo def'))
-    #    self._write('double e1,emin,emax,cv,t1,dt;')
-    #    self._write('int i;'+self.line(' loop counter'))
-    #    self._write('CKUBMS(&tmin, y, iwrk, rwrk, &emin);')
-    #    self._write('CKUBMS(&tmax, y, iwrk, rwrk, &emax);')
-    #    self._write('if (ein < emin) {')
-    #    self._indent()
-    #    self._write(self.line('Linear Extrapolation below tmin'))
-    #    self._write('CKCVBS(&tmin, y, iwrk, rwrk, &cv);')
-    #    self._write('*t = tmin - (emin-ein)/cv;')
-    #    self._write('*ierr = 1;')
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('if (ein > emax) {')
-    #    self._indent()
-    #    self._write(self.line('Linear Extrapolation above tmax'))
-    #    self._write('CKCVBS(&tmax, y, iwrk, rwrk, &cv);')
-    #    self._write('*t = tmax - (emax-ein)/cv;')
-    #    self._write('*ierr = 1;')
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('t1 = *t;')
-    #    self._write('if (t1 < tmin || t1 > tmax) {')
-    #    self._indent()
-    #    self._write('t1 = tmin + (tmax-tmin)/(emax-emin)*(ein-emin);')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('for (i = 0; i < maxiter; ++i) {')
-    #    self._indent()
-    #    self._write('CKUBMS(&t1,y,iwrk,rwrk,&e1);')
-    #    self._write('CKCVBS(&t1,y,iwrk,rwrk,&cv);')
-    #    self._write('dt = (ein - e1) / cv;')
-    #    self._write('if (dt > 100.) { dt = 100.; }')
-    #    self._write('else if (dt < -100.) { dt = -100.; }')
-    #    self._write('else if (fabs(dt) < tol) break;')
-    #    self._write('else if (t1+dt == t1) break;')
-    #    self._write('t1 += dt;')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('*t = t1;')
-    #    self._write('*ierr = 0;')
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
+    def _T_given_ey(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! get temperature given internal energy in mass units and mass fracs')
+        self._write('subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: e')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(out) :: t')
+        self._write('integer, intent(out) :: ierr')
+        self._write()
+        self._outdent()
+        self._write('#ifdef CONVERGENCE')
+        self._indent()
+        self._write('integer, parameter :: maxiter = 5000')
+        self._write('double precision, parameter tol = 1.d-12')
+        self._outdent()
+        self._write('#else')
+        self._indent()
+        self._write('integer, parameter :: maxiter = 200')
+        self._write('double precision, parameter :: tol = 1.d-6')
+        self._outdent()
+        self._write('#endif')
+        self._write()
+        self._indent()
+        self._write('double precision :: ein')
+        self._write('double precision, parameter :: tmin = 90.d0' + ' ! max lower bound for thermo def')
+        self._write('double precision, parameter :: tmax = 4000.d0' + ' ! min upper bound for thermo def')
+        self._write('double precision :: e1,emin,emax,cv,t1,dt')
+        self._write('integer :: i' + ' ! loop counter')
+        self._write()
+        self._write('ein = e')
+        self._write()
+        self._write('call ckubms(tmin, y, iwrk, rwrk, emin)')
+        self._write('call ckubms(tmax, y, iwrk, rwrk, emax)')
+        self._write()
+        self._write('if (ein < emin) then')
+        self._indent()
+        self._write('! Linear Extrapolation below tmin')
+        self._write('call ckcvbs(tmin, y, iwrk, rwrk, cv)')
+        self._write('t = tmin - (emin-ein) / cv')
+        self._write('ierr = 1')
+        self._write('return')
+        self._outdent()
+        self._write('end if')
+        self._write('if (ein > emax) then')
+        self._indent()
+        self._write('! Linear Extrapolation above tmax')
+        self._write('call ckcvbs(tmax, y, iwrk, rwrk, cv)')
+        self._write('t = tmax - (emax - ein) / cv')
+        self._write('ierr = 1')
+        self._write('return')
+        self._outdent()
+        self._write('end if')
+        self._write('t1 = t')
+        self._write('if (t1 < tmin .or. t1 > tmax) then')
+        self._indent()
+        self._write('t1 = tmin + (tmax-tmin)/(emax-emin)*(ein-emin)')
+        self._outdent()
+        self._write('end if')
+        self._write('do i=1, maxiter')
+        self._indent()
+        self._write('call ckubms(t1,y,iwrk,rwrk,e1)')
+        self._write('call ckcvbs(t1,y,iwrk,rwrk,cv)')
+        self._write('dt = (ein - e1) / cv')
+        self._write('if (dt > 100.d0) then')
+        self._indent()
+        self._write('dt = 100.d0')
+        self._outdent()
+        self._write('else if (dt < -100.d0) then')
+        self._indent()
+        self._write('dt = -100.d0')
+        self._outdent()
+        self._write('else if (abs(dt) < tol) then')
+        self._indent()
+        self._write('exit')
+        self._outdent()
+        self._write('else if (t1+dt == t1) then')
+        self._indent()
+        self._write('exit')
+        self._outdent()
+        self._write('t1 = t1 + dt')
+        self._write('end if')
+        self._outdent()
+        self._write('end do')
+        self._write()
+        self._write('t = t1')
+        self._write('ierr = 0')
+        self._write()
+        self._outdent()
+        self._write('end subroutine')
 
     #def _T_given_hy(self, mechanism):
     #    self._write(self.line(' get temperature given enthalpy in mass units and mass fracs'))
