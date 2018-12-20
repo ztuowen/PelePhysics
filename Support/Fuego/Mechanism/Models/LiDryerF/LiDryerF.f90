@@ -4,6 +4,7 @@ module fuego_module
   private
   public :: ckcpms
   public :: ckums
+  public :: ckrhoy
   public :: ckcvms
   public :: ckxty
   public :: ckytcr
@@ -55,6 +56,32 @@ subroutine ckpy(rho, T, y, iwrk, rwrk, P)
 
     ! YOW holds the reciprocal of the mean molecular wt
     P = rho * 8.31451000d+07 * T * YOW ! P = rho*R*T/W
+
+end subroutine
+
+! Compute rho = P*W(y)/RT
+subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
+
+    double precision, intent(in) :: P
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(out) :: rho
+
+    double precision :: YOW, tmp(9)
+    integer :: i
+
+    YOW = 0.d0
+
+    do i=1, 9
+        tmp(i) = y(i) * imw(i)
+    end do
+    do i=1, 9
+        YOW = YOW + tmp(i)
+    end do
+
+    rho = P / ( 8.31451000d+07 * T * YOW) ! rho = P*W/(R*T)
 
 end subroutine
 

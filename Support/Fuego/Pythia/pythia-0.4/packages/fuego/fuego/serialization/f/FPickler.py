@@ -350,7 +350,7 @@ class FPickler(CMill):
         #self._vckpy(mechanism)
         #self._ckpc(mechanism)
         #self._ckrhox(mechanism)
-        #self._ckrhoy(mechanism)
+        self._ckrhoy(mechanism)
         #self._ckrhoc(mechanism)
         #self._ckwt(mechanism)
         #self._ckawt(mechanism)
@@ -457,6 +457,7 @@ class FPickler(CMill):
             '  private',
             '  public :: ckcpms',
             '  public :: ckums',
+            '  public :: ckrhoy',
             '  public :: ckcvms',
             '  public :: ckxty',
             '  public :: ckytcr',
@@ -1558,36 +1559,42 @@ class FPickler(CMill):
     #    self._write('}')
     #    return
 
-    #def _ckrhoy(self, mechanism):
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Compute rho = P*W(y)/RT'))
-    #    self._write('void CKRHOY'+sym+'(double * restrict P, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict rho)')
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('double YOW = 0;')
-    #    self._write('double tmp[%d];' % (nSpec))
-    #    self._write('')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('tmp[i] = y[i]*imw[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('YOW += tmp[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write('')
-    #    self._write('*rho = *P / (%g * (*T) * YOW);' % (R * mole * kelvin / erg) + self.line('rho = P*W/(R*T)'))
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
-    #    return 
+    def _ckrhoy(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Compute rho = P*W(y)/RT')
+        self._write('subroutine ckrhoy'+sym+'(P, T, y, iwrk, rwrk, rho)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: P')
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(out) :: rho')
+        self._write()
+        self._write('double precision :: YOW, tmp(%d)' % nSpec)
+        self._write('integer :: i')
+        self._write()
+        self._write('YOW = 0.d0')
+        self._write()
+        self._write('do i=1, %d' % nSpec)
+        self._indent()
+        self._write('tmp(i) = y(i) * imw(i)')
+        self._outdent()
+        self._write('end do')
+        self._write('do i=1, %d' % nSpec)
+        self._indent()
+        self._write('YOW = YOW + tmp(i)')
+        self._outdent()
+        self._write('end do')
+        self._write()
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write('rho = P / (%s * T * YOW) ' % expression + '! rho = P*W/(R*T)')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return 
  
     #def _ckrhoc(self, mechanism):
     #    self._write()
