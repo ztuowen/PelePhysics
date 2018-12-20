@@ -6,7 +6,8 @@ module chemistry_module
 
   implicit none
 
-  integer, parameter :: naux = 0   ! number of auxiliary components
+  integer, parameter :: nadv = NUM_ADVECT
+  integer, parameter :: naux = NUM_AUXILIARY
   integer, parameter :: nspecies = NUM_SPECIES
   integer, parameter :: nreactions = NUM_REACTIONS
   integer, parameter :: nelements = NUM_ELEMENTS
