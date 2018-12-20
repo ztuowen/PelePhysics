@@ -13,8 +13,10 @@ module fuego_module
   public :: vckytx
   public :: vckhms
   public :: ckcvbs
+  public :: ckubms
   public :: ckcpbs
   public :: ckpy
+  public :: get_t_given_ey
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -412,6 +414,42 @@ subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
     res = res + (cvor(9) * y(9) * imw(9)) ! N2
 
     cvbs = res * 8.31451000d+07
+
+end subroutine
+
+! get mean internal energy in mass units
+subroutine ckubms(T, y, iwrk, rwrk, ubms)
+
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(out) :: ubms
+
+    double precision :: ums(9) ! temporary energy array
+    double precision :: res
+    double precision :: RT, tT, tc(5)
+
+    res = 0.d0
+
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+    RT = 8.31451000d+07 * tT ! R*T
+
+    call speciesInternalEnergy(ums, tc)
+
+    ! perform dot product + scaling by wt
+    res = res + (y(1) * ums(1) * imw(1)) ! H2
+    res = res + (y(2) * ums(2) * imw(2)) ! O2
+    res = res + (y(3) * ums(3) * imw(3)) ! H2O
+    res = res + (y(4) * ums(4) * imw(4)) ! H
+    res = res + (y(5) * ums(5) * imw(5)) ! O
+    res = res + (y(6) * ums(6) * imw(6)) ! OH
+    res = res + (y(7) * ums(7) * imw(7)) ! HO2
+    res = res + (y(8) * ums(8) * imw(8)) ! H2O2
+    res = res + (y(9) * ums(9) * imw(9)) ! N2
+
+    ubms = res * RT
 
 end subroutine
 
@@ -1030,6 +1068,74 @@ subroutine speciesEnthalpy(species, tc)
             -1.35067020d-15 * tc(5) &
             -9.22797700d+02 * invT
     end if
+
+end subroutine
+
+! get temperature given internal energy in mass units and mass fracs
+subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
+
+    double precision, intent(in) :: e
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(out) :: t
+    integer, intent(out) :: ierr
+
+#ifdef CONVERGENCE
+    integer, parameter :: maxiter = 5000
+    double precision, parameter tol = 1.d-12
+#else
+    integer, parameter :: maxiter = 200
+    double precision, parameter :: tol = 1.d-6
+#endif
+
+    double precision :: ein
+    double precision, parameter :: tmin = 90.d0 ! max lower bound for thermo def
+    double precision, parameter :: tmax = 4000.d0 ! min upper bound for thermo def
+    double precision :: e1,emin,emax,cv,t1,dt
+    integer :: i ! loop counter
+
+    ein = e
+
+    call ckubms(tmin, y, iwrk, rwrk, emin)
+    call ckubms(tmax, y, iwrk, rwrk, emax)
+
+    if (ein < emin) then
+        ! Linear Extrapolation below tmin
+        call ckcvbs(tmin, y, iwrk, rwrk, cv)
+        t = tmin - (emin-ein) / cv
+        ierr = 1
+        return
+    end if
+    if (ein > emax) then
+        ! Linear Extrapolation above tmax
+        call ckcvbs(tmax, y, iwrk, rwrk, cv)
+        t = tmax - (emax - ein) / cv
+        ierr = 1
+        return
+    end if
+    t1 = t
+    if (t1 < tmin .or. t1 > tmax) then
+        t1 = tmin + (tmax-tmin)/(emax-emin)*(ein-emin)
+    end if
+    do i=1, maxiter
+        call ckubms(t1,y,iwrk,rwrk,e1)
+        call ckcvbs(t1,y,iwrk,rwrk,cv)
+        dt = (ein - e1) / cv
+        if (dt > 100.d0) then
+            dt = 100.d0
+        else if (dt < -100.d0) then
+            dt = -100.d0
+        else if (abs(dt) < tol) then
+            exit
+        else if (t1+dt == t1) then
+            exit
+        t1 = t1 + dt
+        end if
+    end do
+
+    t = t1
+    ierr = 0
 
 end subroutine
 

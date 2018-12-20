@@ -1,14 +1,14 @@
 
-CHEMINP=LiDryerF.mec
-THERMINP=LiDryerF.therm
-FINALFILE=LiDryerF.f90
+CHEMINP=LiDryer.mec
+THERMINP=LiDryer.therm
+FINALFILE=LiDryer.F90
 
 FMC=${PELE_PHYSICS_HOME}/Support/Fuego/Pythia/products/bin/fmc.py
 HEADERDIR=${PELE_PHYSICS_HOME}/Support/Fuego/Mechanism/Models/header
 
 CHEMLK=chem.asc
 LOG=chem.log
-CHEMC=chem.f
+CHEMC=chem.F90
 
 ${FUEGO_PYTHON} ${FMC} -mechanism=${CHEMINP} -thermo=${THERMINP}  -name=${CHEMC}
 echo Compiling ${FINALFILE}...

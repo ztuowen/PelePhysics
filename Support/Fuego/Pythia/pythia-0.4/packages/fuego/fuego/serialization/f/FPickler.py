@@ -469,6 +469,7 @@ class FPickler(CMill):
             '  public :: ckubms',
             '  public :: ckcpbs',
             '  public :: ckpy',
+            '  public :: get_t_given_ey',
             ]
         return
 

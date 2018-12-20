@@ -9,6 +9,7 @@ module eos_module
   use amrex_constants_module
   use eos_type_module
   use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  use fuego_module, only : vckytx, vckhms, ckytx, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
   implicit none
   character (len=64) :: eos_name = "fuego"
@@ -148,7 +149,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckytx (state % massfrac,iwrk,rwrk,state % molefrac)
+    call ckytx(state % massfrac,iwrk,rwrk,state % molefrac)
 
   end subroutine eos_ytx
 
@@ -181,7 +182,7 @@ contains
     npts = (hi(1)+1)-(lo(1)-1)+1
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
-         call VCKYTX( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
+         call vckytx( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
        enddo
     enddo
 
@@ -212,7 +213,7 @@ contains
     implicit none
 
     double precision, intent(in) :: T
-    double precision, intent(in), dimension(1:Nsp) :: hi
+    double precision, intent(out), dimension(1:Nsp) :: hi
     integer, intent(in) :: Nsp
 
     call ckhms(T,iwrk,rwrk,hi(:))
@@ -239,7 +240,7 @@ contains
     npts = (high(1)+1)-(low(1)-1)+1
     do k = low(3)-1, high(3)+1
        do j = low(2)-1, high(2)+1
-          call VCKHMS( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+          call vckhms( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
        enddo
     enddo
 

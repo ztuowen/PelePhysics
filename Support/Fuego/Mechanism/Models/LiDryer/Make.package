@@ -1,4 +1,3 @@
-cEXE_sources+=LiDryer.c
-
-VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
-
+#cEXE_sources+=LiDryer.c
+F90EXE_sources += LiDryer.F90
+VPATH_LOCATIONS += $(CHEM_DIR)/PMFs
