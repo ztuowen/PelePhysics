@@ -11,6 +11,7 @@ module fuego_module
   public :: vckhms
   public :: ckcvbs
   public :: ckcpbs
+  public :: ckpy
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -25,6 +26,35 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 28.013400d0/)  ! N2
 
 contains
+
+! Compute P = rhoRT/W(y)
+subroutine ckpy(rho, T, y, iwrk, rwrk, P)
+
+    double precision, intent(in) :: rho
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: P
+
+    double precision :: YOW ! for computing mean MW
+
+    YOW = 0.d0
+
+    YOW = YOW + (y(1) * imw(1)) ! H2
+    YOW = YOW + (y(2) * imw(2)) ! O2
+    YOW = YOW + (y(3) * imw(3)) ! H2O
+    YOW = YOW + (y(4) * imw(4)) ! H
+    YOW = YOW + (y(5) * imw(5)) ! O
+    YOW = YOW + (y(6) * imw(6)) ! OH
+    YOW = YOW + (y(7) * imw(7)) ! HO2
+    YOW = YOW + (y(8) * imw(8)) ! H2O2
+    YOW = YOW + (y(9) * imw(9)) ! N2
+
+    ! YOW holds the reciprocal of the mean molecular wt
+    P = rho * 8.31451000d+07 * T * YOW ! P = rho*R*T/W
+
+end subroutine
 
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
 subroutine ckytx(y, iwrk, rwrk, x)
