@@ -21,7 +21,6 @@
 #define NUM_ELEMENTS 3
 #define NUM_SPECIES 9
 #define NUM_REACTIONS 21
-
 #define NUM_AUXILIARY 0
 #define NUM_ADVECT 0
 #endif

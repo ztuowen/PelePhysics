@@ -80,6 +80,8 @@ class FMC(Application):
         definesFile.write("#define NUM_ELEMENTS %d\n" % nElements)
         definesFile.write("#define NUM_SPECIES %d\n" % nSpecies)
         definesFile.write("#define NUM_REACTIONS %d\n" % nReactions)
+        definesFile.write("#define NUM_AUXILIARY 0\n")
+        definesFile.write("#define NUM_ADVECT 0\n")
         definesFile.write("#endif\n")
         
         print "... done (%g sec)" % timer.stop()
