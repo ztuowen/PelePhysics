@@ -10,6 +10,7 @@ module eos_module
   use eos_type_module
   use fuego_chemistry
   use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  use fuego_module, only : vckytx, vckhms, ckytx, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
   implicit none
   character (len=64) :: eos_name = "fuego"
