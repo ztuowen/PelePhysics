@@ -389,7 +389,7 @@ class FPickler(CMill):
         #self._cksms(mechanism)
 
         #self._ckcpbl(mechanism)
-        #self._ckcpbs(mechanism)
+        self._ckcpbs(mechanism)
         #self._ckcvbl(mechanism)
         self._ckcvbs(mechanism)
         
@@ -463,6 +463,7 @@ class FPickler(CMill):
             '  public :: vckytx',
             '  public :: vckhms',
             '  public :: ckcvbs',
+            '  public :: ckcpbs',
             ]
         return
 
@@ -2138,8 +2139,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: rwrk')
         self._write('double precision, intent(inout) :: cvms(%d)' % nSpec)
         self._write()
-        self._write('double precision :: tc(5)')
-        self._write('double precision :: tT')
+        self._write('double precision :: tT, tc(5)')
         self._write()
 
         # get temperature cache
@@ -2183,8 +2183,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: rwrk')
         self._write('double precision, intent(inout) :: cpms(%d)' % nSpec)
         self._write()
-        self._write('double precision :: tc(5)')
-        self._write('double precision :: tT')
+        self._write('double precision :: tT, tc(5)')
         self._write()
 
         # get temperature cache
@@ -2289,54 +2288,60 @@ class FPickler(CMill):
 
     #    return
  
-    #def _ckcpbs(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Returns the mean specific heat at CP (Eq. 34)'))
-    #    self._write('void CKCPBS'+sym+'(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cpbs)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckcpbs(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Returns the mean specific heat at CP (Eq. 34)')
+        self._write('subroutine ckcpbs'+sym+'(T, y, iwrk, rwrk, cpbs)')
+        self._write()
+        self._indent()
 
-    #    self._write('double result = 0; ')
-    #    
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    self._write(
-    #        'double cpor[%d], tresult[%d]; ' % (self.nSpecies,self.nSpecies) + self.line(' temporary storage'))
-    #    
-    #    # call routine
-    #    self._write('cp_R(cpor, tc);')
-    #    
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % self.nSpecies)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: cpbs')
+        self._write()
+        self._write('double precision :: cpor(%d)' % self.nSpecies)
+        self._write('double precision :: tresult(%d)' % self.nSpecies)
+        self._write('double precision :: tT, tc(5)')
+        self._write('double precision :: res')
+        self._write('integer :: i')
+        self._write()
+        self._write('res = 0.d0')
+        self._write()
+        
+        # get temperature cache
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+        
+        # call routine
+        self._write()
+        self._write('call cp_R(cpor, tc)')
+        self._write()
 
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('tresult[i] = cpor[i]*y[i]*imw[i];')
-    #    self._outdent()
-    #    self._write('')
-    #    self._write('}')
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('result += tresult[i];')
-    #    self._outdent()
-    #    self._write('}')
+        self._write('do i=1, %d' % nSpec)
+        self._indent()
+        self._write('tresult(i) = cpor(i) * y(i) * imw(i)')
+        self._outdent()
+        self._write('end do')
+        self._write('do i=1, %d' % nSpec)
+        self._indent()
+        self._write('res = res + tresult(i)')
+        self._outdent()
+        self._write('end do')
+        self._write()
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write('cpbs = res *%s' %  expression)
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write()
-    #    self._write('*cpbs = result * %g;' % (R*kelvin*mole/erg) )
-    #    
-    #    self._outdent()
-
-    #    self._write('}')
-
-    #    return
+        return
    
     #def _ckcvbl(self, mechanism):
     #    self._write()
