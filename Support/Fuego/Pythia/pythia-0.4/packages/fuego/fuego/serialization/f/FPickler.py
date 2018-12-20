@@ -360,7 +360,7 @@ class FPickler(CMill):
         self._ckytx(mechanism)
         self._vckytx(mechanism)
         #self._ckytcp(mechanism)
-        #self._ckytcr(mechanism)
+        self._ckytcr(mechanism)
         self._ckxty(mechanism)
         #self._ckxtcp(mechanism)
         #self._ckxtcr(mechanism)
@@ -458,6 +458,7 @@ class FPickler(CMill):
             '  public :: ckcpms',
             '  public :: ckcvms',
             '  public :: ckxty',
+            '  public :: ckytcr',
             '  public :: ckytx',
             '  public :: ckhms',
             '  public :: vckytx',
@@ -3589,25 +3590,31 @@ class FPickler(CMill):
     #    self._write('}')
     #    return 
  
-    #def _ckytcr(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line(
-    #        'convert y[species] (mass fracs) to c[species] (molar conc)'))
-    #    self._write('void CKYTCR'+sym+'(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict c)')
-    #    self._write('{')
-    #    self._indent()
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('c[i] = (*rho)  * y[i] * imw[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._outdent()
-    #    self._write('}')
-    #    return 
+    def _ckytcr(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! convert y[species] (mass fracs) to c[species] (molar conc)')
+        self._write('subroutine ckytcr'+sym+'(rho, T, y, iwrk, rwrk, c)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: rho')
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(out) :: c(%d)' % nSpec)
+        self._write()
+        self._write('integer :: i')
+        self._write()
+        self._write('do i=1, %d' % nSpec)
+        self._indent()
+        self._write('c(i) = rho * y(i) * imw(i)')
+        self._outdent()
+        self._write('end do')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return 
  
     def _ckxty(self, mechanism):
         nSpec = len(self.species)

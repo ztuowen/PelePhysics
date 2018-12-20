@@ -5,6 +5,7 @@ module fuego_module
   public :: ckcpms
   public :: ckcvms
   public :: ckxty
+  public :: ckytcr
   public :: ckytx
   public :: ckhms
   public :: vckytx
@@ -114,6 +115,24 @@ subroutine vckytx(np, y, iwrk, rwrk, x)
         do i=1, np
             x(i,n) = x(i,n) * YOW(i)
         end do
+    end do
+
+end subroutine
+
+! convert y[species] (mass fracs) to c[species] (molar conc)
+subroutine ckytcr(rho, T, y, iwrk, rwrk, c)
+
+    double precision, intent(in) :: rho
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(out) :: c(9)
+
+    integer :: i
+
+    do i=1, 9
+        c(i) = rho * y(i) * imw(i)
     end do
 
 end subroutine
