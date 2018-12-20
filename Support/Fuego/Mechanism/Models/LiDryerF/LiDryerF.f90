@@ -3,6 +3,7 @@ module fuego_module
   implicit none
   private
   public :: ckcpms
+  public :: ckums
   public :: ckcvms
   public :: ckxty
   public :: ckytcr
@@ -36,7 +37,7 @@ subroutine ckpy(rho, T, y, iwrk, rwrk, P)
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
-    double precision, intent(inout) :: P
+    double precision, intent(out) :: P
 
     double precision :: YOW ! for computing mean MW
 
@@ -63,7 +64,7 @@ subroutine ckytx(y, iwrk, rwrk, x)
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
-    double precision, intent(inout) :: x(9)
+    double precision, intent(out) :: x(9)
 
     double precision :: YOW, YOWINV
     double precision :: tmp(9)
@@ -143,7 +144,7 @@ subroutine ckxty(x, iwrk, rwrk, y)
     double precision, intent(in) :: x(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
-    double precision, intent(inout) :: y(9)
+    double precision, intent(out) :: y(9)
 
     double precision :: XW, XWinv
 
@@ -232,6 +233,30 @@ subroutine ckcpms(T, iwrk, rwrk, cpms)
 
 end subroutine
 
+! Returns internal energy in mass units (Eq 30.)
+subroutine ckums(T, iwrk, rwrk, ums)
+
+    double precision, intent(in) :: T
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: ums(9)
+
+    double precision :: tT, tc(5)
+    double precision :: RT
+    integer :: i
+
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+    RT = 8.31451000d+07 * tT ! R*T
+
+    call speciesInternalEnergy(ums, tc)
+
+    do i=1, 9
+        ums(i) = ums(i) * (RT * imw(i))
+    end do
+
+end subroutine
+
 ! Returns enthalpy in mass units (Eq 27.)
 subroutine ckhms(T, iwrk, rwrk, hms)
 
@@ -303,7 +328,7 @@ subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
-    double precision, intent(inout) :: cpbs
+    double precision, intent(out) :: cpbs
 
     double precision :: cpor(9)
     double precision :: tresult(9)
@@ -336,7 +361,7 @@ subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
-    double precision, intent(inout) :: cvbs
+    double precision, intent(out) :: cvbs
 
     double precision :: cvor(9)
     double precision :: tT, tc(5)
@@ -368,7 +393,7 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cv_R(species, tc)
 
-    double precision, intent(inout) :: species(9)
+    double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
     ! temperature
     double precision :: T
@@ -513,7 +538,7 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cp_R(species, tc)
 
-    double precision, intent(inout) :: species(9)
+    double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
     ! temperature
     double precision :: T
@@ -653,11 +678,175 @@ subroutine cp_R(species, tc)
 
 end subroutine
 
+! compute the e/(RT) at the given temperature
+! tc contains precomputed powers of T, tc[0] = log(T)
+subroutine speciesInternalEnergy(species, tc)
+
+    double precision, intent(out) :: species(9)
+    double precision, intent(in) :: tc(5)
+    ! temperature
+    double precision :: T
+    double precision :: invT
+
+    T = tc(2)
+    invT = 1.d0 / T
+
+    ! species with midpoint at T=1000 kelvin
+    if (T < 1000.000000d0) then
+        ! species 1: H2
+        species(1) = &
+            +2.29812431d+00 &
+            +4.12472087d-04 * tc(2) &
+            -2.71433843d-07 * tc(3) &
+            -2.36885858d-11 * tc(4) &
+            +8.26974448d-14 * tc(5) &
+            -1.01252087d+03 * invT
+        ! species 2: O2
+        species(2) = &
+            +2.21293640d+00 &
+            +5.63743175d-04 * tc(2) &
+            -1.91871682d-07 * tc(3) &
+            +3.28469308d-10 * tc(4) &
+            -1.75371078d-13 * tc(5) &
+            -1.00524902d+03 * invT
+        ! species 3: H2O
+        species(3) = &
+            +2.38684249d+00 &
+            +1.73749123d-03 * tc(2) &
+            -2.11823211d-06 * tc(3) &
+            +1.74214532d-09 * tc(4) &
+            -5.01317694d-13 * tc(5) &
+            -3.02081133d+04 * invT
+        ! species 4: H
+        species(4) = &
+            +1.50000000d+00 &
+            +0.00000000d+00 * tc(2) &
+            +0.00000000d+00 * tc(3) &
+            +0.00000000d+00 * tc(4) &
+            +0.00000000d+00 * tc(5) &
+            +2.54716270d+04 * invT
+        ! species 5: O
+        species(5) = &
+            +1.94642878d+00 &
+            -8.19083245d-04 * tc(2) &
+            +8.07010567d-07 * tc(3) &
+            -4.00710797d-10 * tc(4) &
+            +7.78139272d-14 * tc(5) &
+            +2.91476445d+04 * invT
+        ! species 6: OH
+        species(6) = &
+            +3.12530561d+00 &
+            -1.61272470d-03 * tc(2) &
+            +2.17588230d-06 * tc(3) &
+            -1.44963411d-09 * tc(4) &
+            +4.12474758d-13 * tc(5) &
+            +3.34630913d+03 * invT
+        ! species 7: HO2
+        species(7) = &
+            +3.30179801d+00 &
+            -2.37456025d-03 * tc(2) &
+            +7.05276303d-06 * tc(3) &
+            -6.06909735d-09 * tc(4) &
+            +1.85845025d-12 * tc(5) &
+            +2.94808040d+02 * invT
+        ! species 8: H2O2
+        species(8) = &
+            +2.38875365d+00 &
+            +3.28461290d-03 * tc(2) &
+            -4.95004193d-08 * tc(3) &
+            -1.15645138d-09 * tc(4) &
+            +4.94302950d-13 * tc(5) &
+            -1.76631465d+04 * invT
+        ! species 9: N2
+        species(9) = &
+            +2.29867700d+00 &
+            +7.04120000d-04 * tc(2) &
+            -1.32107400d-06 * tc(3) &
+            +1.41037875d-09 * tc(4) &
+            -4.88971000d-13 * tc(5) &
+            -1.02090000d+03 * invT
+    else
+        !species 1: H2
+        species(1) = &
+            +1.99142337d+00 &
+            +3.50032206d-04 * tc(2) &
+            -1.87794290d-08 * tc(3) &
+            -2.30789455d-12 * tc(4) &
+            +3.16550358d-16 * tc(5) &
+            -8.35033997d+02 * invT
+        !species 2: O2
+        species(2) = &
+            +2.69757819d+00 &
+            +3.06759845d-04 * tc(2) &
+            -4.19613997d-08 * tc(3) &
+            +4.43820370d-12 * tc(4) &
+            -2.27287062d-16 * tc(5) &
+            -1.23393018d+03 * invT
+        !species 3: H2O
+        species(3) = &
+            +1.67214561d+00 &
+            +1.52814644d-03 * tc(2) &
+            -2.91008670d-07 * tc(3) &
+            +3.00249098d-11 * tc(4) &
+            -1.27832357d-15 * tc(5) &
+            -2.98992090d+04 * invT
+        !species 4: H
+        species(4) = &
+            +1.50000000d+00 &
+            +0.00000000d+00 * tc(2) &
+            +0.00000000d+00 * tc(3) &
+            +0.00000000d+00 * tc(4) &
+            +0.00000000d+00 * tc(5) &
+            +2.54716270d+04 * invT
+        !species 5: O
+        species(5) = &
+            +1.54205966d+00 &
+            -1.37753096d-05 * tc(2) &
+            -1.03426778d-09 * tc(3) &
+            +1.13776685d-12 * tc(4) &
+            -8.73610300d-17 * tc(5) &
+            +2.92308027d+04 * invT
+        !species 6: OH
+        species(6) = &
+            +1.86472886d+00 &
+            +5.28252240d-04 * tc(2) &
+            -8.63609193d-08 * tc(3) &
+            +7.63046685d-12 * tc(4) &
+            -2.66391752d-16 * tc(5) &
+            +3.68362875d+03 * invT
+        !species 7: HO2
+        species(7) = &
+            +3.01721090d+00 &
+            +1.11991006d-03 * tc(2) &
+            -2.11219383d-07 * tc(3) &
+            +2.85615925d-11 * tc(4) &
+            -2.15817070d-15 * tc(5) &
+            +1.11856713d+02 * invT
+        !species 8: H2O2
+        species(8) = &
+            +3.57316685d+00 &
+            +2.16806820d-03 * tc(2) &
+            -4.91562940d-07 * tc(3) &
+            +5.87225893d-11 * tc(4) &
+            -2.86330712d-15 * tc(5) &
+            -1.80069609d+04 * invT
+        !species 9: N2
+        species(9) = &
+            +1.92664000d+00 &
+            +7.43988500d-04 * tc(2) &
+            -1.89492033d-07 * tc(3) &
+            +2.52426000d-11 * tc(4) &
+            -1.35067020d-15 * tc(5) &
+            -9.22797700d+02 * invT
+    end if
+
+end subroutine
+
 ! compute the h/(RT) at the given temperature (Eq 20)
 ! tc contains precomputed powers of T, tc(1) = log(T)
 subroutine speciesEnthalpy(species, tc)
 
-    double precision, intent(inout) :: species(9)
+    double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
     ! temperature
     double precision :: T
