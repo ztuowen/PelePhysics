@@ -361,7 +361,7 @@ class FPickler(CMill):
         self._vckytx(mechanism)
         #self._ckytcp(mechanism)
         #self._ckytcr(mechanism)
-        #self._ckxty(mechanism)
+        self._ckxty(mechanism)
         #self._ckxtcp(mechanism)
         #self._ckxtcr(mechanism)
         #self._ckctx(mechanism)
@@ -457,6 +457,7 @@ class FPickler(CMill):
             '  private',
             '  public :: ckcpms',
             '  public :: ckcvms',
+            '  public :: ckxty',
             '  public :: ckytx',
             '  public :: ckhms',
             '  public :: vckytx',
@@ -2003,8 +2004,7 @@ class FPickler(CMill):
         return
 
     def _vckhms(self, mechanism):
-        species = self.species
-        nSpec = len(species)
+        nSpec = len(self.species)
         self._write()
         self._write()
         self._write('! Returns enthalpy in mass units (Eq 27.)')
@@ -2125,8 +2125,7 @@ class FPickler(CMill):
 
 
     def _ckcvms(self, mechanism):
-        species = self.species
-        nSpec = len(species)
+        nSpec = len(self.species)
         self._write()
         self._write('! Returns the specific heats at constant volume')
         self._write('! in mass units (Eq. 29)')
@@ -3426,8 +3425,7 @@ class FPickler(CMill):
     #    return 
  
     def _ckytx(self, mechanism):
-        species = self.species
-        nSpec = len(species)
+        nSpec = len(self.species)
         self._write()
         self._write('! convert y[species] (mass fracs) to x[species] (mole fracs)')
         self._write('subroutine ckytx'+sym+'(y, iwrk, rwrk, x)')
@@ -3466,8 +3464,7 @@ class FPickler(CMill):
         return 
  
     def _vckytx(self, mechanism):
-        species = self.species
-        nSpec = len(species)
+        nSpec = len(self.species)
         self._write()
         self._write('! convert y(npoints,species) (mass fracs) to x(npoints,species) (mole fracs)')
         self._write('subroutine vckytx'+sym+'(np, y, iwrk, rwrk, x)')
@@ -3585,37 +3582,46 @@ class FPickler(CMill):
     #    self._write('}')
     #    return 
  
-    #def _ckxty(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line(
-    #        'convert x[species] (mole fracs) to y[species] (mass fracs)'))
-    #    self._write('void CKXTY'+sym+'(double * restrict x, int * iwrk, double * restrict rwrk, double * restrict y)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckxty(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write(
+            '! convert x[species] (mole fracs) to y[species] (mass fracs)')
+        self._write('subroutine ckxty'+sym+'(x, iwrk, rwrk, y)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: x(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: y(%d)' % nSpec)
+        self._write()
+        self._write('double precision :: XW, XWinv')
+        self._write()
 
-    #    self._write('double XW = 0; '+self.line('See Eq 4, 9 in CK Manual'))
-    #    
-    #    # compute mean molecular weight first (eq 3)
-    #    self._write(self.line('Compute mean molecular wt first'))
-    #    for species in self.species:
-    #        self._write('XW += x[%d]*%f; ' % (
-    #            species.id, species.weight) + self.line('%s' % species.symbol))
+        self._write('XW = 0.d0 ' + '! See Eq 4, 9 in CK Manual')
+        self._write()
+        
+        # compute mean molecular weight first (eq 3)
+        self._write('! Compute mean molecular wt first')
+        for species in self.species:
+            expression = format(species.weight, '15.8e').replace("e", "d")
+            self._write('XW = XW + (x(%d) *%s) ' % (
+                species.id + 1, expression) + '! %s' % species.symbol)
  
-    #    # now compute conversion
-    #    self._write(self.line('Now compute conversion'))
-    #    self._write('double XWinv = 1.0/XW;')
-    #    for species in self.species:
-    #        self._write('y[%d] = x[%d]*%f*XWinv; ' % (
-    #            species.id, species.id, species.weight) )
+        # now compute conversion
+        self._write()
+        self._write('! Now compute conversion')
+        self._write('XWinv = 1.d0/XW')
+        for species in self.species:
+            expression = format(species.weight, '15.8e').replace("e", "d")
+            self._write('y(%d) = x(%d) *%s * XWinv ' % (
+                species.id + 1, species.id + 1, expression) )
 
-    #    self._write()
-    #    self._write('return;')
-    #    self._outdent()
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
-
-    #    return 
+        return 
  
     #def _ckxtcp(self, mechanism):
     #    self._write()
