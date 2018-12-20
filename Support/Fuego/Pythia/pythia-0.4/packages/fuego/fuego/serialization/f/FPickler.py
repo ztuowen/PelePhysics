@@ -391,7 +391,7 @@ class FPickler(CMill):
         #self._ckcpbl(mechanism)
         #self._ckcpbs(mechanism)
         #self._ckcvbl(mechanism)
-        #self._ckcvbs(mechanism)
+        self._ckcvbs(mechanism)
         
         #self._ckhbml(mechanism)
         #self._ckhbms(mechanism)
@@ -462,6 +462,7 @@ class FPickler(CMill):
             '  public :: ckhms',
             '  public :: vckytx',
             '  public :: vckhms',
+            '  public :: ckcvbs',
             ]
         return
 
@@ -1983,9 +1984,9 @@ class FPickler(CMill):
         self._write(
             'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
             + '! temperature cache')
-        expression = format((R*kelvin*mole/erg), 'g').replace("e", "d")
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
         self._write(
-            'RT = %s*tT ' % expression
+            'RT =%s * tT ' % expression
             + '! R*T')
         
         # call routine
@@ -1994,7 +1995,7 @@ class FPickler(CMill):
         self._write()
         self._write('do i=1, %d' % (nSpec))
         self._indent()
-        self._write('hms(i) = hms(i) * (RT*imw(i))')
+        self._write('hms(i) = hms(i) * (RT * imw(i))')
         self._outdent()
         self._write('end do')
         self._outdent()
@@ -2038,7 +2039,7 @@ class FPickler(CMill):
         self._indent()
         self._write('do i=1, np')
         self._indent()
-        expression = format((R*kelvin*mole/erg), 'g').replace("e", "d")
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
         self._write('hms(i,n) = hms(i,n) * (%s * T(i) * imw(n))' % expression)
         self._outdent()
         self._write('end do')
@@ -2379,44 +2380,55 @@ class FPickler(CMill):
 
     #    return
 
-    #def _ckcvbs(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Returns the mean specific heat at CV (Eq. 36)'))
-    #    self._write('void CKCVBS'+sym+'(double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict cvbs)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckcvbs(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Returns the mean specific heat at CV (Eq. 36)')
+        self._write('subroutine ckcvbs'+sym+'(T, y, iwrk, rwrk, cvbs)')
+        self._write()
+        self._indent()
 
-    #    self._write('double result = 0; ')
-    #    
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    self._write(
-    #        'double cvor[%d]; ' % self.nSpecies + self.line(' temporary storage'))
-    #    
-    #    # call routine
-    #    self._write('cv_R(cvor, tc);')
-    #    
-    #    # do dot product
-    #    self._write(self.line('multiply by y/molecularweight'))
-    #    for species in self.species:
-    #        self._write('result += cvor[%d]*y[%d]*imw[%d]; ' % (
-    #            species.id, species.id, species.id) + self.line('%s' % species.symbol))
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: cvbs')
+        self._write()
+        self._write('double precision :: cvor(%d)' % nSpec)
+        self._write('double precision :: tT, tc(5)')
+        self._write('double precision :: res')
+        self._write()
+        self._write('res = 0.d0')
+        
+        # get temperature cache
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+        
+        # call routine
+        self._write()
+        self._write('call cv_R(cvor, tc)')
+        self._write()
+        
+        # do dot product
+        self._write('! multiply by y/molecularweight')
+        for species in self.species:
+            self._write('res = res + (cvor(%d) * y(%d) * imw(%d)) ' % (
+                species.id + 1, species.id + 1, species.id + 1) + '! %s' % species.symbol)
 
-    #    self._write()
-    #    self._write('*cvbs = result * %g;' % (R*kelvin*mole/erg) )
-    #    
-    #    self._outdent()
+        self._write()
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write('cvbs = res *%s' % expression)
+        
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
+        return
 
-    #    return
-    #
     #def _ckhbml(self, mechanism):
     #    self._write()
     #    self._write()
@@ -3442,7 +3454,7 @@ class FPickler(CMill):
         self._write()
         self._write('do i=1, %d' % (nSpec))
         self._indent()
-        self._write('tmp(i) = y(i)*imw(i)')
+        self._write('tmp(i) = y(i) * imw(i)')
         self._outdent()
         self._write('end do')
         self._write('do i=1, %d' % (nSpec))
@@ -3451,11 +3463,11 @@ class FPickler(CMill):
         self._outdent()
         self._write('end do')
         self._write()
-        self._write('YOWINV = 1.d0/YOW')
+        self._write('YOWINV = 1.d0 / YOW')
         self._write()
         self._write('do i=1, %d' % (nSpec))
         self._indent()
-        self._write('x(i) = y(i)*imw(i)*YOWINV')
+        self._write('x(i) = y(i) * imw(i) * YOWINV')
         self._outdent()
         self._write('end do')
         self._outdent()
@@ -3498,7 +3510,7 @@ class FPickler(CMill):
         self._write()
         self._write('do i=1, np')
         self._indent()
-        self._write('YOW(i) = 1.d0/YOW(i)')
+        self._write('YOW(i) = 1.d0 / YOW(i)')
         self._outdent()
         self._write('end do')
         self._write()
@@ -3611,7 +3623,7 @@ class FPickler(CMill):
         # now compute conversion
         self._write()
         self._write('! Now compute conversion')
-        self._write('XWinv = 1.d0/XW')
+        self._write('XWinv = 1.d0 / XW')
         for species in self.species:
             expression = format(species.weight, '15.8e').replace("e", "d")
             self._write('y(%d) = x(%d) *%s * XWinv ' % (
@@ -6999,13 +7011,13 @@ class FPickler(CMill):
         if needsInvT != 0:
            self._write('invT = 1.d0 / T')
         if needsInvT == 2:
-           self._write('invT2 = invT*invT')
+           self._write('invT2 = invT * invT')
 
         for midT, speciesList in midpoints.items():
 
             self._write()
             self._write('! species with midpoint at T=%g kelvin' % midT)
-            self._write('if (T < %s) then' % format(midT, '15.8e').replace("e", "d"))
+            self._write('if (T < %fd0) then' % midT)
             self._indent()
 
             for species, lowRange, highRange in speciesList:

@@ -9,6 +9,7 @@ module fuego_module
   public :: ckhms
   public :: vckytx
   public :: vckhms
+  public :: ckcvbs
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -37,16 +38,16 @@ subroutine ckytx(y, iwrk, rwrk, x)
     integer :: i
 
     do i=1, 9
-        tmp(i) = y(i)*imw(i)
+        tmp(i) = y(i) * imw(i)
     end do
     do i=1, 9
         YOW = YOW + tmp(i)
     end do
 
-    YOWINV = 1.d0/YOW
+    YOWINV = 1.d0 / YOW
 
     do i=1, 9
-        x(i) = y(i)*imw(i)*YOWINV
+        x(i) = y(i) * imw(i) * YOWINV
     end do
 
 end subroutine
@@ -75,7 +76,7 @@ subroutine vckytx(np, y, iwrk, rwrk, x)
     end do
 
     do i=1, np
-        YOW(i) = 1.d0/YOW(i)
+        YOW(i) = 1.d0 / YOW(i)
     end do
 
     do n=1, 9
@@ -110,7 +111,7 @@ subroutine ckxty(x, iwrk, rwrk, y)
     XW = XW + (x(9) * 2.80134000d+01) ! N2
 
     ! Now compute conversion
-    XWinv = 1.d0/XW
+    XWinv = 1.d0 / XW
     y(1) = x(1) * 2.01594000d+00 * XWinv 
     y(2) = x(2) * 3.19988000d+01 * XWinv 
     y(3) = x(3) * 1.80153400d+01 * XWinv 
@@ -197,12 +198,12 @@ subroutine ckhms(T, iwrk, rwrk, hms)
 
     tT = T ! temporary temperature
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
-    RT = 8.31451d+07*tT ! R*T
+    RT = 8.31451000d+07 * tT ! R*T
 
     call speciesEnthalpy(hms, tc)
 
     do i=1, 9
-        hms(i) = hms(i) * (RT*imw(i))
+        hms(i) = hms(i) * (RT * imw(i))
     end do
 
 end subroutine
@@ -241,9 +242,43 @@ subroutine vckhms(np, T, iwrk, rwrk, hms)
 
     do n=1, 9
         do i=1, np
-            hms(i,n) = hms(i,n) * (8.31451d+07 * T(i) * imw(n))
+            hms(i,n) = hms(i,n) * ( 8.31451000d+07 * T(i) * imw(n))
         end do
     end do
+
+end subroutine
+
+! Returns the mean specific heat at CV (Eq. 36)
+subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
+
+    double precision, intent(in) :: T
+    double precision, intent(in) :: y(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: cvbs
+
+    double precision :: cvor(9)
+    double precision :: tT, tc(5)
+    double precision :: res
+
+    res = 0.d0
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+
+    call cv_R(cvor, tc)
+
+    ! multiply by y/molecularweight
+    res = res + (cvor(1) * y(1) * imw(1)) ! H2
+    res = res + (cvor(2) * y(2) * imw(2)) ! O2
+    res = res + (cvor(3) * y(3) * imw(3)) ! H2O
+    res = res + (cvor(4) * y(4) * imw(4)) ! H
+    res = res + (cvor(5) * y(5) * imw(5)) ! O
+    res = res + (cvor(6) * y(6) * imw(6)) ! OH
+    res = res + (cvor(7) * y(7) * imw(7)) ! HO2
+    res = res + (cvor(8) * y(8) * imw(8)) ! H2O2
+    res = res + (cvor(9) * y(9) * imw(9)) ! N2
+
+    cvbs = res * 8.31451000d+07
 
 end subroutine
 
@@ -260,7 +295,7 @@ subroutine cv_R(species, tc)
     T = tc(2)
 
     ! species with midpoint at T=1000 kelvin
-    if (T <  1.00000000d+03) then
+    if (T < 1000.000000d0) then
         ! species 1: H2
         species(1) = &
             +2.29812431d+00 &
@@ -405,7 +440,7 @@ subroutine cp_R(species, tc)
     T = tc(2)
 
     ! species with midpoint at T=1000 kelvin
-    if (T <  1.00000000d+03) then
+    if (T < 1000.000000d0) then
         ! species 1: H2
         species(1) = &
             +3.29812431d+00 &
@@ -551,7 +586,7 @@ subroutine speciesEnthalpy(species, tc)
     invT = 1.d0 / T
 
     ! species with midpoint at T=1000 kelvin
-    if (T <  1.00000000d+03) then
+    if (T < 1000.000000d0) then
         ! species 1: H2
         species(1) = &
             +3.29812431d+00 &
