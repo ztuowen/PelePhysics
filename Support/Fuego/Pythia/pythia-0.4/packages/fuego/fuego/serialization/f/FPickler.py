@@ -346,7 +346,7 @@ class FPickler(CMill):
         #self._ckrp(mechanism)
         
         #self._ckpx(mechanism)
-        #self._ckpy(mechanism)
+        self._ckpy(mechanism)
         #self._vckpy(mechanism)
         #self._ckpc(mechanism)
         #self._ckrhox(mechanism)
@@ -464,6 +464,7 @@ class FPickler(CMill):
             '  public :: vckhms',
             '  public :: ckcvbs',
             '  public :: ckcpbs',
+            '  public :: ckpy',
             ]
         return
 
@@ -1407,34 +1408,43 @@ class FPickler(CMill):
     #    self._write('}')
     #    return
 
-    #def _ckpy(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Compute P = rhoRT/W(y)'))
-    #    self._write('void CKPY'+sym+'(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict P)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckpy(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Compute P = rhoRT/W(y)')
+        self._write('subroutine ckpy'+sym+'(rho, T, y, iwrk, rwrk, P)')
+        self._write()
+        self._indent()
 
-    #    self._write('double YOW = 0;'+self.line(' for computing mean MW'))
-    #    
-    #    # molecular weights of all species
-    #    for species in self.species:
-    #        self._write('YOW += y[%d]*imw[%d]; ' % (
-    #            species.id, species.id) + self.line('%s' % species.symbol))
+        self._write('double precision, intent(in) :: rho')
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(in) :: y(%d)' % nSpec)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: P')
+        self._write()
+        self._write('double precision :: YOW ' + '! for computing mean MW')
+        self._write()
+        self._write('YOW = 0.d0')
+        self._write()
+        
+        # molecular weights of all species
+        for species in self.species:
+            self._write('YOW = YOW + (y(%d) * imw(%d)) ' % (
+                species.id + 1, species.id + 1) + '! %s' % species.symbol)
 
-    #    self.line('YOW holds the reciprocal of the mean molecular wt')
-    #    self._write(
-    #        '*P = *rho * %g * (*T) * YOW; ' % (R*kelvin*mole/erg)
-    #        + self.line('P = rho*R*T/W'))
-    #    
-    #    
-    #    self._write()
-    #    self._write('return;')
-    #    self._outdent()
+        self._write()
+        self._write('! YOW holds the reciprocal of the mean molecular wt')
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write(
+            'P = rho *%s * T * YOW ' % expression
+            + '! P = rho*R*T/W')
+        
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
-
-    #    return 
+        return 
 
     #def _vckpy(self, mechanism):
     #    self._write()
