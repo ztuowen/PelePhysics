@@ -381,7 +381,7 @@ class FPickler(CMill):
         
         self._ckcvms(mechanism)
         self._ckcpms(mechanism)
-        #self._ckums(mechanism)
+        self._ckums(mechanism)
         self._ckhms(mechanism)
         self._vckhms(mechanism)
         #self._ckgms(mechanism)
@@ -456,6 +456,7 @@ class FPickler(CMill):
             '  implicit none',
             '  private',
             '  public :: ckcpms',
+            '  public :: ckums',
             '  public :: ckcvms',
             '  public :: ckxty',
             '  public :: ckytcr',
@@ -1125,7 +1126,7 @@ class FPickler(CMill):
         #self._helmholtz(speciesInfo)
         self._cv(speciesInfo)
         self._cp(speciesInfo)
-        #self._speciesInternalEnergy(speciesInfo)
+        self._speciesInternalEnergy(speciesInfo)
         self._speciesEnthalpy(speciesInfo)
         #self._speciesEntropy(speciesInfo)
 
@@ -1422,7 +1423,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: y(%d)' % nSpec)
         self._write('integer, intent(in) :: iwrk')
         self._write('double precision, intent(in) :: rwrk')
-        self._write('double precision, intent(inout) :: P')
+        self._write('double precision, intent(out) :: P')
         self._write()
         self._write('double precision :: YOW ' + '! for computing mean MW')
         self._write()
@@ -1437,9 +1438,7 @@ class FPickler(CMill):
         self._write()
         self._write('! YOW holds the reciprocal of the mean molecular wt')
         expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
-        self._write(
-            'P = rho *%s * T * YOW ' % expression
-            + '! P = rho*R*T/W')
+        self._write('P = rho *%s * T * YOW ' % expression + '! P = rho*R*T/W')
         
         self._outdent()
         self._write()
@@ -1935,41 +1934,48 @@ class FPickler(CMill):
 
     #    return
  
-    #def _ckums(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Returns internal energy in mass units (Eq 30.)'))
-    #    self._write('void CKUMS'+sym+'(double * restrict T, int * iwrk, double * restrict rwrk, double * restrict ums)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckums(self, mechanism):
+        nSpec = len(self.species)
+        self._write()
+        self._write('! Returns internal energy in mass units (Eq 30.)')
+        self._write('subroutine ckums'+sym+'(T, iwrk, rwrk, ums)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: T')
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: ums(%d)' % nSpec)
+        self._write()
+        self._write('double precision :: tT, tc(5)')
+        self._write('double precision :: RT')
+        self._write('integer :: i')
+        self._write()
 
-    #    # get temperature cache
-    #    self._write(
-    #        'double tT = *T; '
-    #        + self.line('temporary temperature'))
-    #    self._write(
-    #        'double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; '
-    #        + self.line('temperature cache'))
-    #    self._write(
-    #        'double RT = %g*tT; ' % (R*kelvin*mole/erg)
-    #        + self.line('R*T'))
-    #    
-    #    # call routine
-    #    self._write('speciesInternalEnergy(ums, tc);')
-    #    
-    #    species = self.species
-    #    nSpec = len(species)
-    #    self._write('for (int i = 0; i < %d; i++)' % (nSpec))
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('ums[i] *= RT*imw[i];')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._outdent()
+        # get temperature cache
+        self._write(
+            'tT = T '
+            + '! temporary temperature')
+        self._write(
+            'tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) '
+            + '! temperature cache')
+        expression = format((R*kelvin*mole/erg), '15.8e').replace("e", "d")
+        self._write('RT =%s * tT ' % expression + '! R*T')
+        
+        # call routine
+        self._write()
+        self._write('call speciesInternalEnergy(ums, tc)')
+        self._write()
+        
+        self._write('do i=1, %d' % (nSpec))
+        self._indent()
+        self._write('ums(i) = ums(i) * (RT * imw(i))')
+        self._outdent()
+        self._write('end do')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
-
-    #    return
+        return
  
     def _ckhms(self, mechanism):
         species = self.species
@@ -2311,7 +2317,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: y(%d)' % self.nSpecies)
         self._write('integer, intent(in) :: iwrk')
         self._write('double precision, intent(in) :: rwrk')
-        self._write('double precision, intent(inout) :: cpbs')
+        self._write('double precision, intent(out) :: cpbs')
         self._write()
         self._write('double precision :: cpor(%d)' % self.nSpecies)
         self._write('double precision :: tresult(%d)' % self.nSpecies)
@@ -2408,7 +2414,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: y(%d)' % nSpec)
         self._write('integer, intent(in) :: iwrk')
         self._write('double precision, intent(in) :: rwrk')
-        self._write('double precision, intent(inout) :: cvbs')
+        self._write('double precision, intent(out) :: cvbs')
         self._write()
         self._write('double precision :: cvor(%d)' % nSpec)
         self._write('double precision :: tT, tc(5)')
@@ -3462,7 +3468,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: y(%d)' % (nSpec))
         self._write('integer, intent(in) :: iwrk')
         self._write('double precision, intent(in) :: rwrk')
-        self._write('double precision, intent(inout) :: x(%d)' % (nSpec))
+        self._write('double precision, intent(out) :: x(%d)' % (nSpec))
         self._write()
         self._write('double precision :: YOW, YOWINV')
         self._write('double precision :: tmp(%d)' % (nSpec))
@@ -3627,7 +3633,7 @@ class FPickler(CMill):
         self._write('double precision, intent(in) :: x(%d)' % nSpec)
         self._write('integer, intent(in) :: iwrk')
         self._write('double precision, intent(in) :: rwrk')
-        self._write('double precision, intent(inout) :: y(%d)' % nSpec)
+        self._write('double precision, intent(out) :: y(%d)' % nSpec)
         self._write()
         self._write('double precision :: XW, XWinv')
         self._write()
@@ -6976,15 +6982,14 @@ class FPickler(CMill):
 
     #    return
 
-    #def _speciesInternalEnergy(self, speciesInfo):
+    def _speciesInternalEnergy(self, speciesInfo):
 
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('compute the e/(RT) at the given temperature'))
-    #    self._write(self.line('tc contains precomputed powers of T, tc[0] = log(T)'))
-    #    self._generateThermoRoutine("speciesInternalEnergy", self._internalEnergy, speciesInfo, 1)
+        self._write()
+        self._write('! compute the e/(RT) at the given temperature')
+        self._write('! tc contains precomputed powers of T, tc[0] = log(T)')
+        self._generateThermoRoutine("speciesInternalEnergy", self._internalEnergy, speciesInfo, 1)
 
-    #    return
+        return
 
     def _speciesEnthalpy(self, speciesInfo):
 
@@ -7007,7 +7012,7 @@ class FPickler(CMill):
         species = self.species
         nSpec = len(species)
         self._write()
-        self._write('double precision, intent(inout) :: species(%d)' % nSpec)
+        self._write('double precision, intent(out) :: species(%d)' % nSpec)
         self._write('double precision, intent(in) :: tc(5)')
         self._write('! temperature')
         self._write('double precision :: T')
@@ -8461,14 +8466,14 @@ class FPickler(CMill):
         return
 
 
-    #def _internalEnergy(self, parameters):
-    #    self._write('%+15.8e' % (parameters[0] - 1.0))
-    #    self._write('%+15.8e * tc[1]' % (parameters[1]/2))
-    #    self._write('%+15.8e * tc[2]' % (parameters[2]/3))
-    #    self._write('%+15.8e * tc[3]' % (parameters[3]/4))
-    #    self._write('%+15.8e * tc[4]' % (parameters[4]/5))
-    #    self._write('%+15.8e * invT;' % (parameters[5]))
-    #    return
+    def _internalEnergy(self, parameters):
+        self._write('%s &' % ('%+15.8e' % (parameters[0] - 1.0)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(2)' % (parameters[1]/2)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(3)' % (parameters[2]/3)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(4)' % (parameters[3]/4)).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(5)' % (parameters[4]/5)).replace("e", "d"))
+        self._write('%s' % ('%+15.8e * invT' % (parameters[5])).replace("e", "d"))
+        return
 
     #
     #def _gibbsNASA(self, parameters):
