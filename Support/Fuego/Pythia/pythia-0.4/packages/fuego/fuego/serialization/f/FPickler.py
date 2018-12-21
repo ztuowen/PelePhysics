@@ -352,7 +352,7 @@ class FPickler(CMill):
         #self._ckrhox(mechanism)
         self._ckrhoy(mechanism)
         #self._ckrhoc(mechanism)
-        #self._ckwt(mechanism)
+        self._ckwt(mechanism)
         #self._ckawt(mechanism)
         #self._ckmmwy(mechanism)
         #self._ckmmwx(mechanism)
@@ -439,7 +439,7 @@ class FPickler(CMill):
         #self._progressRateFR(mechanism)
         #self._equilibriumConstants(mechanism)
         self._thermo(mechanism)
-        #self._molecularWeight(mechanism)
+        self._molecularWeight(mechanism)
         #self._atomicWeight(mechanism)
         self._T_given_ey(mechanism)
         #self._T_given_hy(mechanism)
@@ -472,6 +472,7 @@ class FPickler(CMill):
             '  public :: get_t_given_ey',
             '  public :: cksyme',
             '  public :: cksyms',
+            '  public :: ckwt',
             ]
         return
 
@@ -1638,24 +1639,23 @@ class FPickler(CMill):
 
     #    return 
 
-    #def _ckwt(self, mechanism):
+    def _ckwt(self, mechanism):
+        nSpecies = len(mechanism.species())
+        self._write()
+        self._write('! get molecular weight for all species')
+        self._write('subroutine ckwt'+sym+'(iwrk, rwrk, wt)')
+        self._write()
+        self._indent()
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(out) :: wt(%d)' % nSpecies)
+        self._write()
+        self._write('call molecularWeight(wt)')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return
 
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('get molecular weight for all species'))
-    #    self._write('void CKWT'+sym+'(int * iwrk, double * restrict rwrk, double * restrict wt)')
-    #    self._write('{')
-    #    self._indent()
-
-    #    # call molecularWeight
-    #    self._write('molecularWeight(wt);')
-    #    
-    #    self._outdent()
-
-    #    self._write('}')
-
-    #    return
-    #  
     #def _ckawt(self, mechanism):
 
     #    self._write()
@@ -4764,41 +4764,34 @@ class FPickler(CMill):
     #    return
     
 # Fuego's core routines section begins here
-    #def _molecularWeight(self, mechanism):
+    def _molecularWeight(self, mechanism):
+        import pyre
+        periodic = pyre.handbook.periodicTable()
+        nSpecies = len(mechanism.species())
+        self._write()
+        self._write('! save molecular weights into array')
+        self._write('subroutine molecularWeight(wt)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(out) :: wt(%d)' % nSpecies)
+        self._write()
 
-    #    import pyre
-    #    periodic = pyre.handbook.periodicTable()
-    #    
-    #    nSpecies = len(mechanism.species())
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('save molecular weights into array'))
-    #    self._write('void molecularWeight(double * restrict wt)')
-    #    self._write('{')
-    #    self._indent()
+        #wtTab=np.zeros(nSpecies)
+        # molecular weights of all species
+        for species in mechanism.species():
+            weight = 0.0 #species.molecularWeight()
+            for elem, coef in species.composition:
+                aw = mechanism.element(elem).weight
+                if not aw:
+                    aw = periodic.symbol(elem.capitalize()).atomicWeight
+                weight += coef * aw
 
-    #    #wtTab=np.zeros(nSpecies)
+            self._write('wt(%d) = %fd0 ' % (species.id + 1, weight) + '! %s' % species.symbol)
 
-    #    # molecular weights of all species
-    #    for species in mechanism.species():
-
-    #        weight = 0.0 #species.molecularWeight()
-    #        for elem, coef in species.composition:
-    #            aw = mechanism.element(elem).weight
-    #            if not aw:
-    #                aw = periodic.symbol(elem.capitalize()).atomicWeight
-    #            weight += coef * aw
-
-    #        self._write('wt[%d] = %f; ' % (
-    #            species.id, weight) + self.line('%s' % species.symbol))
-
-    #    self._write()
-    #    self._write('return;')
-    #    self._outdent()
-
-    #    self._write('}')
-
-    #    return 
+        self._write()
+        self._outdent()
+        self._write('end subroutine')
+        return 
 
     #def _atomicWeight(self, mechanism):
 
