@@ -1,6 +1,8 @@
 module chemistry_module
 
   use amrex_fort_module, only : amrex_real
+  use fuego_module, only : ckindx, cksyme, cksyms, ckwt, ckrp
+
   implicit none
 
   integer, save :: nelements   ! number of elements

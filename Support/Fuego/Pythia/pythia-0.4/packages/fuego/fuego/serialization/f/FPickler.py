@@ -338,7 +338,7 @@ class FPickler(CMill):
         #self._main(mechanism)
 
         # chemkin wrappers
-        #self._ckindx(mechanism)
+        self._ckindx(mechanism)
         #self._ckxnum(mechanism)
         #self._cksnum(mechanism)
         self._cksyme(mechanism)
@@ -474,6 +474,7 @@ class FPickler(CMill):
             '  public :: cksyms',
             '  public :: ckwt',
             '  public :: ckrp',
+            '  public :: ckindx',
             ]
         return
 
@@ -1372,25 +1373,29 @@ class FPickler(CMill):
         return
 
 
-    #def _ckindx(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('A few mechanism parameters'))
-    #    self._write('void CKINDX'+sym+'(int * iwrk, double * restrict rwrk, int * mm, int * kk, int * ii, int * nfit)')
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('*mm = %d;' % len(mechanism.element()))
-    #    self._write('*kk = %d;' % len(mechanism.species()))
-    #    self._write('*ii = %d;' % len(mechanism.reaction()))
-    #    self._write('*nfit = -1; ' + self.line(
-    #        'Why do you need this anyway ? '))
-    #    
-    #    # done
-    #    self._outdent()
-    #    self._write('}')
-    #    return
-    #    
-    #    
+    def _ckindx(self, mechanism):
+        self._write()
+        self._write('! A few mechanism parameters')
+        self._write('subroutine ckindx'+sym+'(iwrk, rwrk, mm, kk, ii, nfit)')
+        self._write()
+        self._indent()
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('integer, intent(out) :: mm')
+        self._write('integer, intent(out) :: kk')
+        self._write('integer, intent(out) :: ii')
+        self._write('integer, intent(out) :: nfit')
+        self._write()
+        self._write('mm = %d' % len(mechanism.element()))
+        self._write('kk = %d' % len(mechanism.species()))
+        self._write('ii = %d' % len(mechanism.reaction()))
+        self._write('nfit = -1' + ' ! Why do you need this anyway?')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return
+
+
     #def _ckpx(self, mechanism):
     #    self._write()
     #    self._write()
