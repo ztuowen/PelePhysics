@@ -19,6 +19,7 @@ module fuego_module
   public :: get_t_given_ey
   public :: cksyme
   public :: cksyms
+  public :: ckwt
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -171,6 +172,17 @@ subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
     end do
 
     rho = P / ( 8.31451000d+07 * T * YOW) ! rho = P*W/(R*T)
+
+end subroutine
+
+! get molecular weight for all species
+subroutine ckwt(iwrk, rwrk, wt)
+
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(out) :: wt(9)
+
+    call molecularWeight(wt)
 
 end subroutine
 
@@ -1155,6 +1167,23 @@ subroutine speciesEnthalpy(species, tc)
             -1.35067020d-15 * tc(5) &
             -9.22797700d+02 * invT
     end if
+
+end subroutine
+
+! save molecular weights into array
+subroutine molecularWeight(wt)
+
+    double precision, intent(out) :: wt(9)
+
+    wt(1) = 2.015940d0 ! H2
+    wt(2) = 31.998800d0 ! O2
+    wt(3) = 18.015340d0 ! H2O
+    wt(4) = 1.007970d0 ! H
+    wt(5) = 15.999400d0 ! O
+    wt(6) = 17.007370d0 ! OH
+    wt(7) = 33.006770d0 ! HO2
+    wt(8) = 34.014740d0 ! H2O2
+    wt(9) = 28.013400d0 ! N2
 
 end subroutine
 
