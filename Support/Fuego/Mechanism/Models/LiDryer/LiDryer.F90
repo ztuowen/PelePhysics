@@ -20,6 +20,7 @@ module fuego_module
   public :: cksyme
   public :: cksyms
   public :: ckwt
+  public :: ckrp
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -117,6 +118,21 @@ subroutine cksyms(kname, plenkname)
     kname(8*lenkname+1) = ichar('N')
     kname(8*lenkname+2) = ichar('2')
     kname(8*lenkname+3) = ichar(' ')
+
+end subroutine
+
+! Returns R, Rc, Patm
+subroutine ckrp(ickwrk, rckwrk, ru, ruc, pa)
+
+    integer, intent(in) :: ickwrk
+    double precision, intent(in) :: rckwrk
+    double precision, intent(out) :: ru
+    double precision, intent(out) :: ruc
+    double precision, intent(out) :: pa
+
+    ru  = 83145100.000000d0 
+    ruc = 1.98721558317399615845d0 
+    pa  = 1013250.000000d0 
 
 end subroutine
 
