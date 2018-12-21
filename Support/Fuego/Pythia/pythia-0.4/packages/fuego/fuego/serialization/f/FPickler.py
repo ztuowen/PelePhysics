@@ -343,7 +343,7 @@ class FPickler(CMill):
         #self._cksnum(mechanism)
         self._cksyme(mechanism)
         self._cksyms(mechanism)
-        #self._ckrp(mechanism)
+        self._ckrp(mechanism)
         
         #self._ckpx(mechanism)
         self._ckpy(mechanism)
@@ -473,6 +473,7 @@ class FPickler(CMill):
             '  public :: cksyme',
             '  public :: cksyms',
             '  public :: ckwt',
+            '  public :: ckrp',
             ]
         return
 
@@ -1275,23 +1276,25 @@ class FPickler(CMill):
     #    self._write('}')
     #    return
 
-    #def _ckrp(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(
-    #        self.line(' Returns R, Rc, Patm' ))
-    #    self._write('void CKRP'+sym+'(int * ickwrk, double * restrict rckwrk, double * restrict ru, double * restrict ruc, double * restrict pa)')
-    #    self._write('{')
-    #    self._indent()
-    #    
-    #    self._write(' *ru  = %g; ' % (R * mole * kelvin / erg))
-    #    self._write(' *ruc = %.20f; ' % (Rc * mole * kelvin / cal))
-    #    self._write(' *pa  = %g; ' % (Patm) )
-    #    
-    #    # done
-    #    self._outdent()
-    #    self._write('}')
-    #    return
+    def _ckrp(self, mechanism):
+        self._write()
+        self._write('! Returns R, Rc, Patm' )
+        self._write('subroutine ckrp'+sym+'(ickwrk, rckwrk, ru, ruc, pa)')
+        self._write()
+        self._indent()
+        self._write('integer, intent(in) :: ickwrk')
+        self._write('double precision, intent(in) :: rckwrk')
+        self._write('double precision, intent(out) :: ru')
+        self._write('double precision, intent(out) :: ruc')
+        self._write('double precision, intent(out) :: pa')
+        self._write()
+        self._write('ru  = %fd0 ' % (R * mole * kelvin / erg))
+        self._write('ruc = %.20fd0 ' % (Rc * mole * kelvin / cal))
+        self._write('pa  = %fd0 ' % (Patm))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return
 
     def _cksyme(self, mechanism):
         nElement = len(mechanism.element())
