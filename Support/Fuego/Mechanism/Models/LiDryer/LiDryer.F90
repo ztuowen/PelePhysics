@@ -17,6 +17,7 @@ module fuego_module
   public :: ckcpbs
   public :: ckpy
   public :: get_t_given_ey
+  public :: cksyme
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -31,6 +32,34 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 28.013400d0/)  ! N2
 
 contains
+
+! Returns the char strings of element names
+subroutine cksyme(kname, plenkname)
+
+    integer, intent(out) :: kname(plenkname*3)
+    integer, intent(in) :: plenkname
+
+    integer :: i
+    integer :: lenkname
+
+    lenkname = plenkname
+
+    !clear kname
+    do i=1, lenkname*3
+        kname(i) = ichar(' ')
+    end do
+
+    ! H 
+    kname(0*lenkname+1) = ichar('H')
+    kname(0*lenkname+2) = ichar(' ')
+    ! O 
+    kname(1*lenkname+1) = ichar('O')
+    kname(1*lenkname+2) = ichar(' ')
+    ! N 
+    kname(2*lenkname+1) = ichar('N')
+    kname(2*lenkname+2) = ichar(' ')
+
+end subroutine
 
 ! Compute P = rhoRT/W(y)
 subroutine ckpy(rho, T, y, iwrk, rwrk, P)

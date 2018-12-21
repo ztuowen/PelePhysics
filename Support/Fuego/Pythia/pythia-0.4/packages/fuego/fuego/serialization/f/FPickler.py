@@ -341,7 +341,7 @@ class FPickler(CMill):
         #self._ckindx(mechanism)
         #self._ckxnum(mechanism)
         #self._cksnum(mechanism)
-        #self._cksyme(mechanism)
+        self._cksyme(mechanism)
         #self._cksyms(mechanism)
         #self._ckrp(mechanism)
         
@@ -470,6 +470,7 @@ class FPickler(CMill):
             '  public :: ckcpbs',
             '  public :: ckpy',
             '  public :: get_t_given_ey',
+            '  public :: cksyme',
             ]
         return
 
@@ -1290,42 +1291,42 @@ class FPickler(CMill):
     #    self._write('}')
     #    return
 
-    #def _cksyme(self, mechanism):
-
-    #    nElement = len(mechanism.element())
-    #    
-    #    self._write()
-    #    self._write()
-    #    self._write(
-    #        self.line(' Returns the char strings of element names'))
-    #    self._write('void CKSYME'+sym+'(int * kname, int * plenkname )')
-    #    self._write('{')
-    #    self._indent()
-
-    #    self._write('int i; '+self.line('Loop Counter'))
-    #    self._write('int lenkname = *plenkname;')
-    #    self._write(self.line('clear kname'))
-    #    self._write('for (i=0; i<lenkname*%d; i++) {' % nElement)
-    #    self._indent()
-    #    self._write('kname[i] = \' \';')
-    #    self._outdent()
-    #    self._write('}')
-    #    self._write()
-    #    for element in mechanism.element():
-    #        self._write(self.line(' %s ' % element.symbol))
-    #        ii = 0
-    #        for char in element.symbol:
-    #            self._write('kname[ %d*lenkname + %d ] = \'%s\';' %
-    #                       (element.id, ii, char.capitalize()))
-    #            ii = ii+1
-    #        self._write('kname[ %d*lenkname + %d ] = \' \';' %
-    #                       (element.id, ii))
-    #        self._write()
-    #        
-    #    # done
-    #    self._outdent()
-    #    self._write('}')
-    #    return
+    def _cksyme(self, mechanism):
+        nElement = len(mechanism.element())
+        self._write()
+        self._write('! Returns the char strings of element names')
+        self._write('subroutine cksyme'+sym+'(kname, plenkname)')
+        self._write()
+        self._indent()
+        self._write('integer, intent(out) :: kname(plenkname*%d)' % nElement)
+        self._write('integer, intent(in) :: plenkname')
+        self._write()
+        self._write('integer :: i')
+        self._write('integer :: lenkname')
+        self._write()
+        self._write('lenkname = plenkname')
+        self._write()
+        self._write('!clear kname')
+        self._write('do i=1, lenkname*%d' % nElement)
+        self._indent()
+        self._write('kname(i) = ichar(\' \')')
+        self._outdent()
+        self._write('end do')
+        self._write()
+        for element in mechanism.element():
+            self._write('! %s ' % element.symbol)
+            ii = 1
+            for char in element.symbol:
+                self._write('kname(%d*lenkname+%d) = ichar(\'%s\')' %
+                           (element.id, ii, char.capitalize()))
+                ii = ii+1
+            self._write('kname(%d*lenkname+%d) = ichar(\' \')' %
+                           (element.id, ii))
+            
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        return
 
 
     #def _cksyms(self, mechanism):
