@@ -18,6 +18,7 @@ module fuego_module
   public :: ckpy
   public :: get_t_given_ey
   public :: cksyme
+  public :: cksyms
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -58,6 +59,63 @@ subroutine cksyme(kname, plenkname)
     ! N 
     kname(2*lenkname+1) = ichar('N')
     kname(2*lenkname+2) = ichar(' ')
+
+end subroutine
+
+! Returns the char strings of species names
+subroutine cksyms(kname, plenkname)
+
+    integer, intent(out) :: kname(plenkname*9)
+    integer, intent(in) :: plenkname
+
+    integer :: i
+    integer :: lenkname
+
+    lenkname = plenkname
+
+    !clear kname
+    do i=1, lenkname*9
+        kname(i) = ichar(' ')
+    end do
+
+    ! H2 
+    kname(0*lenkname+1) = ichar('H')
+    kname(0*lenkname+2) = ichar('2')
+    kname(0*lenkname+3) = ichar(' ')
+    ! O2 
+    kname(1*lenkname+1) = ichar('O')
+    kname(1*lenkname+2) = ichar('2')
+    kname(1*lenkname+3) = ichar(' ')
+    ! H2O 
+    kname(2*lenkname+1) = ichar('H')
+    kname(2*lenkname+2) = ichar('2')
+    kname(2*lenkname+3) = ichar('O')
+    kname(2*lenkname+4) = ichar(' ')
+    ! H 
+    kname(3*lenkname+1) = ichar('H')
+    kname(3*lenkname+2) = ichar(' ')
+    ! O 
+    kname(4*lenkname+1) = ichar('O')
+    kname(4*lenkname+2) = ichar(' ')
+    ! OH 
+    kname(5*lenkname+1) = ichar('O')
+    kname(5*lenkname+2) = ichar('H')
+    kname(5*lenkname+3) = ichar(' ')
+    ! HO2 
+    kname(6*lenkname+1) = ichar('H')
+    kname(6*lenkname+2) = ichar('O')
+    kname(6*lenkname+3) = ichar('2')
+    kname(6*lenkname+4) = ichar(' ')
+    ! H2O2 
+    kname(7*lenkname+1) = ichar('H')
+    kname(7*lenkname+2) = ichar('2')
+    kname(7*lenkname+3) = ichar('O')
+    kname(7*lenkname+4) = ichar('2')
+    kname(7*lenkname+5) = ichar(' ')
+    ! N2 
+    kname(8*lenkname+1) = ichar('N')
+    kname(8*lenkname+2) = ichar('2')
+    kname(8*lenkname+3) = ichar(' ')
 
 end subroutine
 
