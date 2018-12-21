@@ -21,6 +21,7 @@ module fuego_module
   public :: cksyms
   public :: ckwt
   public :: ckrp
+  public :: ckindx
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -35,6 +36,23 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 28.013400d0/)  ! N2
 
 contains
+
+! A few mechanism parameters
+subroutine ckindx(iwrk, rwrk, mm, kk, ii, nfit)
+
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    integer, intent(out) :: mm
+    integer, intent(out) :: kk
+    integer, intent(out) :: ii
+    integer, intent(out) :: nfit
+
+    mm = 3
+    kk = 9
+    ii = 21
+    nfit = -1 ! Why do you need this anyway?
+
+end subroutine
 
 ! Returns the char strings of element names
 subroutine cksyme(kname, plenkname)
