@@ -3110,7 +3110,19 @@ class FPickler(CMill):
     #    
     #    self._outdent()
 
-    #    self._write('}')
+        # convert C and wdot to chemkin units
+        self._write()
+        self._write('! convert to chemkin units')
+        self._write('do id=1, %d' % self.nSpecies)
+        self._indent()
+        self._write('C(id) = C(id) * 1.0d-6')
+        self._write('wdot(id) = wdot(id) * 1.0d-6')
+        self._outdent()
+        self._write('end do')
+        
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
     #    return
     #

@@ -21,6 +21,7 @@ module fuego_module
   public :: cksyms
   public :: ckwt
   public :: ckrp
+  public :: ckwc
   public :: ckindx
 
 ! Inverse molecular weights
@@ -35,6 +36,14 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 34.014740d0,  & ! H2O2
     1.d0 / 28.013400d0/)  ! N2
 
+
+
+double precision :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
+double precision :: low_A(21), low_beta(21), low_Ea(21)
+double precision :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
+double precision :: activation_units(21), prefactor_units(21), phase_units(21)
+integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21), TBid(21)
+double precision :: TB(21,21)
 contains
 
 ! A few mechanism parameters
@@ -586,6 +595,565 @@ subroutine ckubms(T, y, iwrk, rwrk, ubms)
 
 end subroutine
 
+! compute the production rate for each species
+subroutine ckwc(T, C, iwrk, rwrk, wdot)
+
+    double precision, intent(in) :: T
+    double precision, intent(inout) :: C(9)
+    integer, intent(in) :: iwrk
+    double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: wdot(9)
+
+    integer :: id ! loop counter
+
+    ! convert to SI
+    do id = 1, 9
+        C(id) = C(id) * 1.0d6
+    end do
+
+    ! convert to chemkin units
+    call productionRate(wdot, C, T)
+
+    ! convert to chemkin units
+    do id=1, 9
+        C(id) = C(id) * 1.0d-6
+        wdot(id) = wdot(id) * 1.0d-6
+    end do
+
+end subroutine
+
+! compute the production rate for each species
+subroutine productionRate(wdot, sc, T)
+
+    double precision, intent(inout) :: wdot(9)
+    double precision, intent(in) :: sc(9)
+    double precision, intent(in) :: T
+
+    double precision :: tc(5)
+    double precision :: invT
+    double precision :: T_save
+    double precision :: k_f_save(21)
+    double precision :: Kc_save(21)
+    double precision :: qdot, q_f(21), q_r(21)
+    integer :: i
+
+    tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /) ! temperature cache
+    invT = 1.d0 / tc(2)
+    T_save = -1.d0
+
+    if (T /= T_save) then
+        T_save = T
+        call comp_k_f(tc,invT,k_f_save)
+        call comp_Kc(tc,invT,Kc_save)
+    end if
+
+    call comp_qfqr(q_f, q_r, sc, tc, invT)
+
+    do i=1, 9
+        wdot(i) = 0.d0
+    end do
+
+    qdot = q_f(1)-q_r(1)
+    wdot(2) = wdot(2) - qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(7) = wdot(7) + qdot
+
+    qdot = q_f(2)-q_r(2)
+    wdot(6) = wdot(6) + qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(8) = wdot(8) - qdot
+
+    qdot = q_f(3)-q_r(3)
+    wdot(1) = wdot(1) - qdot
+    wdot(4) = wdot(4) + qdot
+    wdot(4) = wdot(4) + qdot
+
+    qdot = q_f(4)-q_r(4)
+    wdot(2) = wdot(2) + qdot
+    wdot(5) = wdot(5) - qdot
+    wdot(5) = wdot(5) - qdot
+
+    qdot = q_f(5)-q_r(5)
+    wdot(4) = wdot(4) - qdot
+    wdot(5) = wdot(5) - qdot
+    wdot(6) = wdot(6) + qdot
+
+    qdot = q_f(6)-q_r(6)
+    wdot(3) = wdot(3) + qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(6) = wdot(6) - qdot
+
+    qdot = q_f(7)-q_r(7)
+    wdot(2) = wdot(2) - qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(5) = wdot(5) + qdot
+    wdot(6) = wdot(6) + qdot
+
+    qdot = q_f(8)-q_r(8)
+    wdot(1) = wdot(1) - qdot
+    wdot(4) = wdot(4) + qdot
+    wdot(5) = wdot(5) - qdot
+    wdot(6) = wdot(6) + qdot
+
+    qdot = q_f(9)-q_r(9)
+    wdot(1) = wdot(1) - qdot
+    wdot(3) = wdot(3) + qdot
+    wdot(4) = wdot(4) + qdot
+    wdot(6) = wdot(6) - qdot
+
+    qdot = q_f(10)-q_r(10)
+    wdot(3) = wdot(3) - qdot
+    wdot(5) = wdot(5) - qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(6) = wdot(6) + qdot
+
+    qdot = q_f(11)-q_r(11)
+    wdot(1) = wdot(1) + qdot
+    wdot(2) = wdot(2) + qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(7) = wdot(7) - qdot
+
+    qdot = q_f(12)-q_r(12)
+    wdot(4) = wdot(4) - qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(7) = wdot(7) - qdot
+
+    qdot = q_f(13)-q_r(13)
+    wdot(2) = wdot(2) + qdot
+    wdot(5) = wdot(5) - qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(7) = wdot(7) - qdot
+
+    qdot = q_f(14)-q_r(14)
+    wdot(2) = wdot(2) + qdot
+    wdot(3) = wdot(3) + qdot
+    wdot(6) = wdot(6) - qdot
+    wdot(7) = wdot(7) - qdot
+
+    qdot = q_f(15)-q_r(15)
+    wdot(2) = wdot(2) + qdot
+    wdot(7) = wdot(7) - qdot
+    wdot(7) = wdot(7) - qdot
+    wdot(8) = wdot(8) + qdot
+
+    qdot = q_f(16)-q_r(16)
+    wdot(2) = wdot(2) + qdot
+    wdot(7) = wdot(7) - qdot
+    wdot(7) = wdot(7) - qdot
+    wdot(8) = wdot(8) + qdot
+
+    qdot = q_f(17)-q_r(17)
+    wdot(3) = wdot(3) + qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(8) = wdot(8) - qdot
+
+    qdot = q_f(18)-q_r(18)
+    wdot(1) = wdot(1) + qdot
+    wdot(4) = wdot(4) - qdot
+    wdot(7) = wdot(7) + qdot
+    wdot(8) = wdot(8) - qdot
+
+    qdot = q_f(19)-q_r(19)
+    wdot(5) = wdot(5) - qdot
+    wdot(6) = wdot(6) + qdot
+    wdot(7) = wdot(7) + qdot
+    wdot(8) = wdot(8) - qdot
+
+    qdot = q_f(20)-q_r(20)
+    wdot(3) = wdot(3) + qdot
+    wdot(6) = wdot(6) - qdot
+    wdot(7) = wdot(7) + qdot
+    wdot(8) = wdot(8) - qdot
+
+    qdot = q_f(21)-q_r(21)
+    wdot(3) = wdot(3) + qdot
+    wdot(6) = wdot(6) - qdot
+    wdot(7) = wdot(7) + qdot
+    wdot(8) = wdot(8) - qdot
+
+end subroutine
+
+subroutine comp_k_f(tc, invT, k_f)
+
+    double precision, intent(in) :: tc(5)
+    double precision, intent(in) :: invT
+    double precision, intent(out) :: k_f(21)
+
+    integer :: i
+
+    do i=1, 21
+        k_f(i) = prefactor_units(i)*fwd_A(i)*exp(fwd_beta(i)*tc(1)-activation_units(i)*fwd_Ea(i)*invT)
+    end do
+
+end subroutine
+
+subroutine comp_Kc(tc, invT, Kc)
+
+    double precision, intent(in) :: tc(5)
+    double precision, intent(in) :: invT
+    double precision, intent(inout) :: Kc(21)
+
+    double precision :: g_RT(9)
+    double precision :: refC, refCinv
+    integer :: i
+
+    ! compute the Gibbs free energy
+    call gibbs(g_RT, tc)
+
+    Kc(1) = g_RT(2) + g_RT(4) - g_RT(7)
+    Kc(2) = -g_RT(6) - g_RT(6) + g_RT(8)
+    Kc(3) = g_RT(1) - g_RT(4) - g_RT(4)
+    Kc(4) = -g_RT(2) + g_RT(5) + g_RT(5)
+    Kc(5) = g_RT(4) + g_RT(5) - g_RT(6)
+    Kc(6) = -g_RT(3) + g_RT(4) + g_RT(6)
+    Kc(7) = g_RT(2) + g_RT(4) - g_RT(5) - g_RT(6)
+    Kc(8) = g_RT(1) - g_RT(4) + g_RT(5) - g_RT(6)
+    Kc(9) = g_RT(1) - g_RT(3) - g_RT(4) + g_RT(6)
+    Kc(10) = g_RT(3) + g_RT(5) - g_RT(6) - g_RT(6)
+    Kc(11) = -g_RT(1) - g_RT(2) + g_RT(4) + g_RT(7)
+    Kc(12) = g_RT(4) - g_RT(6) - g_RT(6) + g_RT(7)
+    Kc(13) = -g_RT(2) + g_RT(5) - g_RT(6) + g_RT(7)
+    Kc(14) = -g_RT(2) - g_RT(3) + g_RT(6) + g_RT(7)
+    Kc(15) = -g_RT(2) + g_RT(7) + g_RT(7) - g_RT(8)
+    Kc(16) = -g_RT(2) + g_RT(7) + g_RT(7) - g_RT(8)
+    Kc(17) = -g_RT(3) + g_RT(4) - g_RT(6) + g_RT(8)
+    Kc(18) = -g_RT(1) + g_RT(4) - g_RT(7) + g_RT(8)
+    Kc(19) = g_RT(5) - g_RT(6) - g_RT(7) + g_RT(8)
+    Kc(20) = -g_RT(3) + g_RT(6) - g_RT(7) + g_RT(8)
+    Kc(21) = -g_RT(3) + g_RT(6) - g_RT(7) + g_RT(8)
+
+    do i=1, 21
+        Kc(i) = exp(Kc(i))
+    end do
+
+    ! reference concentration: P_atm / (RT) in inverse mol/m^3
+    refC = 101325d0 / 8.31451d0 * invT
+    refCinv = 1.d0 / refC
+
+    Kc(1) = Kc(1) * (refCinv)
+    Kc(2) = Kc(2) * (refC)
+    Kc(3) = Kc(3) * (refC)
+    Kc(4) = Kc(4) * (refCinv)
+    Kc(5) = Kc(5) * (refCinv)
+    Kc(6) = Kc(6) * (refCinv)
+
+end subroutine
+
+subroutine comp_qfqr(qf, qr, sc, tc, invT)
+
+    double precision, intent(out) :: qf(21)
+    double precision, intent(out) :: qr(21)
+    double precision, intent(in) :: sc(9)
+    double precision, intent(in) :: tc(5)
+    double precision, intent(in) :: invT
+
+    double precision :: T
+    double precision :: mixture
+    double precision :: Corr(21)
+    double precision :: alpha_troe(2)
+    double precision :: redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe
+    double precision :: X, F_sri
+    double precision :: k_f_save(21)
+    double precision :: tmp1, tmp2, tmp3
+    integer :: i
+
+    ! reaction 1: H + O2 (+M) <=> HO2 (+M)
+    qf(1) = sc(1+1)*sc(3+1)
+    qr(1) = sc(6+1)
+    ! reaction 2: H2O2 (+M) <=> OH + OH (+M)
+    qf(2) = sc(7+1)
+    qr(2) = sc(5+1)*sc(5+1)
+    ! reaction 3: H2 + M <=> H + H + M
+    qf(3) = sc(0+1)
+    qr(3) = sc(3+1)*sc(3+1)
+    ! reaction 4: O + O + M <=> O2 + M
+    qf(4) = sc(4+1)*sc(4+1)
+    qr(4) = sc(1+1)
+    ! reaction 5: O + H + M <=> OH + M
+    qf(5) = sc(3+1)*sc(4+1)
+    qr(5) = sc(5+1)
+    ! reaction 6: H + OH + M <=> H2O + M
+    qf(6) = sc(3+1)*sc(5+1)
+    qr(6) = sc(2+1)
+    ! reaction 7: H + O2 <=> O + OH
+    qf(7) = sc(1+1)*sc(3+1)
+    qr(7) = sc(4+1)*sc(5+1)
+    ! reaction 8: O + H2 <=> H + OH
+    qf(8) = sc(0+1)*sc(4+1)
+    qr(8) = sc(3+1)*sc(5+1)
+    ! reaction 9: H2 + OH <=> H2O + H
+    qf(9) = sc(0+1)*sc(5+1)
+    qr(9) = sc(2+1)*sc(3+1)
+    ! reaction 10: O + H2O <=> OH + OH
+    qf(10) = sc(2+1)*sc(4+1)
+    qr(10) = sc(5+1)*sc(5+1)
+    ! reaction 11: HO2 + H <=> H2 + O2
+    qf(11) = sc(3+1)*sc(6+1)
+    qr(11) = sc(0+1)*sc(1+1)
+    ! reaction 12: HO2 + H <=> OH + OH
+    qf(12) = sc(3+1)*sc(6+1)
+    qr(12) = sc(5+1)*sc(5+1)
+    ! reaction 13: HO2 + O <=> O2 + OH
+    qf(13) = sc(4+1)*sc(6+1)
+    qr(13) = sc(1+1)*sc(5+1)
+    ! reaction 14: HO2 + OH <=> H2O + O2
+    qf(14) = sc(5+1)*sc(6+1)
+    qr(14) = sc(1+1)*sc(2+1)
+    ! reaction 15: HO2 + HO2 <=> H2O2 + O2
+    qf(15) = sc(6+1)*sc(6+1)
+    qr(15) = sc(1+1)*sc(7+1)
+    ! reaction 16: HO2 + HO2 <=> H2O2 + O2
+    qf(16) = sc(6+1)*sc(6+1)
+    qr(16) = sc(1+1)*sc(7+1)
+    ! reaction 17: H2O2 + H <=> H2O + OH
+    qf(17) = sc(3+1)*sc(7+1)
+    qr(17) = sc(2+1)*sc(5+1)
+    ! reaction 18: H2O2 + H <=> HO2 + H2
+    qf(18) = sc(3+1)*sc(7+1)
+    qr(18) = sc(0+1)*sc(6+1)
+    ! reaction 19: H2O2 + O <=> OH + HO2
+    qf(19) = sc(4+1)*sc(7+1)
+    qr(19) = sc(5+1)*sc(6+1)
+    ! reaction 20: H2O2 + OH <=> HO2 + H2O
+    qf(20) = sc(5+1)*sc(7+1)
+    qr(20) = sc(2+1)*sc(6+1)
+    ! reaction 21: H2O2 + OH <=> HO2 + H2O
+    qf(21) = sc(5+1)*sc(7+1)
+    qr(21) = sc(2+1)*sc(6+1)
+
+    T = tc(2)
+
+    ! compute the mixture concentration
+    mixture = 0.d0
+    do i=1, 9
+        mixture = mixture + sc(i)
+    end do
+
+    do i=1, 21
+        Corr(i) = 1.d0
+    end do
+
+    ! troe
+    alpha_troe(1) = mixture + (TB(1,1) - 1)*sc(0+1) + (TB(1,2) - 1)*sc(2+1) + (TB(1,3) - 1)*sc(1+1)
+    alpha_troe(2) = mixture + (TB(2,1) - 1)*sc(0+1) + (TB(2,2) - 1)*sc(2+1)
+    do i=1, 2
+
+        redP = alpha_troe(i-0) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)
+        F = redP / (1.d0 + redP)
+        logPred = log10(redP)
+
+        if (troe_Tsss(i) > 1.d-100) then
+           tmp1 = abs((1.d0-troe_a(i))*exp(-T/troe_Tsss(i)))
+        else
+           tmp1 = 0.d0
+        end if
+
+        if (troe_Ts(i) > 1.d-100) then
+           tmp2 = abs(troe_a(i) * exp(-T/troe_Ts(i)))
+        else
+           tmp2 = 0.d0
+        end if
+
+        if (troe_len(i) == 4) then
+           tmp3 = exp(-troe_Tss(i) * invT)
+        else
+           tmp3 = 0.d0
+        end if
+
+        logFcent = log10(tmp1+tmp2+tmp3)
+        troe_c = -0.4d0 - 0.67d0 * logFcent
+        troe_n = 0.75d0 - 1.27d0 * logFcent
+        troe = (troe_c + logPred) / (troe_n - 0.14d0*(troe_c + logPred))
+        F_troe = (logFcent / (1.d0 + troe*troe)) ** 10.d0
+        Corr(i) = F * F_troe
+    end do
+
+end subroutine
+
+! compute the g/(RT) at the given temperature
+! tc contains precomputed powers of T, tc[0] = log(T)
+subroutine gibbs(species, tc)
+
+    double precision, intent(out) :: species(9)
+    double precision, intent(in) :: tc(5)
+
+    double precision :: T
+    double precision :: invT
+
+    T = tc(2)
+    invT = 1.d0 / T
+
+    ! species with midpoint at T=1000 kelvin
+    if (T < 1000.000000d0) then
+        ! species 1: H2
+        species(1) = &
+            -1.012520870000000d+03 * invT &
+            +6.592218400000000d+00 &
+            -3.298124310000000d+00 * tc(1) &
+            -4.124720870000000d-04 * tc(2) &
+            +1.357169215000000d-07 * tc(3) &
+            +7.896195275000000d-12 * tc(4) &
+            -2.067436120000000d-14 * tc(5)
+        ! species 2: O2
+        species(2) = &
+            -1.005249020000000d+03 * invT &
+            -2.821801190000000d+00 &
+            -3.212936400000000d+00 * tc(1) &
+            -5.637431750000000d-04 * tc(2) &
+            +9.593584116666666d-08 * tc(3) &
+            -1.094897691666667d-10 * tc(4) &
+            +4.384276960000000d-14 * tc(5)
+        ! species 3: H2O
+        species(3) = &
+            -3.020811330000000d+04 * invT &
+            +7.966096399999998d-01 &
+            -3.386842490000000d+00 * tc(1) &
+            -1.737491230000000d-03 * tc(2) &
+            +1.059116055000000d-06 * tc(3) &
+            -5.807151058333333d-10 * tc(4) &
+            +1.253294235000000d-13 * tc(5)
+        ! species 4: H
+        species(4) = &
+            +2.547162700000000d+04 * invT &
+            +2.960117608000000d+00 &
+            -2.500000000000000d+00 * tc(1) &
+            -0.000000000000000d+00 * tc(2) &
+            -0.000000000000000d+00 * tc(3) &
+            -0.000000000000000d+00 * tc(4) &
+            -0.000000000000000d+00 * tc(5)
+        ! species 5: O
+        species(5) = &
+            +2.914764450000000d+04 * invT &
+            -1.756619999999964d-02 &
+            -2.946428780000000d+00 * tc(1) &
+            +8.190832450000000d-04 * tc(2) &
+            -4.035052833333333d-07 * tc(3) &
+            +1.335702658333333d-10 * tc(4) &
+            -1.945348180000000d-14 * tc(5)
+        ! species 6: OH
+        species(6) = &
+            +3.346309130000000d+03 * invT &
+            +4.815738570000000d+00 &
+            -4.125305610000000d+00 * tc(1) &
+            +1.612724695000000d-03 * tc(2) &
+            -1.087941151666667d-06 * tc(3) &
+            +4.832113691666666d-10 * tc(4) &
+            -1.031186895000000d-13 * tc(5)
+        ! species 7: HO2
+        species(7) = &
+            +2.948080400000000d+02 * invT &
+            +5.851355599999999d-01 &
+            -4.301798010000000d+00 * tc(1) &
+            +2.374560255000000d-03 * tc(2) &
+            -3.526381516666666d-06 * tc(3) &
+            +2.023032450000000d-09 * tc(4) &
+            -4.646125620000001d-13 * tc(5)
+        ! species 8: H2O2
+        species(8) = &
+            -1.766314650000000d+04 * invT &
+            -3.396609550000000d+00 &
+            -3.388753650000000d+00 * tc(1) &
+            -3.284612905000000d-03 * tc(2) &
+            +2.475020966666667d-08 * tc(3) &
+            +3.854837933333333d-10 * tc(4) &
+            -1.235757375000000d-13 * tc(5)
+        ! species 9: N2
+        species(9) = &
+            -1.020900000000000d+03 * invT &
+            -6.516950000000001d-01 &
+            -3.298677000000000d+00 * tc(1) &
+            -7.041200000000000d-04 * tc(2) &
+            +6.605369999999999d-07 * tc(3) &
+            -4.701262500000001d-10 * tc(4) &
+            +1.222427500000000d-13 * tc(5)
+    else
+        !species 1: H2
+        species(1) = &
+            -8.350339970000000d+02 * invT &
+            +4.346533540000000d+00 &
+            -2.991423370000000d+00 * tc(1) &
+            -3.500322055000000d-04 * tc(2) &
+            +9.389714483333333d-09 * tc(3) &
+            +7.692981816666667d-13 * tc(4) &
+            -7.913758950000000d-17 * tc(5)
+        !species 2: O2
+        species(2) = &
+            -1.233930180000000d+03 * invT &
+            +5.084126000000002d-01 &
+            -3.697578190000000d+00 * tc(1) &
+            -3.067598445000000d-04 * tc(2) &
+            +2.098069983333333d-08 * tc(3) &
+            -1.479401233333333d-12 * tc(4) &
+            +5.682176550000000d-17 * tc(5)
+        !species 3: H2O
+        species(3) = &
+            -2.989920900000000d+04 * invT &
+            -4.190671200000001d+00 &
+            -2.672145610000000d+00 * tc(1) &
+            -1.528146445000000d-03 * tc(2) &
+            +1.455043351666667d-07 * tc(3) &
+            -1.000830325000000d-11 * tc(4) &
+            +3.195808935000000d-16 * tc(5)
+        !species 4: H
+        species(4) = &
+            +2.547162700000000d+04 * invT &
+            +2.960117638000000d+00 &
+            -2.500000000000000d+00 * tc(1) &
+            -0.000000000000000d+00 * tc(2) &
+            -0.000000000000000d+00 * tc(3) &
+            -0.000000000000000d+00 * tc(4) &
+            -0.000000000000000d+00 * tc(5)
+        !species 5: O
+        species(5) = &
+            +2.923080270000000d+04 * invT &
+            -2.378248450000000d+00 &
+            -2.542059660000000d+00 * tc(1) &
+            +1.377530955000000d-05 * tc(2) &
+            +5.171338916666667d-10 * tc(3) &
+            -3.792556183333333d-13 * tc(4) &
+            +2.184025750000000d-17 * tc(5)
+        !species 6: OH
+        species(6) = &
+            +3.683628750000000d+03 * invT &
+            -2.836911870000000d+00 &
+            -2.864728860000000d+00 * tc(1) &
+            -5.282522400000000d-04 * tc(2) &
+            +4.318045966666667d-08 * tc(3) &
+            -2.543488950000000d-12 * tc(4) &
+            +6.659793800000000d-17 * tc(5)
+        !species 7: HO2
+        species(7) = &
+            +1.118567130000000d+02 * invT &
+            +2.321087500000001d-01 &
+            -4.017210900000000d+00 * tc(1) &
+            -1.119910065000000d-03 * tc(2) &
+            +1.056096916666667d-07 * tc(3) &
+            -9.520530833333334d-12 * tc(4) &
+            +5.395426750000000d-16 * tc(5)
+        !species 8: H2O2
+        species(8) = &
+            -1.800696090000000d+04 * invT &
+            +4.072029891000000d+00 &
+            -4.573166850000000d+00 * tc(1) &
+            -2.168068195000000d-03 * tc(2) &
+            +2.457814700000000d-07 * tc(3) &
+            -1.957419641666667d-11 * tc(4) &
+            +7.158267800000000d-16 * tc(5)
+        !species 9: N2
+        species(9) = &
+            -9.227977000000000d+02 * invT &
+            -3.053888000000000d+00 &
+            -2.926640000000000d+00 * tc(1) &
+            -7.439885000000000d-04 * tc(2) &
+            +9.474601666666666d-08 * tc(3) &
+            -8.414199999999999d-12 * tc(4) &
+            +3.376675500000000d-16 * tc(5)
+    end if
+
+end subroutine
+
 
 ! compute Cv/R at the given temperature
 ! tc contains precomputed powers of T, tc[0] = log(T)
@@ -593,7 +1161,7 @@ subroutine cv_R(species, tc)
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
-    ! temperature
+
     double precision :: T
 
     T = tc(2)
@@ -738,7 +1306,7 @@ subroutine cp_R(species, tc)
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
-    ! temperature
+
     double precision :: T
 
     T = tc(2)
@@ -882,7 +1450,7 @@ subroutine speciesInternalEnergy(species, tc)
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
-    ! temperature
+
     double precision :: T
     double precision :: invT
 
@@ -1046,7 +1614,7 @@ subroutine speciesEnthalpy(species, tc)
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
-    ! temperature
+
     double precision :: T
     double precision :: invT
 
