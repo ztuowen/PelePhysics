@@ -93,25 +93,24 @@ class FPickler(CMill):
         self._outdent()
         self._write()
 
-        #self._write()
-        #nReactions = len(mechanism.reaction())
-        #self._write()
-        #self._write('static double fwd_A[%d], fwd_beta[%d], fwd_Ea[%d];' 
+        self._write()
+        nReactions = len(mechanism.reaction())
+        self._write()
+        self._write('double precision :: fwd_A(%d), fwd_beta(%d), fwd_Ea(%d)' 
+                    % (nReactions,nReactions,nReactions))
+        self._write('double precision :: low_A(%d), low_beta(%d), low_Ea(%d)' 
+                    % (nReactions,nReactions,nReactions))
+        #self._write('static double rev_A(%d), rev_beta(%d), rev_Ea(%d)' 
         #            % (nReactions,nReactions,nReactions))
-        #self._write('static double low_A[%d], low_beta[%d], low_Ea[%d];' 
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static double rev_A[%d], rev_beta[%d], rev_Ea[%d];' 
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static double troe_a[%d],troe_Ts[%d], troe_Tss[%d], troe_Tsss[%d];' 
-        #            % (nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double sri_a[%d], sri_b[%d], sri_c[%d], sri_d[%d], sri_e[%d];'
+        self._write('double precision :: troe_a(%d),troe_Ts(%d), troe_Tss(%d), troe_Tsss(%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions))
+        #self._write('static double sri_a(%d), sri_b(%d), sri_c(%d), sri_d(%d), sri_e(%d)'
         #            % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double activation_units[%d], prefactor_units[%d], phase_units[%d];'
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static int is_PD[%d], troe_len[%d], sri_len[%d], nTB[%d], *TBid[%d];' 
-        #            % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double *TB[%d];' 
-        #            % (nReactions))
+        self._write('double precision :: activation_units(%d), prefactor_units(%d), phase_units(%d)'
+                    % (nReactions,nReactions,nReactions))
+        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d), TBid(%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions,nReactions))
+        self._write('double precision :: TB(%d,%d)' % (nReactions,nReactions))
 
         #self._write()
         #self._write('static double fwd_A_DEF[%d], fwd_beta_DEF[%d], fwd_Ea_DEF[%d];' 
@@ -404,7 +403,7 @@ class FPickler(CMill):
         #self._ckabml(mechanism)
         #self._ckabms(mechanism)
 
-        #self._ckwc(mechanism)
+        self._ckwc(mechanism)
         #self._ckwyp(mechanism)
         #self._ckwxp(mechanism)
         #self._ckwyr(mechanism)
@@ -430,7 +429,7 @@ class FPickler(CMill):
         #self._ckeqxr(mechanism)
         
         # Fuego Functions
-        #self._productionRate(mechanism)
+        self._productionRate(mechanism)
         #self._vproductionRate(mechanism)
         #self._DproductionRate(mechanism)
         #self._ajac(mechanism)
@@ -474,6 +473,7 @@ class FPickler(CMill):
             '  public :: cksyms',
             '  public :: ckwt',
             '  public :: ckrp',
+            '  public :: ckwc',
             '  public :: ckindx',
             ]
         return
@@ -1130,7 +1130,7 @@ class FPickler(CMill):
     def _thermo(self, mechanism):
         speciesInfo = self._analyzeThermodynamics(mechanism)
 
-        #self._gibbs(speciesInfo)
+        self._gibbs(speciesInfo)
         #self._helmholtz(speciesInfo)
         self._cv(speciesInfo)
         self._cp(speciesInfo)
@@ -2993,45 +2993,49 @@ class FPickler(CMill):
     #    return
     #
 
-    #def _ckwc(self, mechanism):
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('compute the production rate for each species'))
-    #    self._write('void CKWC'+sym+'(double * restrict T, double * restrict C, int * iwrk, double * restrict rwrk, double * restrict wdot)')
-    #    self._write('{')
-    #    self._indent()
+    def _ckwc(self, mechanism):
+        self._write()
+        self._write('! compute the production rate for each species')
+        self._write('subroutine ckwc'+sym+'(T, C, iwrk, rwrk, wdot)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: T')
+        self._write('double precision, intent(inout) :: C(%d)' % self.nSpecies)
+        self._write('integer, intent(in) :: iwrk')
+        self._write('double precision, intent(in) :: rwrk')
+        self._write('double precision, intent(inout) :: wdot(%d)' % self.nSpecies)
+        self._write()
+        self._write('integer :: id' + ' ! loop counter')
 
-    #    self._write('int id; ' + self.line('loop counter'))
+        # convert C to SI units
+        self._write()
+        self._write('! convert to SI')
+        self._write('do id = 1, %d' % self.nSpecies)
+        self._indent()
+        self._write('C(id) = C(id) * 1.0d6')
+        self._outdent()
+        self._write('end do')
 
-    #    # convert C to SI units
-    #    self._write()
-    #    self._write(self.line('convert to SI'))
-    #    self._write('for (id = 0; id < %d; ++id) {' % self.nSpecies)
-    #    self._indent()
-    #    self._write('C[id] *= 1.0e6;')
-    #    self._outdent()
-    #    self._write('}')
-    #    
-    #    # call productionRate
-    #    self._write()
-    #    self._write(self.line('convert to chemkin units'))
-    #    self._write('productionRate(wdot, C, *T);')
+        # call productionRate
+        self._write()
+        self._write('! convert to chemkin units')
+        self._write('call productionRate(wdot, C, T)')
 
-    #    # convert C and wdot to chemkin units
-    #    self._write()
-    #    self._write(self.line('convert to chemkin units'))
-    #    self._write('for (id = 0; id < %d; ++id) {' % self.nSpecies)
-    #    self._indent()
-    #    self._write('C[id] *= 1.0e-6;')
-    #    self._write('wdot[id] *= 1.0e-6;')
-    #    self._outdent()
-    #    self._write('}')
-    #    
-    #    self._outdent()
+        # convert C and wdot to chemkin units
+        self._write()
+        self._write('! convert to chemkin units')
+        self._write('do id=1, %d' % self.nSpecies)
+        self._indent()
+        self._write('C(id) = C(id) * 1.0d-6')
+        self._write('wdot(id) = wdot(id) * 1.0d-6')
+        self._outdent()
+        self._write('end do')
+        
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._write('}')
-
-    #    return
+        return
 
     #def _ckwyp(self, mechanism):
     #    self._write()
@@ -4827,447 +4831,507 @@ class FPickler(CMill):
 
     #    return 
 
-    #def _productionRate(self, mechanism):
+    def _productionRate(self, mechanism):
 
-    #    nSpecies = len(mechanism.species())
-    #    nReactions = len(mechanism.reaction())
+        nSpecies = len(mechanism.species())
+        nReactions = len(mechanism.reaction())
 
-    #    itroe      = self.reactionIndex[0:2]
-    #    isri       = self.reactionIndex[1:3]
-    #    ilindemann = self.reactionIndex[2:4]
-    #    i3body     = self.reactionIndex[3:5] 
-    #    isimple    = self.reactionIndex[4:6]
-    #    ispecial   = self.reactionIndex[5:7]
+        itroe      = self.reactionIndex[0:2]
+        isri       = self.reactionIndex[1:3]
+        ilindemann = self.reactionIndex[2:4]
+        i3body     = self.reactionIndex[3:5] 
+        isimple    = self.reactionIndex[4:6]
+        ispecial   = self.reactionIndex[5:7]
 
-    #    if len(self.reactionIndex) != 7:
-    #        print '\n\nCheck this!!!\n'
-    #        sys.exit(1)
-    #    
-    #    ntroe      = itroe[1]      - itroe[0]
-    #    nsri       = isri[1]       - isri[0]
-    #    nlindemann = ilindemann[1] - ilindemann[0]
-    #    n3body     = i3body[1]     - i3body[0]
-    #    nsimple    = isimple[1]    - isimple[0]
-    #    nspecial   = ispecial[1]   - ispecial[0]
+        if len(self.reactionIndex) != 7:
+            print '\n\nCheck this!!!\n'
+            sys.exit(1)
+        
+        ntroe      = itroe[1]      - itroe[0]
+        nsri       = isri[1]       - isri[0]
+        nlindemann = ilindemann[1] - ilindemann[0]
+        n3body     = i3body[1]     - i3body[0]
+        nsimple    = isimple[1]    - isimple[0]
+        nspecial   = ispecial[1]   - ispecial[0]
 
-    #    # OMP stuff
-    #    self._write()
-    #    self._write('static double T_save = -1;')
-    #    self._write('#ifdef _OPENMP')
-    #    self._write('#pragma omp threadprivate(T_save)')
-    #    self._write('#endif')
-    #    self._write()
-    #    self._write('static double k_f_save[%d];' % nReactions)
-    #    self._write('#ifdef _OPENMP')
-    #    self._write('#pragma omp threadprivate(k_f_save)')
-    #    self._write('#endif')
-    #    self._write()
-    #    self._write('static double Kc_save[%d];' % nReactions)
-    #    self._write('#ifdef _OPENMP')
-    #    self._write('#pragma omp threadprivate(Kc_save)')
-    #    self._write('#endif')
-    #    self._write()
+        # OMP stuff
+        #self._write()
+        #self._write('static double T_save = -1;')
+        #self._write('#ifdef _OPENMP')
+        #self._write('#pragma omp threadprivate(T_save)')
+        #self._write('#endif')
+        #self._write()
+        #self._write('static double k_f_save[%d];' % nReactions)
+        #self._write('#ifdef _OPENMP')
+        #self._write('#pragma omp threadprivate(k_f_save)')
+        #self._write('#endif')
+        #self._write()
+        #self._write('static double Kc_save[%d];' % nReactions)
+        #self._write('#ifdef _OPENMP')
+        #self._write('#pragma omp threadprivate(Kc_save)')
+        #self._write('#endif')
+        #self._write()
 
-    #    # main function
-    #    self._write()
-    #    self._write(self.line('compute the production rate for each species'))
-    #    self._write('void productionRate(double * restrict wdot, double * restrict sc, double T)')
-    #    self._write('{')
-    #    self._indent()
+        # main function
+        self._write()
+        self._write('! compute the production rate for each species')
+        self._write('subroutine productionRate(wdot, sc, T)')
+        self._write()
+        self._indent()
 
-    #    self._write('double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */')
-    #    self._write('double invT = 1.0 / tc[1];')
-    #    
-    #    self._write()
-    #    self._write('if (T != T_save)')
-    #    self._write('{')
-    #    self._indent()
-    #    self._write('T_save = T;')
-    #    self._write('comp_k_f(tc,invT,k_f_save);');
-    #    self._write('comp_Kc(tc,invT,Kc_save);');
-    #    self._outdent()
-    #    self._write("}")
+        self._write('double precision, intent(inout) :: wdot(%d)' % nSpecies)
+        self._write('double precision, intent(in) :: sc(%d)' % nSpecies)
+        self._write('double precision, intent(in) :: T')
+        self._write()
+        self._write('double precision :: tc(5)')
+        self._write('double precision :: invT')
+        self._write('double precision :: T_save')
+        self._write('double precision :: k_f_save(%d)' % nReactions)
+        self._write('double precision :: Kc_save(%d)' % nReactions)
+        self._write('double precision :: qdot, q_f(%d), q_r(%d)' % (nReactions, nReactions))
+        self._write('integer :: i')
 
-    #    self._write()
-    #    self._write('double qdot, q_f[%d], q_r[%d];' % (nReactions,nReactions))
-    #    self._write('comp_qfqr(q_f, q_r, sc, tc, invT);');
+        self._write()
+        self._write('tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /) ! temperature cache')
+        self._write('invT = 1.d0 / tc(2)')
+        self._write('T_save = -1.d0')
+        
+        self._write()
+        self._write('if (T /= T_save) then')
+        self._indent()
+        self._write('T_save = T')
+        self._write('call comp_k_f(tc,invT,k_f_save)');
+        self._write('call comp_Kc(tc,invT,Kc_save)');
+        self._outdent()
+        self._write('end if')
 
-    #    self._write()
-    #    self._write('for (int i = 0; i < %d; ++i) {' % nSpecies)
-    #    self._indent()
-    #    self._write('wdot[i] = 0.0;')
-    #    self._outdent()
-    #    self._write('}')
+        self._write()
+        self._write('call comp_qfqr(q_f, q_r, sc, tc, invT)');
 
-    #    for i in range(nReactions):
-    #        self._write()
-    #        self._write("qdot = q_f[%d]-q_r[%d];" % (i,i))
-    #        reaction = mechanism.reaction(id=i)
-    #        agents = list(set(reaction.reactants + reaction.products))
-    #        agents = sorted(agents, key=lambda x: mechanism.species(x[0]).id)
-    #        # note that a species might appear as both reactant and product
-    #        # a species might alos appear twice or more on on each side
-    #        # agents is a set that contains unique (symbol, coefficient)
-    #        for a in agents:
-    #            symbol, coefficient = a
-    #            for b in reaction.reactants:
-    #                if b == a:
-    #                    if coefficient == 1:
-    #                        self._write("wdot[%d] -= qdot;" % (mechanism.species(symbol).id))
-    #                    else:
-    #                        self._write("wdot[%d] -= %d * qdot;" % (mechanism.species(symbol).id, coefficient))
-    #            for b in reaction.products: 
-    #                if b == a:
-    #                    if coefficient == 1:
-    #                        self._write("wdot[%d] += qdot;" % (mechanism.species(symbol).id))
-    #                    else:
-    #                        self._write("wdot[%d] += %d * qdot;" % (mechanism.species(symbol).id, coefficient))
+        self._write()
+        self._write('do i=1, %d' % nSpecies)
+        self._indent()
+        self._write('wdot(i) = 0.d0')
+        self._outdent()
+        self._write('end do')
+
+        for i in range(nReactions):
+            self._write()
+            self._write("qdot = q_f(%d)-q_r(%d)" % (i+1,i+1))
+            reaction = mechanism.reaction(id=i)
+            agents = list(set(reaction.reactants + reaction.products))
+            agents = sorted(agents, key=lambda x: mechanism.species(x[0]).id)
+            # note that a species might appear as both reactant and product
+            # a species might alos appear twice or more on on each side
+            # agents is a set that contains unique (symbol, coefficient)
+            for a in agents:
+                symbol, coefficient = a
+                for b in reaction.reactants:
+                    if b == a:
+                        if coefficient == 1:
+                            self._write("wdot(%d) = wdot(%d) - qdot" % (mechanism.species(symbol).id+1, mechanism.species(symbol).id+1))
+                        else:
+                            self._write("wdot(%d) = wdot(%d) - (%d * qdot)" % (mechanism.species(symbol).id+1,mechanism.species(symbol).id+1, coefficient))
+                for b in reaction.products: 
+                    if b == a:
+                        if coefficient == 1:
+                            self._write("wdot(%d) = wdot(%d) + qdot" % (mechanism.species(symbol).id+1,mechanism.species(symbol).id+1))
+                        else:
+                            self._write("wdot(%d) = wdot(%d) + (%d * qdot)" % (mechanism.species(symbol).id+1, mechanism.species(symbol).id+1, coefficient))
 
 
-    #    self._write()
-    #    self._write('return;')
-    #    self._outdent()
+        self._write()
+        #self._write('return')
+        self._outdent()
 
-    #    self._write('}')
+        self._write('end subroutine')
 
-    #    # k_f function
-    #    self._write()
-    #    self._write('void comp_k_f(double * restrict tc, double invT, double * restrict k_f)')
-    #    self._write('{')
-    #    self._indent()
-    #    self._outdent()
-    #    self._write('#ifdef __INTEL_COMPILER')
-    #    self._indent()
-    #    self._write('#pragma simd')
-    #    self._outdent()
-    #    self._write('#endif')
-    #    self._indent()
-    #    self._write('for (int i=0; i<%d; ++i) {' % (nReactions))
-    #    self._indent()
-    #    self._write("k_f[i] = prefactor_units[i] * fwd_A[i]")
-    #    self._write("            * exp(fwd_beta[i] * tc[0] - activation_units[i] * fwd_Ea[i] * invT);")
-    #    self._outdent()
-    #    self._write("};")
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
+        # k_f function
+        self._write()
+        self._write('subroutine comp_k_f(tc, invT, k_f)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: tc(5)')
+        self._write('double precision, intent(in) :: invT')
+        self._write('double precision, intent(out) :: k_f(%d)' % nReactions)
+        self._write()
+        self._write('integer :: i')
+        #self._outdent()
+        #self._write('#ifdef __INTEL_COMPILER')
+        #self._indent()
+        #self._write('#pragma simd')
+        #self._outdent()
+        #self._write('#endif')
+        #self._indent()
+        self._write()
+        self._write('do i=1, %d' % nReactions)
+        self._indent()
+        self._write("k_f(i) = prefactor_units(i)*fwd_A(i)*exp(fwd_beta(i)*tc(1)-activation_units(i)*fwd_Ea(i)*invT)")
+        self._outdent()
+        self._write("end do")
+        self._write()
+        self._outdent()
+        self._write('end subroutine')
 
-    #    # Kc
-    #    self._write()
-    #    self._write('void comp_Kc(double * restrict tc, double invT, double * restrict Kc)')
-    #    self._write('{')
-    #    self._indent()
+        # Kc
+        self._write()
+        self._write('subroutine comp_Kc(tc, invT, Kc)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(in) :: tc(5)')
+        self._write('double precision, intent(in) :: invT')
+        self._write('double precision, intent(inout) :: Kc(%d)' % nReactions)
+        self._write()
+        self._write('double precision :: g_RT(%d)' % nSpecies)
+        self._write('double precision :: refC, refCinv')
+        self._write('integer :: i')
+        self._write()
 
-    #    self._write(self.line('compute the Gibbs free energy'))
-    #    self._write('double g_RT[%d];' % (nSpecies))
-    #    self._write('gibbs(g_RT, tc);')
+        self._write('! compute the Gibbs free energy')
+        self._write('call gibbs(g_RT, tc)')
+        self._write()
 
-    #    self._write()
+        for reaction in mechanism.reaction():
+            KcExpArg = self._sortedKcExpArg(mechanism, reaction)
+            self._write("Kc(%d) = %s" % (reaction.id,KcExpArg))
 
-    #    for reaction in mechanism.reaction():
-    #        KcExpArg = self._sortedKcExpArg(mechanism, reaction)
-    #        self._write("Kc[%d] = %s;" % (reaction.id-1,KcExpArg))
+        self._write()
+        
+        #self._outdent()
+        #self._write('#ifdef __INTEL_COMPILER')
+        #self._indent()
+        #self._write(' #pragma simd')
+        #self._outdent()
+        #self._write('#endif')
+        #self._indent()
+        self._write('do i=1, %d' % nReactions)
+        self._indent()
+        self._write("Kc(i) = exp(Kc(i))")
+        self._outdent()
+        self._write("end do")
 
-    #    self._write()
-    #    
-    #    self._outdent()
-    #    self._write('#ifdef __INTEL_COMPILER')
-    #    self._indent()
-    #    self._write(' #pragma simd')
-    #    self._outdent()
-    #    self._write('#endif')
-    #    self._indent()
-    #    self._write('for (int i=0; i<%d; ++i) {' % (nReactions))
-    #    self._indent()
-    #    self._write("Kc[i] = exp(Kc[i]);")
-    #    self._outdent()
-    #    self._write("};")
+        self._write()
 
-    #    self._write()
+        self._write('! reference concentration: P_atm / (RT) in inverse mol/m^3')
+        self._write('refC = %gd0 / %gd0 * invT' % (atm.value, R.value))
+        self._write('refCinv = 1.d0 / refC')
 
-    #    self._write(self.line('reference concentration: P_atm / (RT) in inverse mol/m^3'))
-    #    self._write('double refC = %g / %g * invT;' % (atm.value, R.value))
-    #    self._write('double refCinv = 1 / refC;')
+        self._write()
 
-    #    self._write()
+        for reaction in mechanism.reaction():
+            KcConv = self._KcConv(mechanism, reaction)
+            if KcConv:
+                self._write("Kc(%d) = Kc(%d) * (%s)" % (reaction.id,reaction.id,KcConv))        
+        
+        self._write()
+        self._outdent()
+        self._write('end subroutine')
 
-    #    for reaction in mechanism.reaction():
-    #        KcConv = self._KcConv(mechanism, reaction)
-    #        if KcConv:
-    #            self._write("Kc[%d] *= %s;" % (reaction.id-1,KcConv))        
-    #    
-    #    self._write()
+        # qdot
+        nclassd = nReactions - nspecial
+        nCorr   = n3body + ntroe + nsri + nlindemann
+        self._write()
+        self._write('subroutine comp_qfqr(qf, qr, sc, tc, invT)')
+        self._write()
+        self._indent()
+        self._write('double precision, intent(out) :: qf(%d)' % nReactions)
+        self._write('double precision, intent(out) :: qr(%d)' % nReactions)
+        self._write('double precision, intent(in) :: sc(%d)' % nSpecies)
+        self._write('double precision, intent(in) :: tc(5)')
+        self._write('double precision, intent(in) :: invT')
+        self._write()
+        self._write('double precision :: T')
+        self._write('double precision :: mixture')
+        self._write('double precision :: Corr(%d)' % nclassd)
+        if ntroe > 0:
+            self._write('double precision :: alpha_troe(%d)' % ntroe)
+        if nsri > 0:
+            self._write('double precision :: alpha_sri(%d)' % nsri)
+        if nlindemann > 0:
+            if nlindemann > 1:
+                self._write("double precision :: alpha_lindemann(%d)" % nlindemann)
+            else:
+                self._write("double precision :: alpha_lindemann")
 
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
+        self._write('double precision :: redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe')
+        self._write('double precision :: X, F_sri')
+        self._write('double precision :: k_f_save(%d)' % nReactions)
+        self._write('double precision :: tmp1, tmp2, tmp3')
+        self._write('integer :: i')
+        self._write()
 
-    #    # qdot
-    #    self._write()
-    #    self._write('void comp_qfqr(double * restrict qf, double * restrict qr, double * restrict sc, double * restrict tc, double invT)')
-    #    self._write('{')
-    #    self._indent()
+        for i in range(nclassd):
+            reaction = mechanism.reaction(id=i)
+            self._write('! reaction %d: %s' % (reaction.id, reaction.equation()))
+            self._write("qf(%d) = %s" % (i+1, self._sortedPhaseSpace(mechanism, reaction.reactants)))
+            if reaction.reversible:
+                self._write("qr(%d) = %s" % (i+1, self._sortedPhaseSpace(mechanism, reaction.products)))
+            else:
+                self._write("qr(%d) = 0.d0" % (i+1))
+            if reaction.rev:
+                print "reaction.rev not finished"
+                sys.exit(1)
 
-    #    nclassd = nReactions - nspecial
-    #    nCorr   = n3body + ntroe + nsri + nlindemann
+        self._write()
+        self._write('T = tc(2)')
+        self._write()
+        self._write('! compute the mixture concentration')
+        self._write('mixture = 0.d0')
+        self._write('do i=1, %d' % nSpecies)
+        self._indent()
+        self._write('mixture = mixture + sc(i)')
+        self._outdent()
+        self._write('end do')
 
-    #    for i in range(nclassd):
-    #        self._write()
-    #        reaction = mechanism.reaction(id=i)
-    #        self._write(self.line('reaction %d: %s' % (reaction.id, reaction.equation())))
-    #        self._write("qf[%d] = %s;" % (i, self._sortedPhaseSpace(mechanism, reaction.reactants)))
-    #        if reaction.reversible:
-    #            self._write("qr[%d] = %s;" % (i, self._sortedPhaseSpace(mechanism, reaction.products)))
-    #        else:
-    #            self._write("qr[%d] = 0.0;" % (i))
-    #        if reaction.rev:
-    #            print "reaction.rev not finished"
-    #            sys.exit(1)
+        self._write()
+        self._write('do i=1, %d' % nclassd)
+        self._indent()
+        self._write('Corr(i) = 1.d0')
+        self._outdent()
+        self._write('end do')
 
-    #    self._write()
-    #    self._write('double T = tc[1];')
-    #    self._write()
-    #    self._write(self.line('compute the mixture concentration'))
-    #    self._write('double mixture = 0.0;')
-    #    self._write('for (int i = 0; i < %d; ++i) {' % nSpecies)
-    #    self._indent()
-    #    self._write('mixture += sc[i];')
-    #    self._outdent()
-    #    self._write('}')
+        if ntroe > 0:
+            self._write()
+            self._write("! troe")
+            #self._write("{")
+            #self._indent()
+            alpha_d = {}
+            for i in range(itroe[0],itroe[1]):
+                ii = i - itroe[0] + 1
+                reaction = mechanism.reaction(id=i)
+                if reaction.thirdBody:
+                    alpha = self._enhancement(mechanism, reaction)
+                    if alpha in alpha_d:
+                        self._write("alpha_troe(%d) = %s" %(ii,alpha_d[alpha]))
+                    else:
+                        self._write("alpha_troe(%d) = %s" %(ii,alpha))
+                        alpha_d[alpha] = "alpha_troe(%d)" % ii
 
-    #    self._write()
-    #    self._write("double Corr[%d];" % nclassd)
-    #    self._write('for (int i = 0; i < %d; ++i) {' % nclassd)
-    #    self._indent()
-    #    self._write('Corr[i] = 1.0;')
-    #    self._outdent()
-    #    self._write('}')
+            #if ntroe >= 4:
+            #    self._outdent()
+            #    self._outdent()
+            #    self._write('#ifdef __INTEL_COMPILER')
+            #    self._indent()
+            #    self._indent()
+            #    self._write(' #pragma simd')
+            #    self._outdent()
+            #    self._outdent()
+            #    self._write('#endif')
+            #    self._indent()
+            #    self._indent()
+            self._write("do i=%d, %d" %(itroe[0]+1,itroe[1]))
+            self._write()
+            self._indent()
+            self._write("redP = alpha_troe(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)" % itroe[0])
+            self._write("F = redP / (1.d0 + redP)")
+            self._write("logPred = log10(redP)")
+            self._write()
+            self._write("if (troe_Tsss(i) > 1.d-100) then")
+            self._write("   tmp1 = abs((1.d0-troe_a(i))*exp(-T/troe_Tsss(i)))")
+            self._write("else")
+            self._write("   tmp1 = 0.d0")
+            self._write("end if")
+            self._write()
+            self._write("if (troe_Ts(i) > 1.d-100) then")
+            self._write("   tmp2 = abs(troe_a(i) * exp(-T/troe_Ts(i)))")
+            self._write("else")
+            self._write("   tmp2 = 0.d0")
+            self._write("end if")
+            self._write()
+            self._write("if (troe_len(i) == 4) then")
+            self._write("   tmp3 = exp(-troe_Tss(i) * invT)")
+            self._write("else")
+            self._write("   tmp3 = 0.d0")
+            self._write("end if")
+            self._write()
+            self._write('logFcent = log10(tmp1+tmp2+tmp3)')
+            self._write("troe_c = -0.4d0 - 0.67d0 * logFcent")
+            self._write("troe_n = 0.75d0 - 1.27d0 * logFcent")
+            self._write("troe = (troe_c + logPred) / (troe_n - 0.14d0*(troe_c + logPred))")
+            self._write("F_troe = (logFcent / (1.d0 + troe*troe)) ** 10.d0")
+            self._write("Corr(i) = F * F_troe")
+            self._outdent()
+            self._write('end do')
+            #self._outdent()
+            #self._write("}")
 
-    #    if ntroe > 0:
-    #        self._write()
-    #        self._write(self.line(" troe"))
-    #        self._write("{")
-    #        self._indent()
-    #        self._write("double alpha[%d];" % ntroe)
-    #        alpha_d = {}
-    #        for i in range(itroe[0],itroe[1]):
-    #            ii = i - itroe[0]
-    #            reaction = mechanism.reaction(id=i)
-    #            if reaction.thirdBody:
-    #                alpha = self._enhancement(mechanism, reaction)
-    #                if alpha in alpha_d:
-    #                    self._write("alpha[%d] = %s;" %(ii,alpha_d[alpha]))
-    #                else:
-    #                    self._write("alpha[%d] = %s;" %(ii,alpha))
-    #                    alpha_d[alpha] = "alpha[%d]" % ii
+        if nsri > 0:
+            self._write()
+            self._write("! SRI")
+            #self._write("{")
+            #self._indent()
+            alpha_d = {}
+            for i in range(isri[0],isri[1]):
+                ii = i - isri[0] + 1
+                reaction = mechanism.reaction(id=i)
+                if reaction.thirdBody:
+                    alpha = self._enhancement(mechanism, reaction)
+                    if alpha in alpha_d:
+                        self._write("alpha_sri(%d) = %s" %(ii,alpha_d[alpha]))
+                    else:
+                        self._write("alpha_sri(%d) = %s" %(ii,alpha))
+                        alpha_d[alpha] = "alpha_sri(%d)" % ii
 
-    #        if ntroe >= 4:
-    #            self._outdent()
-    #            self._outdent()
-    #            self._write('#ifdef __INTEL_COMPILER')
-    #            self._indent()
-    #            self._indent()
-    #            self._write(' #pragma simd')
-    #            self._outdent()
-    #            self._outdent()
-    #            self._write('#endif')
-    #            self._indent()
-    #            self._indent()
-    #        self._write("for (int i=%d; i<%d; i++)" %(itroe[0],itroe[1]))
-    #        self._write("{")
-    #        self._indent()
-    #        self._write("double redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe;")
-    #        self._write("redP = alpha[i-%d] / k_f_save[i] * phase_units[i] * low_A[i] * exp(low_beta[i] * tc[0] - activation_units[i] * low_Ea[i] *invT);" % itroe[0])
-    #        self._write("F = redP / (1.0 + redP);")
-    #        self._write("logPred = log10(redP);")
-    #        self._write('logFcent = log10(')
-    #        self._write('    (fabs(troe_Tsss[i]) > 1.e-100 ? (1.-troe_a[i])*exp(-T/troe_Tsss[i]) : 0.) ')
-    #        self._write('    + (fabs(troe_Ts[i]) > 1.e-100 ? troe_a[i] * exp(-T/troe_Ts[i]) : 0.) ')
-    #        self._write('    + (troe_len[i] == 4 ? exp(-troe_Tss[i] * invT) : 0.) );')
-    #        self._write("troe_c = -.4 - .67 * logFcent;")
-    #        self._write("troe_n = .75 - 1.27 * logFcent;")
-    #        self._write("troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));")
-    #        self._write("F_troe = pow(10., logFcent / (1.0 + troe*troe));")
-    #        self._write("Corr[i] = F * F_troe;")
-    #        self._outdent()
-    #        self._write('}')
+            #if nsri >= 4:
+            #    self._outdent()
+            #    self._outdent()
+            #    self._write('#ifdef __INTEL_COMPILER')
+            #    self._indent()
+            #    self._indent()
+            #    self._write(' #pragma simd')
+            #    self._outdent()
+            #    self._outdent()
+            #    self._write('#endif')
+            #    self._indent()
+            #    self._indent()
+            self._write("do i=%d, %d" %(isri[0]+1,isri[1]))
+            self._write()
+            self._indent()
+            self._write("redP = alpha_sri(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)" % itroe[0])
+            self._write("F = redP / (1.d0 + redP)")
+            self._write("logPred = log10(redP)")
+            self._write("X = 1.d0 / (1.d0 + logPred*logPred)")
+            self._write()
+            self._write("if (sri_c(i) > 1.d-100) then")
+            self._write("   tmp1 = exp(T/sri_c(i))")
+            self._write("else")
+            self._write("   tmp1 = 0.d0")
+            self._write("end if")
+            self._write()
+            self._write("if (sri_len(i) > 3.d0) then")
+            self._write("   tmp2 = sri_d(i)*exp(sri_e(i)*tc(1))")
+            self._write("else")
+            self._write("   tmp2 = 0.d0")
+            self._write("end if")
+            self._write()
+            self._write("F_sri = exp(X*log(sri_a(i)*exp(-sri_b(i)*invT)+tmp1)*tmp2)")
+            self._write("Corr(i) = F * F_sri")
+            self._outdent()
+            self._write('end do')
 
-    #        self._outdent()
-    #        self._write("}")
+            #self._outdent()
+            #self._write("}")
 
-    #    if nsri > 0:
-    #        self._write()
-    #        self._write(self.line(" SRI"))
-    #        self._write("{")
-    #        self._indent()
-    #        self._write("double alpha[%d];" % nsri)
-    #        self._write("double redP, F, X, F_sri;")
-    #        alpha_d = {}
-    #        for i in range(isri[0],isri[1]):
-    #            ii = i - isri[0]
-    #            reaction = mechanism.reaction(id=i)
-    #            if reaction.thirdBody:
-    #                alpha = self._enhancement(mechanism, reaction)
-    #                if alpha in alpha_d:
-    #                    self._write("alpha[%d] = %s;" %(ii,alpha_d[alpha]))
-    #                else:
-    #                    self._write("alpha[%d] = %s;" %(ii,alpha))
-    #                    alpha_d[alpha] = "alpha[%d]" % ii
+        if nlindemann > 0:
+            self._write()
+            self._write("! Lindemann")
+            #self._write("{")
+            #self._indent()
 
-    #        if nsri >= 4:
-    #            self._outdent()
-    #            self._outdent()
-    #            self._write('#ifdef __INTEL_COMPILER')
-    #            self._indent()
-    #            self._indent()
-    #            self._write(' #pragma simd')
-    #            self._outdent()
-    #            self._outdent()
-    #            self._write('#endif')
-    #            self._indent()
-    #            self._indent()
-    #        self._write("for (int i=%d; i<%d; i++)" %(isri[0],isri[1]))
-    #        self._write("{")
-    #        self._indent()
-    #        self._write("redP = alpha[i-%d] / k_f_save[i] * phase_units[i] * low_A[i] * exp(low_beta[i] * tc[0] - activation_units[i] * low_Ea[i] *invT);" % itroe[0])
-    #        self._write("F = redP / (1.0 + redP);")
-    #        self._write("logPred = log10(redP);")
-    #        self._write("X = 1.0 / (1.0 + logPred*logPred);")
-    #        self._write("F_sri = exp(X * log(sri_a[i] * exp(-sri_b[i]*invT)")
-    #        self._write("   +  (sri_c[i] > 1.e-100 ? exp(T/sri_c[i]) : 0.0) )")
-    #        self._write("   *  (sri_len[i] > 3 ? sri_d[i]*exp(sri_e[i]*tc[0]) : 1.0);")
-    #        self._write("Corr[i] = F * F_sri;")
-    #        self._outdent()
-    #        self._write('}')
+            for i in range(ilindemann[0],ilindemann[1]):
+                ii = i - ilindemann[0] + 1
+                reaction = mechanism.reaction(id=i)
+                if reaction.thirdBody:
+                    alpha = self._enhancement(mechanism, reaction)
+                    if nlindemann > 1:
+                        self._write("alpha_lindemann(%d) = %s" %(ii,alpha))
+                    else:
+                        self._write("alpha_lindemann = %s" %(alpha))
 
-    #        self._outdent()
-    #        self._write("}")
+            if nlindemann == 1:
+                self._write("double redP = alpha_lindemann / k_f_save(%d) * phase_units(%d) * low_A(%d) * exp(low_beta(%d) * tc(1) - activation_units(%d) * low_Ea(%d) * invT)" 
+                            % (ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0]))
+                self._write("Corr(%d) = redP / (1.d0 + redP)" % ilindemann[0])
+            else:
+                #if nlindemann >= 4:
+                #    self._outdent()
+                #    self._write('#ifdef __INTEL_COMPILER')
+                #    self._indent()
+                #    self._write(' #pragma simd')
+                #    self._outdent()
+                #    self._write('#endif')
+                #    self._indent()
+                self._write("do i=%d, %d" % (ilindemann[0]+1, ilindemann[1]))
+                self._write()
+                self._indent()
+                self._write("double redP = alpha_lindemann(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) * invT)"
+                            % ilindemann[0])
+                self._write("Corr(i) = redP / (1.d0 + redP)")
+                self._outdent()
+                self._write('end do')
 
-    #    if nlindemann > 0:
-    #        self._write()
-    #        self._write(self.line(" Lindemann"))
-    #        self._write("{")
-    #        self._indent()
-    #        if nlindemann > 1:
-    #            self._write("double alpha[%d];" % nlindemann)
-    #        else:
-    #            self._write("double alpha;")
+            self._outdent()
+            #self._write("}")
 
-    #        for i in range(ilindemann[0],ilindemann[1]):
-    #            ii = i - ilindemann[0]
-    #            reaction = mechanism.reaction(id=i)
-    #            if reaction.thirdBody:
-    #                alpha = self._enhancement(mechanism, reaction)
-    #                if nlindemann > 1:
-    #                    self._write("alpha[%d] = %s;" %(ii,alpha))
-    #                else:
-    #                    self._write("alpha = %s;" %(alpha))
+        #if n3body > 0:
+        #    self._write()
+        #    self._write(self.line(" simple three-body correction"))
+        #    self._write("{")
+        #    self._indent()
+        #    self._write("double alpha;")
+        #    alpha_save = ""
+        #    for i in range(i3body[0],i3body[1]):
+        #        reaction = mechanism.reaction(id=i)
+        #        if reaction.thirdBody:
+        #            alpha = self._enhancement(mechanism, reaction)
+        #            if alpha != alpha_save:
+        #                alpha_save = alpha
+        #                self._write("alpha = %s;" % alpha)
+        #            self._write("Corr[%d] = alpha;" % i)
+        #    self._outdent()
+        #    self._write("}")
 
-    #        if nlindemann == 1:
-    #            self._write("double redP = alpha / k_f_save[%d] * phase_units[%d] * low_A[%d] * exp(low_beta[%d] * tc[0] - activation_units[%d] * low_Ea[%d] * invT);" 
-    #                        % (ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0]))
-    #            self._write("Corr[%d] = redP / (1. + redP);" % ilindemann[0])
-    #        else:
-    #            if nlindemann >= 4:
-    #                self._outdent()
-    #                self._write('#ifdef __INTEL_COMPILER')
-    #                self._indent()
-    #                self._write(' #pragma simd')
-    #                self._outdent()
-    #                self._write('#endif')
-    #                self._indent()
-    #            self._write("for (int i=%d; i<%d; i++)" % (ilindemann[0], ilindemann[1]))
-    #            self._write("{")
-    #            self._indent()
-    #            self._write("double redP = alpha[i-%d] / k_f_save[i] * phase_units[i] * low_A[i] * exp(low_beta[i] * tc[0] - activation_units[i] * low_Ea[i] * invT);"
-    #                        % ilindemann[0])
-    #            self._write("Corr[i] = redP / (1. + redP);")
-    #            self._outdent()
-    #            self._write('}')
+        #self._write()
+        #self._write("for (int i=0; i<%d; i++)" % nclassd)
+        #self._write("{")
+        #self._indent()
+        #self._write("qf[i] *= Corr[i] * k_f_save[i];")
+        #self._write("qr[i] *= Corr[i] * k_f_save[i] / Kc_save[i];")
+        #self._outdent()
+        #self._write("}")
+        #
+        #if nspecial > 0:
 
-    #        self._outdent()
-    #        self._write("}")
+        #    print "\n\n ***** WARNING: %d unclassified reactions\n" % nspecial
 
-    #    if n3body > 0:
-    #        self._write()
-    #        self._write(self.line(" simple three-body correction"))
-    #        self._write("{")
-    #        self._indent()
-    #        self._write("double alpha;")
-    #        alpha_save = ""
-    #        for i in range(i3body[0],i3body[1]):
-    #            reaction = mechanism.reaction(id=i)
-    #            if reaction.thirdBody:
-    #                alpha = self._enhancement(mechanism, reaction)
-    #                if alpha != alpha_save:
-    #                    alpha_save = alpha
-    #                    self._write("alpha = %s;" % alpha)
-    #                self._write("Corr[%d] = alpha;" % i)
-    #        self._outdent()
-    #        self._write("}")
+        #    self._write()
+        #    self._write(self.line('unclassified reactions'))
+        #    self._write('{')
+        #    self._indent()
 
-    #    self._write()
-    #    self._write("for (int i=0; i<%d; i++)" % nclassd)
-    #    self._write("{")
-    #    self._indent()
-    #    self._write("qf[i] *= Corr[i] * k_f_save[i];")
-    #    self._write("qr[i] *= Corr[i] * k_f_save[i] / Kc_save[i];")
-    #    self._outdent()
-    #    self._write("}")
-    #    
-    #    if nspecial > 0:
+        #    self._write(self.line("reactions: %d to %d" % (ispecial[0]+1,ispecial[1])))
 
-    #        print "\n\n ***** WARNING: %d unclassified reactions\n" % nspecial
+        #    self._write('double Kc;                      ' + self.line('equilibrium constant'))
+        #    self._write('double k_f;                     ' + self.line('forward reaction rate'))
+        #    self._write('double k_r;                     ' + self.line('reverse reaction rate'))
+        #    self._write('double q_f;                     ' + self.line('forward progress rate'))
+        #    self._write('double q_r;                     ' + self.line('reverse progress rate'))
+        #    self._write('double phi_f;                   '
+        #                + self.line('forward phase space factor'))
+        #    self._write('double phi_r;                   ' + self.line('reverse phase space factor'))
+        #    self._write('double alpha;                   ' + self.line('enhancement'))
 
-    #        self._write()
-    #        self._write(self.line('unclassified reactions'))
-    #        self._write('{')
-    #        self._indent()
+        #    self._write('double redP;                    ' + self.line('reduced pressure'))
+        #    self._write('double logPred;                 ' + self.line('log of above'))
+        #    self._write('double F;                       ' + self.line('fallof rate enhancement'))
+        #    self._write()
+        #    self._write('double F_troe;                  ' + self.line('TROE intermediate'))
+        #    self._write('double logFcent;                ' + self.line('TROE intermediate'))
+        #    self._write('double troe;                    ' + self.line('TROE intermediate'))
+        #    self._write('double troe_c;                  ' + self.line('TROE intermediate'))
+        #    self._write('double troe_n;                  ' + self.line('TROE intermediate'))
 
-    #        self._write(self.line("reactions: %d to %d" % (ispecial[0]+1,ispecial[1])))
+        #    for i in range(ispecial[0],ispecial[1]):
+        #        self._write()
+        #        reaction = mechanism.reaction(id=i)
+        #        self._write(self.line('reaction %d: %s' % (reaction.id, reaction.equation())))
 
-    #        self._write('double Kc;                      ' + self.line('equilibrium constant'))
-    #        self._write('double k_f;                     ' + self.line('forward reaction rate'))
-    #        self._write('double k_r;                     ' + self.line('reverse reaction rate'))
-    #        self._write('double q_f;                     ' + self.line('forward progress rate'))
-    #        self._write('double q_r;                     ' + self.line('reverse progress rate'))
-    #        self._write('double phi_f;                   '
-    #                    + self.line('forward phase space factor'))
-    #        self._write('double phi_r;                   ' + self.line('reverse phase space factor'))
-    #        self._write('double alpha;                   ' + self.line('enhancement'))
+        #        # compute the rates
+        #        self._forwardRate(mechanism, reaction)
+        #        self._reverseRate(mechanism, reaction)
 
-    #        self._write('double redP;                    ' + self.line('reduced pressure'))
-    #        self._write('double logPred;                 ' + self.line('log of above'))
-    #        self._write('double F;                       ' + self.line('fallof rate enhancement'))
-    #        self._write()
-    #        self._write('double F_troe;                  ' + self.line('TROE intermediate'))
-    #        self._write('double logFcent;                ' + self.line('TROE intermediate'))
-    #        self._write('double troe;                    ' + self.line('TROE intermediate'))
-    #        self._write('double troe_c;                  ' + self.line('TROE intermediate'))
-    #        self._write('double troe_n;                  ' + self.line('TROE intermediate'))
+        #        # store the progress rate
+        #        self._write("qf[%d] = q_f;" % i)
+        #        self._write("qr[%d] = q_r;" % i)
 
-    #        for i in range(ispecial[0],ispecial[1]):
-    #            self._write()
-    #            reaction = mechanism.reaction(id=i)
-    #            self._write(self.line('reaction %d: %s' % (reaction.id, reaction.equation())))
+        #    self._outdent()
+        #    self._write('}')
 
-    #            # compute the rates
-    #            self._forwardRate(mechanism, reaction)
-    #            self._reverseRate(mechanism, reaction)
+        self._write()
+        self._outdent()
+        self._write('end subroutine')
 
-    #            # store the progress rate
-    #            self._write("qf[%d] = q_f;" % i)
-    #            self._write("qr[%d] = q_r;" % i)
-
-    #        self._outdent()
-    #        self._write('}')
-
-    #    self._write()
-    #    self._write('return;')
-    #    self._outdent()
-    #    self._write('}')
-
-    #    return
+        return
 
 
     #def _DproductionRate(self, mechanism):
@@ -6807,15 +6871,15 @@ class FPickler(CMill):
 
     #    return "*".join(phi)
 
-    #def _sortedPhaseSpace(self, mechanism, reagents):
+    def _sortedPhaseSpace(self, mechanism, reagents):
 
-    #    phi = []
+        phi = []
 
-    #    for symbol, coefficient in sorted(reagents,key=lambda x:mechanism.species(x[0]).id):
-    #        conc = "sc[%d]" % mechanism.species(symbol).id
-    #        phi += [conc] * coefficient
+        for symbol, coefficient in sorted(reagents,key=lambda x:mechanism.species(x[0]).id):
+            conc = "sc(%d+1)" % mechanism.species(symbol).id
+            phi += [conc] * coefficient
 
-    #    return "*".join(phi)
+        return "*".join(phi)
 
 
     #def _DphaseSpace(self, mechanism, reagents, r):
@@ -6857,29 +6921,29 @@ class FPickler(CMill):
     #    return dim
 
 
-    #def _enhancement(self, mechanism, reaction):
-    #    thirdBody = reaction.thirdBody
-    #    if not thirdBody:
-    #        import pyre
-    #        pyre.debug.Firewall.hit("_enhancement called for a reaction without a third body")
-    #        return
+    def _enhancement(self, mechanism, reaction):
+        thirdBody = reaction.thirdBody
+        if not thirdBody:
+            import pyre
+            pyre.debug.Firewall.hit("_enhancement called for a reaction without a third body")
+            return
 
-    #    species, coefficient = thirdBody
-    #    efficiencies = reaction.efficiencies
+        species, coefficient = thirdBody
+        efficiencies = reaction.efficiencies
 
-    #    if not efficiencies:
-    #        if species == "<mixture>":
-    #            return "mixture"
-    #        return "sc[%d]" % mechanism.species(species).id
+        if not efficiencies:
+            if species == "<mixture>":
+                return "mixture"
+            return "sc(%d+1)" % mechanism.species(species).id
 
-    #    alpha = ["mixture"]
-    #    for i, eff in enumerate(efficiencies):
-    #        symbol, efficiency = eff
-    #        factor = "(TB[%d][%d] - 1)" % (reaction.id-1, i)
-    #        conc = "sc[%d]" % mechanism.species(symbol).id
-    #        alpha.append("%s*%s" % (factor, conc))
+        alpha = ["mixture"]
+        for i, eff in enumerate(efficiencies):
+            symbol, efficiency = eff
+            factor = "(TB(%d,%d) - 1)" % (reaction.id, i+1)
+            conc = "sc(%d+1)" % mechanism.species(symbol).id
+            alpha.append("%s*%s" % (factor, conc))
 
-    #    return " + ".join(alpha).replace('+ -','- ')
+        return " + ".join(alpha).replace('+ -','- ')
 
     #def _Denhancement(self, mechanism, reaction, kid, consP):
     #    thirdBody = reaction.thirdBody
@@ -6970,15 +7034,13 @@ class FPickler(CMill):
 
     #    return
 
-    #def _gibbs(self, speciesInfo):
+    def _gibbs(self, speciesInfo):
+        self._write()
+        self._write('! compute the g/(RT) at the given temperature')
+        self._write('! tc contains precomputed powers of T, tc[0] = log(T)')
+        self._generateThermoRoutine("gibbs", self._gibbsNASA, speciesInfo, 1)
 
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('compute the g/(RT) at the given temperature'))
-    #    self._write(self.line('tc contains precomputed powers of T, tc[0] = log(T)'))
-    #    self._generateThermoRoutine("gibbs", self._gibbsNASA, speciesInfo, 1)
-
-    #    return
+        return
 
     #def _helmholtz(self, speciesInfo):
 
@@ -7032,7 +7094,7 @@ class FPickler(CMill):
         self._write()
         self._write('double precision, intent(out) :: species(%d)' % nSpec)
         self._write('double precision, intent(in) :: tc(5)')
-        self._write('! temperature')
+        self._write()
         self._write('double precision :: T')
         if needsInvT != 0:
            self._write('double precision :: invT')
@@ -8320,54 +8382,54 @@ class FPickler(CMill):
 
     #    return K_c
 
-    #def _KcConv(self, mechanism, reaction):
-    #    dim = 0
-    #    for symbol, coefficient in reaction.reactants:
-    #        dim -= coefficient
-    #    # flip the signs
-    #    for symbol, coefficient in reaction.products:
-    #        dim += coefficient
+    def _KcConv(self, mechanism, reaction):
+        dim = 0
+        for symbol, coefficient in reaction.reactants:
+            dim -= coefficient
+        # flip the signs
+        for symbol, coefficient in reaction.products:
+            dim += coefficient
 
-    #    if dim == 0:
-    #        conversion = ""
-    #    elif dim > 0:
-    #        conversion = "*".join(["refC"] * dim)
-    #    else:
-    #        conversion = "*".join(["refCinv"] * abs(dim))
+        if dim == 0:
+            conversion = ""
+        elif dim > 0:
+            conversion = "*".join(["refC"] * dim)
+        else:
+            conversion = "*".join(["refCinv"] * abs(dim))
 
-    #    return conversion
+        return conversion
 
-    #def _sortedKcExpArg(self, mechanism, reaction):
+    def _sortedKcExpArg(self, mechanism, reaction):
 
-    #    nSpecies = len(mechanism.species())
+        nSpecies = len(mechanism.species())
 
-    #    terms = []
-    #    for i in range(nSpecies):
-    #        terms.append('')
-    #    for symbol, coefficient in reaction.reactants:
-    #        if coefficient == 1:
-    #            factor = " + "
-    #        else:
-    #            factor = " + %d*" % coefficient
-    #        i = mechanism.species(symbol).id
-    #        terms[i] += "%sg_RT[%d]"%(factor,i)
+        terms = []
+        for i in range(nSpecies):
+            terms.append('')
+        for symbol, coefficient in reaction.reactants:
+            if coefficient == 1:
+                factor = " + "
+            else:
+                factor = " + %d*" % coefficient
+            i = mechanism.species(symbol).id
+            terms[i] += "%sg_RT(%d)"%(factor,i+1)
 
-    #    for symbol, coefficient in reaction.products:
-    #        if coefficient == 1:
-    #            factor = " - "    # flip the signs
-    #        else:
-    #            factor = " - %d*" % coefficient
-    #        i = mechanism.species(symbol).id
-    #        terms[i] += "%sg_RT[%d]"%(factor,i)
+        for symbol, coefficient in reaction.products:
+            if coefficient == 1:
+                factor = " - "    # flip the signs
+            else:
+                factor = " - %d*" % coefficient
+            i = mechanism.species(symbol).id
+            terms[i] += "%sg_RT(%d)"%(factor,i+1)
 
-    #    dG = ""
-    #    for i in range(nSpecies):
-    #        if terms[i]:
-    #            dG += terms[i]
-    #    if dG[0:3] == " + ":
-    #        return dG[3:]
-    #    else:
-    #        return "-"+dG[3:]
+        dG = ""
+        for i in range(nSpecies):
+            if terms[i]:
+                dG += terms[i]
+        if dG[0:3] == " + ":
+            return dG[3:]
+        else:
+            return "-"+dG[3:]
 
 
     #def _sortedKc(self, mechanism, reaction):
@@ -8493,17 +8555,17 @@ class FPickler(CMill):
         self._write('%s' % ('%+15.8e * invT' % (parameters[5])).replace("e", "d"))
         return
 
-    #
-    #def _gibbsNASA(self, parameters):
-    #    self._write('%+20.15e * invT' % parameters[5])
-    #    self._write('%+20.15e' % (parameters[0] - parameters[6]))
-    #    self._write('%+20.15e * tc[0]' % (-parameters[0]))
-    #    self._write('%+20.15e * tc[1]' % (-parameters[1]/2))
-    #    self._write('%+20.15e * tc[2]' % (-parameters[2]/6))
-    #    self._write('%+20.15e * tc[3]' % (-parameters[3]/12))
-    #    self._write('%+20.15e * tc[4];' % (-parameters[4]/20))
-    #    return
-    #
+
+    def _gibbsNASA(self, parameters):
+        self._write('%s &' % ('%+20.15e * invT' % (parameters[5])).replace("e", "d"))
+        self._write('%s &' % ('%+20.15e' % (parameters[0] - parameters[6])).replace("e", "d"))
+        self._write('%s &' % ('%+20.15e * tc(1)' % (-parameters[0])).replace("e", "d"))
+        self._write('%s &' % ('%+20.15e * tc(2)' % (-parameters[1]/2)).replace("e", "d"))
+        self._write('%s &' % ('%+20.15e * tc(3)' % (-parameters[2]/6)).replace("e", "d"))
+        self._write('%s &' % ('%+20.15e * tc(4)' % (-parameters[3]/12)).replace("e", "d"))
+        self._write('%s' % ('%+20.15e * tc(5)' % (-parameters[4]/20)).replace("e", "d"))
+        return
+    
     #def _helmholtzNASA(self, parameters):
     #    self._write('%+15.8e * invT' % parameters[5])
     #    self._write('%+15.8e' % (parameters[0] - parameters[6] - 1.0))
