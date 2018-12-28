@@ -53,7 +53,7 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 17.007370d0,  & ! OH
     1.d0 / 33.006770d0,  & ! HO2
     1.d0 / 34.014740d0,  & ! H2O2
-    1.d0 / 28.013400d0/)  ! N2
+    1.d0 / 28.013400d0 /) ! N2
 
 double precision :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
 double precision :: low_A(21), low_beta(21), low_Ea(21)
@@ -72,7 +72,6 @@ double precision :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), 
 double precision :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
 integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21), TBid_DEF(21,21)
 double precision :: TB_DEF(21,21)
-integer :: rxn_map(21) = (/ 6,7,8,9,2,3,4,5,0,10,11,12,13,14,15,1,16,17,18,19,20 /)
 
 contains
 
@@ -81,11 +80,11 @@ subroutine SetAllDefaults()
     integer :: i,j
 
     do i=1, 21
-        !if (nTB_DEF[i] != 0) {
+        if (nTB_DEF(i) /= 0) then
             nTB_DEF(i) = 0
             !free(TB_DEF[i]);
             !free(TBid_DEF[i]);
-        !}
+        end if
 
         fwd_A_DEF(i)    = fwd_A(i)
         fwd_beta_DEF(i) = fwd_beta(i)
@@ -119,14 +118,14 @@ subroutine SetAllDefaults()
         phase_units_DEF(i)      = phase_units(i)
 
         nTB_DEF(i)  = nTB(i)
-        !if (nTB_DEF(i) != 0) then
+        if (nTB_DEF(i) /= 0) then
            !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))
            !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))
            do j=1, nTB_DEF(i)
              TB_DEF(i,j) = TB(i,j)
              TBid_DEF(i,j) = TBid(i,j)
            end do
-        !end if
+        end if
     end do
 end subroutine
 
@@ -134,20 +133,20 @@ end subroutine
 ! Finalizes parameter database
 subroutine ckfinalize()
 
-  integer :: i
+  !integer :: i
 
   !do i=1, 21
     !free(TB[i])
-    !TB[i] = 0
+    !TB(i) = 0
     !free(TBid[i])
-    !TBid[i] = 0
-    !nTB[i] = 0
+    !TBid(i) = 0
+    !nTB(i) = 0
 
     !free(TB_DEF[i])
-    !TB_DEF[i] = 0
+    !TB_DEF(i) = 0
     !free(TBid_DEF[i])
-    !TBid_DEF[i] = 0
-    !nTB_DEF[i] = 0
+    !TBid_DEF(i) = 0
+    !nTB_DEF(i) = 0
   !end do
 end subroutine
 
@@ -155,268 +154,269 @@ end subroutine
 subroutine ckinit()
 
     ! (0):  H + O2 <=> O + OH
-    fwd_A(7)     = 3547000000000000
-    fwd_beta(7)  = -0.40600000000000003
-    fwd_Ea(7)    = 16599
-    prefactor_units(7)  = 1.0000000000000002e-06
-    activation_units(7) = 0.50321666580471969
+    fwd_A(7)     = 3.54700000000000000d+15
+    fwd_beta(7)  = -4.06000000000000028d-01
+    fwd_Ea(7)    = 1.65990000000000000d+04
+    prefactor_units(7)  = 1.00000000000000017d-06
+    activation_units(7) = 5.03216665804719687d-01
     phase_units(7)      = 1d-12
     is_PD(7) = 0
     nTB(7) = 0
 
     ! (1):  O + H2 <=> H + OH
-    fwd_A(8)     = 50800
-    fwd_beta(8)  = 2.6699999999999999
-    fwd_Ea(8)    = 6290
-    prefactor_units(8)  = 1.0000000000000002e-06
-    activation_units(8) = 0.50321666580471969
+    fwd_A(8)     = 5.08000000000000000d+04
+    fwd_beta(8)  = 2.66999999999999993d+00
+    fwd_Ea(8)    = 6.29000000000000000d+03
+    prefactor_units(8)  = 1.00000000000000017d-06
+    activation_units(8) = 5.03216665804719687d-01
     phase_units(8)      = 1d-12
     is_PD(8) = 0
     nTB(8) = 0
 
     ! (2):  H2 + OH <=> H2O + H
-    fwd_A(9)     = 216000000
-    fwd_beta(9)  = 1.51
-    fwd_Ea(9)    = 3430
-    prefactor_units(9)  = 1.0000000000000002e-06
-    activation_units(9) = 0.50321666580471969
+    fwd_A(9)     = 2.16000000000000000d+08
+    fwd_beta(9)  = 1.51000000000000001d+00
+    fwd_Ea(9)    = 3.43000000000000000d+03
+    prefactor_units(9)  = 1.00000000000000017d-06
+    activation_units(9) = 5.03216665804719687d-01
     phase_units(9)      = 1d-12
     is_PD(9) = 0
     nTB(9) = 0
 
     ! (3):  O + H2O <=> OH + OH
-    fwd_A(10)     = 2970000
-    fwd_beta(10)  = 2.02
-    fwd_Ea(10)    = 13400
-    prefactor_units(10)  = 1.0000000000000002e-06
-    activation_units(10) = 0.50321666580471969
+    fwd_A(10)     = 2.97000000000000000d+06
+    fwd_beta(10)  = 2.02000000000000002d+00
+    fwd_Ea(10)    = 1.34000000000000000d+04
+    prefactor_units(10)  = 1.00000000000000017d-06
+    activation_units(10) = 5.03216665804719687d-01
     phase_units(10)      = 1d-12
     is_PD(10) = 0
     nTB(10) = 0
 
     ! (4):  H2 + M <=> H + H + M
-    fwd_A(3)     = 4.577e+19
-    fwd_beta(3)  = -1.3999999999999999
-    fwd_Ea(3)    = 104380
-    prefactor_units(3)  = 1.0000000000000002e-06
-    activation_units(3) = 0.50321666580471969
+    fwd_A(3)     = 4.57700000000000000d+19
+    fwd_beta(3)  = -1.39999999999999991d+00
+    fwd_Ea(3)    = 1.04380000000000000d+05
+    prefactor_units(3)  = 1.00000000000000017d-06
+    activation_units(3) = 5.03216665804719687d-01
     phase_units(3)      = 1d-6
     is_PD(3) = 0
     nTB(3) = 2
     !TB(3) = (double *) malloc(2 * sizeof(double))
     !TBid(3) = (int *) malloc(2 * sizeof(int))
-    TBid(4,1) = 0
-    TB(4,1) = 2.5 ! H2
-    TBid(4,2) = 2
-    TB(4,2) = 12 ! H2O
+    TBid(3,1) = 0.00000000000000000d+00
+    TB(3,1) = 2.50000000000000000d+00 ! H2
+    TBid(3,2) = 2.00000000000000000d+00
+    TB(3,2) = 1.20000000000000000d+01 ! H2O
 
     ! (5):  O + O + M <=> O2 + M
-    fwd_A(4)     = 6165000000000000
-    fwd_beta(4)  = -0.5
-    fwd_Ea(4)    = 0
-    prefactor_units(4)  = 1.0000000000000002e-12
-    activation_units(4) = 0.50321666580471969
+    fwd_A(4)     = 6.16500000000000000d+15
+    fwd_beta(4)  = -5.00000000000000000d-01
+    fwd_Ea(4)    = 0.00000000000000000d+00
+    prefactor_units(4)  = 1.00000000000000018d-12
+    activation_units(4) = 5.03216665804719687d-01
     phase_units(4)      = 1d-12
     is_PD(4) = 0
     nTB(4) = 2
     !TB(4) = (double *) malloc(2 * sizeof(double))
     !TBid(4) = (int *) malloc(2 * sizeof(int))
-    TBid(5,1) = 0
-    TB(5,1) = 2.5 ! H2
-    TBid(5,2) = 2
-    TB(5,2) = 12 ! H2O
+    TBid(4,1) = 0.00000000000000000d+00
+    TB(4,1) = 2.50000000000000000d+00 ! H2
+    TBid(4,2) = 2.00000000000000000d+00
+    TB(4,2) = 1.20000000000000000d+01 ! H2O
 
     ! (6):  O + H + M <=> OH + M
-    fwd_A(5)     = 4.714e+18
-    fwd_beta(5)  = -1
-    fwd_Ea(5)    = 0
-    prefactor_units(5)  = 1.0000000000000002e-12
-    activation_units(5) = 0.50321666580471969
+    fwd_A(5)     = 4.71400000000000000d+18
+    fwd_beta(5)  = -1.00000000000000000d+00
+    fwd_Ea(5)    = 0.00000000000000000d+00
+    prefactor_units(5)  = 1.00000000000000018d-12
+    activation_units(5) = 5.03216665804719687d-01
     phase_units(5)      = 1d-12
     is_PD(5) = 0
     nTB(5) = 2
     !TB(5) = (double *) malloc(2 * sizeof(double))
     !TBid(5) = (int *) malloc(2 * sizeof(int))
-    TBid(6,1) = 0
-    TB(6,1) = 2.5 ! H2
-    TBid(6,2) = 2
-    TB(6,2) = 12 ! H2O
+    TBid(5,1) = 0.00000000000000000d+00
+    TB(5,1) = 2.50000000000000000d+00 ! H2
+    TBid(5,2) = 2.00000000000000000d+00
+    TB(5,2) = 1.20000000000000000d+01 ! H2O
 
     ! (7):  H + OH + M <=> H2O + M
-    fwd_A(6)     = 3.8000000000000004e+22
-    fwd_beta(6)  = -2
-    fwd_Ea(6)    = 0
-    prefactor_units(6)  = 1.0000000000000002e-12
-    activation_units(6) = 0.50321666580471969
+    fwd_A(6)     = 3.80000000000000042d+22
+    fwd_beta(6)  = -2.00000000000000000d+00
+    fwd_Ea(6)    = 0.00000000000000000d+00
+    prefactor_units(6)  = 1.00000000000000018d-12
+    activation_units(6) = 5.03216665804719687d-01
     phase_units(6)      = 1d-12
     is_PD(6) = 0
     nTB(6) = 2
     !TB(6) = (double *) malloc(2 * sizeof(double))
     !TBid(6) = (int *) malloc(2 * sizeof(int))
-    TBid(7,1) = 0
-    TB(7,1) = 2.5 ! H2
-    TBid(7,2) = 2
-    TB(7,2) = 12 ! H2O
+    TBid(6,1) = 0.00000000000000000d+00
+    TB(6,1) = 2.50000000000000000d+00 ! H2
+    TBid(6,2) = 2.00000000000000000d+00
+    TB(6,2) = 1.20000000000000000d+01 ! H2O
 
     ! (8):  H + O2 (+M) <=> HO2 (+M)
-    fwd_A(1)     = 1475000000000
-    fwd_beta(1)  = 0.59999999999999998
-    fwd_Ea(1)    = 0
-    low_A(1)     = 6.366e+20
-    low_beta(1)  = -1.72
-    low_Ea(1)    = 524.79999999999995
-    troe_a(1)    = 0.80000000000000004
-    troe_Tsss(1) = 1.0000000000000001e-30
-    troe_Ts(1)   = 1e+30
+    fwd_A(1)     = 1.47500000000000000d+12
+    fwd_beta(1)  = 5.99999999999999978d-01
+    fwd_Ea(1)    = 0.00000000000000000d+00
+    low_A(1)     = 6.36600000000000000d+20
+    low_beta(1)  = -1.71999999999999997d+00
+    low_Ea(1)    = 5.24799999999999955d+02
+    troe_a(1)    = 8.00000000000000044d-01
+    troe_Tsss(1) = 1.00000000000000008d-30
+    troe_Ts(1)   = 1.00000000000000002d+30
     troe_len(1)  = 3
-    prefactor_units(1)  = 1.0000000000000002e-06
-    activation_units(1) = 0.50321666580471969
+    prefactor_units(1)  = 1.00000000000000017d-06
+    activation_units(1) = 5.03216665804719687d-01
     phase_units(1)      = 1d-12
     is_PD(1) = 1
     nTB(1) = 3
     !TB(1) = (double *) malloc(3 * sizeof(double))
     !TBid(1) = (int *) malloc(3 * sizeof(int))
-    TBid(2,1) = 0
-    TB(2,1) = 2 ! H2
-    TBid(2,2) = 2
-    TB(2,2) = 11 ! H2O
-    TBid(2,3) = 1
-    TB(2,3) = 0.78000000000000003 ! O2
+    TBid(1,1) = 0.00000000000000000d+00
+    TB(1,1) = 2.00000000000000000d+00 ! H2
+    TBid(1,2) = 2.00000000000000000d+00
+    TB(1,2) = 1.10000000000000000d+01 ! H2O
+    TBid(1,3) = 1.00000000000000000d+00
+    TB(1,3) = 7.80000000000000027d-01 ! O2
 
     ! (9):  HO2 + H <=> H2 + O2
-    fwd_A(11)     = 16600000000000
-    fwd_beta(11)  = 0
-    fwd_Ea(11)    = 823
-    prefactor_units(11)  = 1.0000000000000002e-06
-    activation_units(11) = 0.50321666580471969
+    fwd_A(11)     = 1.66000000000000000d+13
+    fwd_beta(11)  = 0.00000000000000000d+00
+    fwd_Ea(11)    = 8.23000000000000000d+02
+    prefactor_units(11)  = 1.00000000000000017d-06
+    activation_units(11) = 5.03216665804719687d-01
     phase_units(11)      = 1d-12
     is_PD(11) = 0
     nTB(11) = 0
 
     ! (10):  HO2 + H <=> OH + OH
-    fwd_A(12)     = 70790000000000
-    fwd_beta(12)  = 0
-    fwd_Ea(12)    = 295
-    prefactor_units(12)  = 1.0000000000000002e-06
-    activation_units(12) = 0.50321666580471969
+    fwd_A(12)     = 7.07900000000000000d+13
+    fwd_beta(12)  = 0.00000000000000000d+00
+    fwd_Ea(12)    = 2.95000000000000000d+02
+    prefactor_units(12)  = 1.00000000000000017d-06
+    activation_units(12) = 5.03216665804719687d-01
     phase_units(12)      = 1d-12
     is_PD(12) = 0
     nTB(12) = 0
 
     ! (11):  HO2 + O <=> O2 + OH
-    fwd_A(13)     = 32500000000000
-    fwd_beta(13)  = 0
-    fwd_Ea(13)    = 0
-    prefactor_units(13)  = 1.0000000000000002e-06
-    activation_units(13) = 0.50321666580471969
+    fwd_A(13)     = 3.25000000000000000d+13
+    fwd_beta(13)  = 0.00000000000000000d+00
+    fwd_Ea(13)    = 0.00000000000000000d+00
+    prefactor_units(13)  = 1.00000000000000017d-06
+    activation_units(13) = 5.03216665804719687d-01
     phase_units(13)      = 1d-12
     is_PD(13) = 0
     nTB(13) = 0
 
     ! (12):  HO2 + OH <=> H2O + O2
-    fwd_A(14)     = 28900000000000
-    fwd_beta(14)  = 0
-    fwd_Ea(14)    = -497
-    prefactor_units(14)  = 1.0000000000000002e-06
-    activation_units(14) = 0.50321666580471969
+    fwd_A(14)     = 2.89000000000000000d+13
+    fwd_beta(14)  = 0.00000000000000000d+00
+    fwd_Ea(14)    = -4.97000000000000000d+02
+    prefactor_units(14)  = 1.00000000000000017d-06
+    activation_units(14) = 5.03216665804719687d-01
     phase_units(14)      = 1d-12
     is_PD(14) = 0
     nTB(14) = 0
 
     ! (13):  HO2 + HO2 <=> H2O2 + O2
-    fwd_A(15)     = 420000000000000
-    fwd_beta(15)  = 0
-    fwd_Ea(15)    = 11982
-    prefactor_units(15)  = 1.0000000000000002e-06
-    activation_units(15) = 0.50321666580471969
+    fwd_A(15)     = 4.20000000000000000d+14
+    fwd_beta(15)  = 0.00000000000000000d+00
+    fwd_Ea(15)    = 1.19820000000000000d+04
+    prefactor_units(15)  = 1.00000000000000017d-06
+    activation_units(15) = 5.03216665804719687d-01
     phase_units(15)      = 1d-12
     is_PD(15) = 0
     nTB(15) = 0
 
     ! (14):  HO2 + HO2 <=> H2O2 + O2
-    fwd_A(16)     = 130000000000
-    fwd_beta(16)  = 0
-    fwd_Ea(16)    = -1629.3
-    prefactor_units(16)  = 1.0000000000000002e-06
-    activation_units(16) = 0.50321666580471969
+    fwd_A(16)     = 1.30000000000000000d+11
+    fwd_beta(16)  = 0.00000000000000000d+00
+    fwd_Ea(16)    = -1.62929999999999995d+03
+    prefactor_units(16)  = 1.00000000000000017d-06
+    activation_units(16) = 5.03216665804719687d-01
     phase_units(16)      = 1d-12
     is_PD(16) = 0
     nTB(16) = 0
 
     ! (15):  H2O2 (+M) <=> OH + OH (+M)
-    fwd_A(2)     = 295100000000000
-    fwd_beta(2)  = 0
-    fwd_Ea(2)    = 48430
-    low_A(2)     = 1.202e+17
-    low_beta(2)  = 0
-    low_Ea(2)    = 45500
-    troe_a(2)    = 0.5
-    troe_Tsss(2) = 1.0000000000000001e-30
-    troe_Ts(2)   = 1e+30
+    fwd_A(2)     = 2.95100000000000000d+14
+    fwd_beta(2)  = 0.00000000000000000d+00
+    fwd_Ea(2)    = 4.84300000000000000d+04
+    low_A(2)     = 1.20200000000000000d+17
+    low_beta(2)  = 0.00000000000000000d+00
+    low_Ea(2)    = 4.55000000000000000d+04
+    troe_a(2)    = 5.00000000000000000d-01
+    troe_Tsss(2) = 1.00000000000000008d-30
+    troe_Ts(2)   = 1.00000000000000002d+30
     troe_len(2)  = 3
-    prefactor_units(2)  = 1
-    activation_units(2) = 0.50321666580471969
+    prefactor_units(2)  = 1.00000000000000000d+00
+    activation_units(2) = 5.03216665804719687d-01
     phase_units(2)      = 1d-6
     is_PD(2) = 1
     nTB(2) = 2
     !TB(2) = (double *) malloc(2 * sizeof(double))
     !TBid(2) = (int *) malloc(2 * sizeof(int))
-    TBid(3,1) = 0
-    TB(3,1) = 2.5 ! H2
-    TBid(3,2) = 2
-    TB(3,2) = 12 ! H2O
+    TBid(2,1) = 0.00000000000000000d+00
+    TB(2,1) = 2.50000000000000000d+00 ! H2
+    TBid(2,2) = 2.00000000000000000d+00
+    TB(2,2) = 1.20000000000000000d+01 ! H2O
 
     ! (16):  H2O2 + H <=> H2O + OH
-    fwd_A(17)     = 24100000000000
-    fwd_beta(17)  = 0
-    fwd_Ea(17)    = 3970
-    prefactor_units(17)  = 1.0000000000000002e-06
-    activation_units(17) = 0.50321666580471969
+    fwd_A(17)     = 2.41000000000000000d+13
+    fwd_beta(17)  = 0.00000000000000000d+00
+    fwd_Ea(17)    = 3.97000000000000000d+03
+    prefactor_units(17)  = 1.00000000000000017d-06
+    activation_units(17) = 5.03216665804719687d-01
     phase_units(17)      = 1d-12
     is_PD(17) = 0
     nTB(17) = 0
 
     ! (17):  H2O2 + H <=> HO2 + H2
-    fwd_A(18)     = 48200000000000
-    fwd_beta(18)  = 0
-    fwd_Ea(18)    = 7950
-    prefactor_units(18)  = 1.0000000000000002e-06
-    activation_units(18) = 0.50321666580471969
+    fwd_A(18)     = 4.82000000000000000d+13
+    fwd_beta(18)  = 0.00000000000000000d+00
+    fwd_Ea(18)    = 7.95000000000000000d+03
+    prefactor_units(18)  = 1.00000000000000017d-06
+    activation_units(18) = 5.03216665804719687d-01
     phase_units(18)      = 1d-12
     is_PD(18) = 0
     nTB(18) = 0
 
     ! (18):  H2O2 + O <=> OH + HO2
-    fwd_A(19)     = 9550000
-    fwd_beta(19)  = 2
-    fwd_Ea(19)    = 3970
-    prefactor_units(19)  = 1.0000000000000002e-06
-    activation_units(19) = 0.50321666580471969
+    fwd_A(19)     = 9.55000000000000000d+06
+    fwd_beta(19)  = 2.00000000000000000d+00
+    fwd_Ea(19)    = 3.97000000000000000d+03
+    prefactor_units(19)  = 1.00000000000000017d-06
+    activation_units(19) = 5.03216665804719687d-01
     phase_units(19)      = 1d-12
     is_PD(19) = 0
     nTB(19) = 0
 
     ! (19):  H2O2 + OH <=> HO2 + H2O
-    fwd_A(20)     = 1000000000000
-    fwd_beta(20)  = 0
-    fwd_Ea(20)    = 0
-    prefactor_units(20)  = 1.0000000000000002e-06
-    activation_units(20) = 0.50321666580471969
+    fwd_A(20)     = 1.00000000000000000d+12
+    fwd_beta(20)  = 0.00000000000000000d+00
+    fwd_Ea(20)    = 0.00000000000000000d+00
+    prefactor_units(20)  = 1.00000000000000017d-06
+    activation_units(20) = 5.03216665804719687d-01
     phase_units(20)      = 1d-12
     is_PD(20) = 0
     nTB(20) = 0
 
     ! (20):  H2O2 + OH <=> HO2 + H2O
-    fwd_A(21)     = 580000000000000
-    fwd_beta(21)  = 0
-    fwd_Ea(21)    = 9557
-    prefactor_units(21)  = 1.0000000000000002e-06
-    activation_units(21) = 0.50321666580471969
+    fwd_A(21)     = 5.80000000000000000d+14
+    fwd_beta(21)  = 0.00000000000000000d+00
+    fwd_Ea(21)    = 9.55700000000000000d+03
+    prefactor_units(21)  = 1.00000000000000017d-06
+    activation_units(21) = 5.03216665804719687d-01
     phase_units(21)      = 1d-12
     is_PD(21) = 0
     nTB(21) = 0
 
     call SetAllDefaults()
+
 end subroutine
 
 
@@ -1011,7 +1011,7 @@ subroutine productionRate(wdot, sc, T)
     double precision :: qdot, q_f(21), q_r(21)
     integer :: i
 
-    tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /) ! temperature cache
+    tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /)
     invT = 1.d0 / tc(2)
     T_save = -1.d0
 

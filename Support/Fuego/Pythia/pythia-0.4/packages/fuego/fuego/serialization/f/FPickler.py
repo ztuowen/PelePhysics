@@ -88,7 +88,7 @@ class FPickler(CMill):
             if (i<self.nSpecies-1):
                text += ',  & '
             else:
-               text += '/)  '
+               text += ' /) '
             self._write(text + '! %s' % species.symbol)
         self._outdent()
 
@@ -129,11 +129,11 @@ class FPickler(CMill):
                     % (nReactions,nReactions))
 
         # build reverse reaction map
-        rmap = {}
-        for i, reaction in zip(range(nReactions), mechanism.reaction()):
-            rmap[reaction.orig_id-1] = i
-        
-        self._write('integer :: rxn_map(%d) = (/ %s /)' % (nReactions, ",".join(str(rmap[x]) for x in range(len(rmap)))))
+        #rmap = {}
+        #for i, reaction in zip(range(nReactions), mechanism.reaction()):
+        #    rmap[reaction.orig_id-1] = i
+        #
+        #self._write('integer, parameter :: rxn_map(%d) = (/ %s /)' % (nReactions, ",".join(str(rmap[x]) for x in range(len(rmap)))))
         self._write()
        
         return
@@ -454,11 +454,11 @@ class FPickler(CMill):
         self._write('    integer :: i,j')
         self._write()
         self._write("    do i=1, %d" % (nReactions))
-        self._write("        !if (nTB_DEF[i] != 0) {")
+        self._write("        if (nTB_DEF(i) /= 0) then")
         self._write("            nTB_DEF(i) = 0")
         self._write("            !free(TB_DEF[i]);")
         self._write("            !free(TBid_DEF[i]);")
-        self._write("        !}")
+        self._write("        end if")
         self._write("")
         self._write("        fwd_A_DEF(i)    = fwd_A(i)")
         self._write("        fwd_beta_DEF(i) = fwd_beta(i)")
@@ -492,14 +492,14 @@ class FPickler(CMill):
         self._write("        phase_units_DEF(i)      = phase_units(i)")
         self._write("")
         self._write("        nTB_DEF(i)  = nTB(i)")
-        self._write("        !if (nTB_DEF(i) != 0) then")
+        self._write("        if (nTB_DEF(i) /= 0) then")
         self._write("           !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))")
         self._write("           !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))")
         self._write("           do j=1, nTB_DEF(i)")
         self._write("             TB_DEF(i,j) = TB(i,j)")
         self._write("             TBid_DEF(i,j) = TBid(i,j)")
         self._write("           end do")
-        self._write("        !end if")
+        self._write("        end if")
         self._write("    end do")
         self._write("end subroutine")
         self._write()
@@ -1045,20 +1045,20 @@ class FPickler(CMill):
         self._write('! Finalizes parameter database')
         self._write('subroutine ckfinalize()')
         self._write()
-        self._write('  integer :: i')
+        self._write('  !integer :: i')
         self._write()
         self._write('  !do i=1, %d' % nReactions)
         self._write('    !free(TB[i])')
-        self._write('    !TB[i] = 0')
+        self._write('    !TB(i) = 0')
         self._write('    !free(TBid[i])')
-        self._write('    !TBid[i] = 0')
-        self._write('    !nTB[i] = 0')
+        self._write('    !TBid(i) = 0')
+        self._write('    !nTB(i) = 0')
         self._write()
         self._write('    !free(TB_DEF[i])')
-        self._write('    !TB_DEF[i] = 0')
+        self._write('    !TB_DEF(i) = 0')
         self._write('    !free(TBid_DEF[i])')
-        self._write('    !TBid_DEF[i] = 0')
-        self._write('    !nTB_DEF[i] = 0')
+        self._write('    !TBid_DEF(i) = 0')
+        self._write('    !nTB_DEF(i) = 0')
         self._write('  !end do')
         self._write('end subroutine')
         self._write()
@@ -1079,9 +1079,9 @@ class FPickler(CMill):
 
             A, beta, E = reaction.arrhenius
             self._write("! (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
-            self._write("fwd_A(%d)     = %.17g" % (id,A))
-            self._write("fwd_beta(%d)  = %.17g" % (id,beta))
-            self._write("fwd_Ea(%d)    = %.17g" % (id,E))
+            self._write("fwd_A(%d)     = %s" % (id,format(A, '.17e').replace("e","d")))
+            self._write("fwd_beta(%d)  = %s" % (id,format(beta, '.17e').replace("e","d")))
+            self._write("fwd_Ea(%d)    = %s" % (id,format(E, '.17e').replace("e","d")))
 
             dim = self._phaseSpaceUnits(reaction.reactants)
             thirdBody = reaction.thirdBody
@@ -1093,39 +1093,39 @@ class FPickler(CMill):
             else:
                 uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 1 PD, TB
                 low_A, low_beta, low_E = low
-                self._write("low_A(%d)     = %.17g" % (id,low_A))
-                self._write("low_beta(%d)  = %.17g" % (id,low_beta))
-                self._write("low_Ea(%d)    = %.17g" % (id,low_E))
+                self._write("low_A(%d)     = %s" % (id,format(low_A, '.17e').replace("e","d")))
+                self._write("low_beta(%d)  = %s" % (id,format(low_beta, '.17e').replace("e","d")))
+                self._write("low_Ea(%d)    = %s" % (id,format(low_E, '.17e').replace("e","d")))
                 if reaction.troe:
                     troe = reaction.troe
                     ntroe = len(troe)
                     is_troe = True
-                    self._write("troe_a(%d)    = %.17g" % (id,troe[0]))
+                    self._write("troe_a(%d)    = %s" % (id,format(troe[0], '.17e').replace("e","d")))
                     if ntroe>1:
-                        self._write("troe_Tsss(%d) = %.17g" % (id,troe[1]))
+                        self._write("troe_Tsss(%d) = %s" % (id,format(troe[1], '.17e').replace("e","d")))
                     if ntroe>2:
-                        self._write("troe_Ts(%d)   = %.17g" % (id,troe[2]))
+                        self._write("troe_Ts(%d)   = %s" % (id,format(troe[2], '.17e').replace("e","d")))
                     if ntroe>3:
-                        self._write("troe_Tss(%d)  = %.17g" % (id,troe[3]))
+                        self._write("troe_Tss(%d)  = %s" % (id,format(troe[3], '.17e').replace("e","d")))
                     self._write("troe_len(%d)  = %d" % (id,ntroe))
                 if reaction.sri:
                     sri = reaction.sri
                     nsri = len(sri)
                     is_sri = True
-                    self._write("sri_a(%d)     = %.17g" % (id,sri[0]))
+                    self._write("sri_a(%d)     = %s" % (id,format(sri[0], '.17e').replace("e","d")))
                     if nsri>1:
-                        self._write("sri_b(%d)     = %.17g" % (id,sri[1]))
+                        self._write("sri_b(%d)     = %s" % (id,format(sri[1], '.17e').replace("e","d")))
                     if nsri>2:
-                        self._write("sri_c(%d)     = %.17g" % (id,sri[2]))
+                        self._write("sri_c(%d)     = %s" % (id,format(sri[2], '.17e').replace("e","d")))
                     if nsri>3:
-                        self._write("sri_d(%d)     = %.17g" % (id,sri[3]))
+                        self._write("sri_d(%d)     = %s" % (id,format(sri[3], '.17e').replace("e","d")))
                     if nsri>4:
-                        self._write("sri_e(%d)     = %.17g" % (id,sri[4]))
+                        self._write("sri_e(%d)     = %s" % (id,format(sri[4], '.17e').replace("e","d")))
                     self._write("sri_len(%d)   = %d" % (id,nsri))
 
-            self._write("prefactor_units(%d)  = %.17g" % (id,uc.value))
+            self._write("prefactor_units(%d)  = %s" % (id,format(uc.value, '.17e').replace("e","d")))
             aeuc = self._activationEnergyUnits(reaction.units["activation"])
-            self._write("activation_units(%d) = %.17g" % (id,aeuc / Rc / kelvin))
+            self._write("activation_units(%d) = %s" % (id,format(aeuc / Rc / kelvin, '.17e').replace("e","d")))
             self._write("phase_units(%d)      = 1d-%d" % (id,dim*6))
 
             if low:
@@ -1141,10 +1141,10 @@ class FPickler(CMill):
                 self._write("!TBid(%d) = (int *) malloc(%d * sizeof(int))" % (id, len(efficiencies)))
                 for i, eff in enumerate(efficiencies):
                     symbol, efficiency = eff
-                    self._write("TBid(%d,%d) = %.17g"
-                                % (id+1, i+1, mechanism.species(symbol).id))
-                    self._write("TB(%d,%d) = %.17g ! %s"
-                                % (id+1, i+1, efficiency, symbol))
+                    self._write("TBid(%d,%d) = %s"
+                                % (id, i+1, format(mechanism.species(symbol).id, '.17e').replace("e","d")))
+                    self._write("TB(%d,%d) = %s ! %s"
+                                % (id, i+1, format(efficiency, '.17e').replace("e","d"), symbol))
             else:
                 self._write("nTB(%d) = 0" % (id))
 
@@ -1152,6 +1152,7 @@ class FPickler(CMill):
 
         self._write("call SetAllDefaults()")
         self._outdent()
+        self._write()
         self._write("end subroutine")
         self._write()
             
@@ -4922,7 +4923,7 @@ class FPickler(CMill):
         self._write('integer :: i')
 
         self._write()
-        self._write('tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /) ! temperature cache')
+        self._write('tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /)')
         self._write('invT = 1.d0 / tc(2)')
         self._write('T_save = -1.d0')
         
