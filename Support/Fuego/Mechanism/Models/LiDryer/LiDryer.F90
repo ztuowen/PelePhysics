@@ -97,8 +97,8 @@ subroutine SetAllDefaults()
     do i=1, 21
         if (nTB_DEF(i) /= 0) then
             nTB_DEF(i) = 0
-            deallocate(TB_DEF(i) % vector)
-            deallocate(TBid_DEF(i) % vector)
+            if (allocated(TB_DEF(i) % vector)) deallocate(TB_DEF(i) % vector)
+            if (allocated(TBid_DEF(i) % vector)) deallocate(TBid_DEF(i) % vector)
         end if
 
         fwd_A_DEF(i)    = fwd_A(i)
@@ -134,8 +134,8 @@ subroutine SetAllDefaults()
 
         nTB_DEF(i)  = nTB(i)
         if (nTB_DEF(i) /= 0) then
-           allocate(TB_DEF(i) % vector(nTB_DEF(i)))
-           allocate(TBid_DEF(i) % vector(nTB_DEF(i)))
+           if (.not. allocated(TB_DEF(i) % vector)) allocate(TB_DEF(i) % vector(nTB_DEF(i)))
+           if (.not. allocated(TBid_DEF(i) % vector)) allocate(TBid_DEF(i) % vector(nTB_DEF(i)))
            do j=1, nTB_DEF(i)
              TB_DEF(i) % vector(j) = TB(i) % vector(j)
              TBid_DEF(i) % vector(j) = TBid(i) % vector(j)
@@ -152,15 +152,15 @@ subroutine ckfinalize()
   integer :: i
 
   do i=1, 21
-    deallocate(TB(i) % vector)
+    if (allocated(TB(i) % vector)) deallocate(TB(i) % vector)
     !TB(i) = 0
-    deallocate(TBid(i) % vector)
+    if (allocated(TBid(i) % vector)) deallocate(TBid(i) % vector)
     !TBid(i) = 0
     nTB(i) = 0
 
-    deallocate(TB_DEF(i) % vector)
+    if (allocated(TB_DEF(i) % vector)) deallocate(TB_DEF(i) % vector)
     !TB_DEF(i) = 0
-    deallocate(TBid_DEF(i) % vector)
+    if (allocated(TBid_DEF(i) % vector)) deallocate(TBid_DEF(i) % vector)
     !TBid_DEF(i) = 0
     nTB_DEF(i) = 0
   end do
@@ -219,8 +219,8 @@ subroutine ckinit()
     phase_units(3)      = 1d-6
     is_PD(3) = 0
     nTB(3) = 2
-    allocate(TB(3) % vector(2))
-    allocate(TBid(3) % vector(2))
+    if (.not. allocated(TB(3) % vector)) allocate(TB(3) % vector(2))
+    if (.not. allocated(TBid(3) % vector)) allocate(TBid(3) % vector(2))
     TBid(3) % vector(1) = 0.00000000000000000d+00
     TB(3) % vector(1) = 2.50000000000000000d+00 ! H2
     TBid(3) % vector(2) = 2.00000000000000000d+00
@@ -235,8 +235,8 @@ subroutine ckinit()
     phase_units(4)      = 1d-12
     is_PD(4) = 0
     nTB(4) = 2
-    allocate(TB(4) % vector(2))
-    allocate(TBid(4) % vector(2))
+    if (.not. allocated(TB(4) % vector)) allocate(TB(4) % vector(2))
+    if (.not. allocated(TBid(4) % vector)) allocate(TBid(4) % vector(2))
     TBid(4) % vector(1) = 0.00000000000000000d+00
     TB(4) % vector(1) = 2.50000000000000000d+00 ! H2
     TBid(4) % vector(2) = 2.00000000000000000d+00
@@ -251,8 +251,8 @@ subroutine ckinit()
     phase_units(5)      = 1d-12
     is_PD(5) = 0
     nTB(5) = 2
-    allocate(TB(5) % vector(2))
-    allocate(TBid(5) % vector(2))
+    if (.not. allocated(TB(5) % vector)) allocate(TB(5) % vector(2))
+    if (.not. allocated(TBid(5) % vector)) allocate(TBid(5) % vector(2))
     TBid(5) % vector(1) = 0.00000000000000000d+00
     TB(5) % vector(1) = 2.50000000000000000d+00 ! H2
     TBid(5) % vector(2) = 2.00000000000000000d+00
@@ -267,8 +267,8 @@ subroutine ckinit()
     phase_units(6)      = 1d-12
     is_PD(6) = 0
     nTB(6) = 2
-    allocate(TB(6) % vector(2))
-    allocate(TBid(6) % vector(2))
+    if (.not. allocated(TB(6) % vector)) allocate(TB(6) % vector(2))
+    if (.not. allocated(TBid(6) % vector)) allocate(TBid(6) % vector(2))
     TBid(6) % vector(1) = 0.00000000000000000d+00
     TB(6) % vector(1) = 2.50000000000000000d+00 ! H2
     TBid(6) % vector(2) = 2.00000000000000000d+00
@@ -290,8 +290,8 @@ subroutine ckinit()
     phase_units(1)      = 1d-12
     is_PD(1) = 1
     nTB(1) = 3
-    allocate(TB(1) % vector(3))
-    allocate(TBid(1) % vector(3))
+    if (.not. allocated(TB(1) % vector)) allocate(TB(1) % vector(3))
+    if (.not. allocated(TBid(1) % vector)) allocate(TBid(1) % vector(3))
     TBid(1) % vector(1) = 0.00000000000000000d+00
     TB(1) % vector(1) = 2.00000000000000000d+00 ! H2
     TBid(1) % vector(2) = 2.00000000000000000d+00
@@ -375,8 +375,8 @@ subroutine ckinit()
     phase_units(2)      = 1d-6
     is_PD(2) = 1
     nTB(2) = 2
-    allocate(TB(2) % vector(2))
-    allocate(TBid(2) % vector(2))
+    if (.not. allocated(TB(2) % vector)) allocate(TB(2) % vector(2))
+    if (.not. allocated(TBid(2) % vector)) allocate(TBid(2) % vector(2))
     TBid(2) % vector(1) = 0.00000000000000000d+00
     TB(2) % vector(1) = 2.50000000000000000d+00 ! H2
     TBid(2) % vector(2) = 2.00000000000000000d+00
