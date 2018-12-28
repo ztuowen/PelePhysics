@@ -55,14 +55,23 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 34.014740d0,  & ! H2O2
     1.d0 / 28.013400d0 /) ! N2
 
+type :: nonsquare_matrix_double
+   double precision, allocatable :: vector(:)
+end type nonsquare_matrix_double
+
+type :: nonsquare_matrix_int
+   integer, allocatable :: vector(:)
+end type nonsquare_matrix_int
+
 double precision :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
 double precision :: low_A(21), low_beta(21), low_Ea(21)
 double precision :: rev_A(21), rev_beta(21), rev_Ea(21)
 double precision :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
 double precision :: sri_a(21), sri_b(21), sri_c(21), sri_d(21), sri_e(21)
 double precision :: activation_units(21), prefactor_units(21), phase_units(21)
-integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21), TBid(21,21)
-double precision :: TB(21,21)
+integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21)
+type(nonsquare_matrix_double) :: TB(21)
+type(nonsquare_matrix_int) :: TBid(21)
 
 double precision :: fwd_A_DEF(21), fwd_beta_DEF(21), fwd_Ea_DEF(21)
 double precision :: low_A_DEF(21), low_beta_DEF(21), low_Ea_DEF(21)
@@ -70,8 +79,9 @@ double precision :: rev_A_DEF(21), rev_beta_DEF(21), rev_Ea_DEF(21)
 double precision :: troe_a_DEF(21),troe_Ts_DEF(21), troe_Tss_DEF(21), troe_Tsss_DEF(21)
 double precision :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), sri_e_DEF(21)
 double precision :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
-integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21), TBid_DEF(21,21)
-double precision :: TB_DEF(21,21)
+integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21)
+type(nonsquare_matrix_double) :: TB_DEF(21)
+type(nonsquare_matrix_int) :: TBid_DEF(21)
 
 ! productionRate() static variables
 double precision :: T_save = -1
@@ -82,13 +92,13 @@ contains
 
 subroutine SetAllDefaults()
 
-    integer :: i,j
+    integer :: i, j
 
     do i=1, 21
         if (nTB_DEF(i) /= 0) then
             nTB_DEF(i) = 0
-            !free(TB_DEF[i]);
-            !free(TBid_DEF[i]);
+            deallocate(TB_DEF(i) % vector)
+            deallocate(TBid_DEF(i) % vector)
         end if
 
         fwd_A_DEF(i)    = fwd_A(i)
@@ -124,35 +134,37 @@ subroutine SetAllDefaults()
 
         nTB_DEF(i)  = nTB(i)
         if (nTB_DEF(i) /= 0) then
-           !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))
-           !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))
+           allocate(TB_DEF(i) % vector(nTB_DEF(i)))
+           allocate(TBid_DEF(i) % vector(nTB_DEF(i)))
            do j=1, nTB_DEF(i)
-             TB_DEF(i,j) = TB(i,j)
-             TBid_DEF(i,j) = TBid(i,j)
+             TB_DEF(i) % vector(j) = TB(i) % vector(j)
+             TBid_DEF(i) % vector(j) = TBid(i) % vector(j)
            end do
         end if
     end do
+
 end subroutine
 
 
 ! Finalizes parameter database
 subroutine ckfinalize()
 
-  !integer :: i
+  integer :: i
 
-  !do i=1, 21
-    !free(TB[i])
+  do i=1, 21
+    deallocate(TB(i) % vector)
     !TB(i) = 0
-    !free(TBid[i])
+    deallocate(TBid(i) % vector)
     !TBid(i) = 0
-    !nTB(i) = 0
+    nTB(i) = 0
 
-    !free(TB_DEF[i])
+    deallocate(TB_DEF(i) % vector)
     !TB_DEF(i) = 0
-    !free(TBid_DEF[i])
+    deallocate(TBid_DEF(i) % vector)
     !TBid_DEF(i) = 0
-    !nTB_DEF(i) = 0
-  !end do
+    nTB_DEF(i) = 0
+  end do
+
 end subroutine
 
 ! Initializes parameter database
@@ -207,12 +219,12 @@ subroutine ckinit()
     phase_units(3)      = 1d-6
     is_PD(3) = 0
     nTB(3) = 2
-    !TB(3) = (double *) malloc(2 * sizeof(double))
-    !TBid(3) = (int *) malloc(2 * sizeof(int))
-    TBid(3,1) = 0.00000000000000000d+00
-    TB(3,1) = 2.50000000000000000d+00 ! H2
-    TBid(3,2) = 2.00000000000000000d+00
-    TB(3,2) = 1.20000000000000000d+01 ! H2O
+    allocate(TB(3) % vector(2))
+    allocate(TBid(3) % vector(2))
+    TBid(3) % vector(1) = 0.00000000000000000d+00
+    TB(3) % vector(1) = 2.50000000000000000d+00 ! H2
+    TBid(3) % vector(2) = 2.00000000000000000d+00
+    TB(3) % vector(2) = 1.20000000000000000d+01 ! H2O
 
     ! (5):  O + O + M <=> O2 + M
     fwd_A(4)     = 6.16500000000000000d+15
@@ -223,12 +235,12 @@ subroutine ckinit()
     phase_units(4)      = 1d-12
     is_PD(4) = 0
     nTB(4) = 2
-    !TB(4) = (double *) malloc(2 * sizeof(double))
-    !TBid(4) = (int *) malloc(2 * sizeof(int))
-    TBid(4,1) = 0.00000000000000000d+00
-    TB(4,1) = 2.50000000000000000d+00 ! H2
-    TBid(4,2) = 2.00000000000000000d+00
-    TB(4,2) = 1.20000000000000000d+01 ! H2O
+    allocate(TB(4) % vector(2))
+    allocate(TBid(4) % vector(2))
+    TBid(4) % vector(1) = 0.00000000000000000d+00
+    TB(4) % vector(1) = 2.50000000000000000d+00 ! H2
+    TBid(4) % vector(2) = 2.00000000000000000d+00
+    TB(4) % vector(2) = 1.20000000000000000d+01 ! H2O
 
     ! (6):  O + H + M <=> OH + M
     fwd_A(5)     = 4.71400000000000000d+18
@@ -239,12 +251,12 @@ subroutine ckinit()
     phase_units(5)      = 1d-12
     is_PD(5) = 0
     nTB(5) = 2
-    !TB(5) = (double *) malloc(2 * sizeof(double))
-    !TBid(5) = (int *) malloc(2 * sizeof(int))
-    TBid(5,1) = 0.00000000000000000d+00
-    TB(5,1) = 2.50000000000000000d+00 ! H2
-    TBid(5,2) = 2.00000000000000000d+00
-    TB(5,2) = 1.20000000000000000d+01 ! H2O
+    allocate(TB(5) % vector(2))
+    allocate(TBid(5) % vector(2))
+    TBid(5) % vector(1) = 0.00000000000000000d+00
+    TB(5) % vector(1) = 2.50000000000000000d+00 ! H2
+    TBid(5) % vector(2) = 2.00000000000000000d+00
+    TB(5) % vector(2) = 1.20000000000000000d+01 ! H2O
 
     ! (7):  H + OH + M <=> H2O + M
     fwd_A(6)     = 3.80000000000000042d+22
@@ -255,12 +267,12 @@ subroutine ckinit()
     phase_units(6)      = 1d-12
     is_PD(6) = 0
     nTB(6) = 2
-    !TB(6) = (double *) malloc(2 * sizeof(double))
-    !TBid(6) = (int *) malloc(2 * sizeof(int))
-    TBid(6,1) = 0.00000000000000000d+00
-    TB(6,1) = 2.50000000000000000d+00 ! H2
-    TBid(6,2) = 2.00000000000000000d+00
-    TB(6,2) = 1.20000000000000000d+01 ! H2O
+    allocate(TB(6) % vector(2))
+    allocate(TBid(6) % vector(2))
+    TBid(6) % vector(1) = 0.00000000000000000d+00
+    TB(6) % vector(1) = 2.50000000000000000d+00 ! H2
+    TBid(6) % vector(2) = 2.00000000000000000d+00
+    TB(6) % vector(2) = 1.20000000000000000d+01 ! H2O
 
     ! (8):  H + O2 (+M) <=> HO2 (+M)
     fwd_A(1)     = 1.47500000000000000d+12
@@ -278,14 +290,14 @@ subroutine ckinit()
     phase_units(1)      = 1d-12
     is_PD(1) = 1
     nTB(1) = 3
-    !TB(1) = (double *) malloc(3 * sizeof(double))
-    !TBid(1) = (int *) malloc(3 * sizeof(int))
-    TBid(1,1) = 0.00000000000000000d+00
-    TB(1,1) = 2.00000000000000000d+00 ! H2
-    TBid(1,2) = 2.00000000000000000d+00
-    TB(1,2) = 1.10000000000000000d+01 ! H2O
-    TBid(1,3) = 1.00000000000000000d+00
-    TB(1,3) = 7.80000000000000027d-01 ! O2
+    allocate(TB(1) % vector(3))
+    allocate(TBid(1) % vector(3))
+    TBid(1) % vector(1) = 0.00000000000000000d+00
+    TB(1) % vector(1) = 2.00000000000000000d+00 ! H2
+    TBid(1) % vector(2) = 2.00000000000000000d+00
+    TB(1) % vector(2) = 1.10000000000000000d+01 ! H2O
+    TBid(1) % vector(3) = 1.00000000000000000d+00
+    TB(1) % vector(3) = 7.80000000000000027d-01 ! O2
 
     ! (9):  HO2 + H <=> H2 + O2
     fwd_A(11)     = 1.66000000000000000d+13
@@ -363,12 +375,12 @@ subroutine ckinit()
     phase_units(2)      = 1d-6
     is_PD(2) = 1
     nTB(2) = 2
-    !TB(2) = (double *) malloc(2 * sizeof(double))
-    !TBid(2) = (int *) malloc(2 * sizeof(int))
-    TBid(2,1) = 0.00000000000000000d+00
-    TB(2,1) = 2.50000000000000000d+00 ! H2
-    TBid(2,2) = 2.00000000000000000d+00
-    TB(2,2) = 1.20000000000000000d+01 ! H2O
+    allocate(TB(2) % vector(2))
+    allocate(TBid(2) % vector(2))
+    TBid(2) % vector(1) = 0.00000000000000000d+00
+    TB(2) % vector(1) = 2.50000000000000000d+00 ! H2
+    TBid(2) % vector(2) = 2.00000000000000000d+00
+    TB(2) % vector(2) = 1.20000000000000000d+01 ! H2O
 
     ! (16):  H2O2 + H <=> H2O + OH
     fwd_A(17)     = 2.41000000000000000d+13
@@ -1310,8 +1322,8 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     end do
 
     ! troe
-    alpha_troe(1) = mixture + (TB(1,1) - 1)*sc(0+1) + (TB(1,2) - 1)*sc(2+1) + (TB(1,3) - 1)*sc(1+1)
-    alpha_troe(2) = mixture + (TB(2,1) - 1)*sc(0+1) + (TB(2,2) - 1)*sc(2+1)
+    alpha_troe(1) = mixture + (TB(1) % vector(1) - 1)*sc(0+1) + (TB(1) % vector(2) - 1)*sc(2+1) + (TB(1) % vector(3) - 1)*sc(1+1)
+    alpha_troe(2) = mixture + (TB(2) % vector(1) - 1)*sc(0+1) + (TB(2) % vector(2) - 1)*sc(2+1)
 
     do i=1, 2
         redP = alpha_troe(i-0) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)
