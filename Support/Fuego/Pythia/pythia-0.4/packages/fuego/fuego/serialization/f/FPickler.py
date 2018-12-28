@@ -144,6 +144,12 @@ class FPickler(CMill):
         self._write('double precision, save :: k_f_save(%d)' % nReactions)
         self._write('double precision, save :: Kc_save(%d)' % nReactions)
 
+        self._write()
+        self._write('! productionRate() static variables')
+        self._write('double precision :: T_save = -1')
+        self._write('double precision :: k_f_save(%d)' % nReactions)
+        self._write('double precision :: Kc_save(%d)' % nReactions)
+
         # build reverse reaction map
         #rmap = {}
         #for i, reaction in zip(range(nReactions), mechanism.reaction()):
