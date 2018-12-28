@@ -26,6 +26,8 @@ module chemistry_module
 contains
 
   subroutine chemistry_init()
+    use fuego_module, only : ckinit, ckindx, cksyme, cksyms, ckwt, ckrp
+
     integer :: nfit, i, ic, ii
     real(amrex_real) :: T0
     integer, allocatable :: names(:)
@@ -73,6 +75,7 @@ contains
 
 
   subroutine chemistry_close()
+    use fuego_module, only : ckfinalize
     deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
     call ckfinalize()
   end subroutine chemistry_close
