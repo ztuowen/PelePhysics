@@ -92,6 +92,15 @@ class FPickler(CMill):
             self._write(text + '! %s' % species.symbol)
         self._outdent()
 
+        self._write()
+        self._write('type :: nonsquare_matrix_double')
+        self._write('   double precision, allocatable :: vector(:)')
+        self._write('end type nonsquare_matrix_double')
+        self._write()
+        self._write('type :: nonsquare_matrix_int')
+        self._write('   integer, allocatable :: vector(:)')
+        self._write('end type nonsquare_matrix_int')
+
         nReactions = len(mechanism.reaction())
         self._write()
         self._write('double precision :: fwd_A(%d), fwd_beta(%d), fwd_Ea(%d)' 
@@ -106,9 +115,10 @@ class FPickler(CMill):
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('double precision :: activation_units(%d), prefactor_units(%d), phase_units(%d)'
                     % (nReactions,nReactions,nReactions))
-        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d), TBid(%d,%d)' 
-                    % (nReactions,nReactions,nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: TB(%d,%d)' % (nReactions,nReactions))
+        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions))
+        self._write('type(nonsquare_matrix_double) :: TB(%d)' % (nReactions))
+        self._write('type(nonsquare_matrix_int) :: TBid(%d)' % (nReactions))
 
         self._write()
         self._write('double precision :: fwd_A_DEF(%d), fwd_beta_DEF(%d), fwd_Ea_DEF(%d)' 
@@ -123,10 +133,10 @@ class FPickler(CMill):
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('double precision :: activation_units_DEF(%d), prefactor_units_DEF(%d), phase_units_DEF(%d)'
                     % (nReactions,nReactions,nReactions))
-        self._write('integer :: is_PD_DEF(%d), troe_len_DEF(%d), sri_len_DEF(%d), nTB_DEF(%d), TBid_DEF(%d,%d)' 
-                    % (nReactions,nReactions,nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: TB_DEF(%d,%d)' 
-                    % (nReactions,nReactions))
+        self._write('integer :: is_PD_DEF(%d), troe_len_DEF(%d), sri_len_DEF(%d), nTB_DEF(%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions))
+        self._write('type(nonsquare_matrix_double) :: TB_DEF(%d)' % (nReactions))
+        self._write('type(nonsquare_matrix_int) :: TBid_DEF(%d)' % (nReactions))
 
         self._write()
         self._write('! productionRate() static variables')
@@ -457,13 +467,13 @@ class FPickler(CMill):
         #self._write()
         self._write("subroutine SetAllDefaults()")
         self._write()
-        self._write('    integer :: i,j')
+        self._write('    integer :: i, j')
         self._write()
         self._write("    do i=1, %d" % (nReactions))
         self._write("        if (nTB_DEF(i) /= 0) then")
         self._write("            nTB_DEF(i) = 0")
-        self._write("            !free(TB_DEF[i]);")
-        self._write("            !free(TBid_DEF[i]);")
+        self._write("            deallocate(TB_DEF(i) % vector)")
+        self._write("            deallocate(TBid_DEF(i) % vector)")
         self._write("        end if")
         self._write("")
         self._write("        fwd_A_DEF(i)    = fwd_A(i)")
@@ -499,14 +509,15 @@ class FPickler(CMill):
         self._write("")
         self._write("        nTB_DEF(i)  = nTB(i)")
         self._write("        if (nTB_DEF(i) /= 0) then")
-        self._write("           !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))")
-        self._write("           !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))")
+        self._write("           allocate(TB_DEF(i) % vector(nTB_DEF(i)))")
+        self._write("           allocate(TBid_DEF(i) % vector(nTB_DEF(i)))")
         self._write("           do j=1, nTB_DEF(i)")
-        self._write("             TB_DEF(i,j) = TB(i,j)")
-        self._write("             TBid_DEF(i,j) = TBid(i,j)")
+        self._write("             TB_DEF(i) % vector(j) = TB(i) % vector(j)")
+        self._write("             TBid_DEF(i) % vector(j) = TBid(i) % vector(j)")
         self._write("           end do")
         self._write("        end if")
         self._write("    end do")
+        self._write()
         self._write("end subroutine")
         self._write()
 
@@ -1051,21 +1062,22 @@ class FPickler(CMill):
         self._write('! Finalizes parameter database')
         self._write('subroutine ckfinalize()')
         self._write()
-        self._write('  !integer :: i')
+        self._write('  integer :: i')
         self._write()
-        self._write('  !do i=1, %d' % nReactions)
-        self._write('    !free(TB[i])')
+        self._write('  do i=1, %d' % nReactions)
+        self._write('    deallocate(TB(i) % vector)')
         self._write('    !TB(i) = 0')
-        self._write('    !free(TBid[i])')
+        self._write('    deallocate(TBid(i) % vector)')
         self._write('    !TBid(i) = 0')
-        self._write('    !nTB(i) = 0')
+        self._write('    nTB(i) = 0')
         self._write()
-        self._write('    !free(TB_DEF[i])')
+        self._write('    deallocate(TB_DEF(i) % vector)')
         self._write('    !TB_DEF(i) = 0')
-        self._write('    !free(TBid_DEF[i])')
+        self._write('    deallocate(TBid_DEF(i) % vector)')
         self._write('    !TBid_DEF(i) = 0')
-        self._write('    !nTB_DEF(i) = 0')
-        self._write('  !end do')
+        self._write('    nTB_DEF(i) = 0')
+        self._write('  end do')
+        self._write()
         self._write('end subroutine')
         self._write()
         self._write('! Initializes parameter database')
@@ -1139,17 +1151,16 @@ class FPickler(CMill):
             else:
                 self._write("is_PD(%d) = 0" % (id) )
 
-
             if thirdBody:
                 efficiencies = reaction.efficiencies
                 self._write("nTB(%d) = %d" % (id, len(efficiencies)))
-                self._write("!TB(%d) = (double *) malloc(%d * sizeof(double))" % (id, len(efficiencies)))
-                self._write("!TBid(%d) = (int *) malloc(%d * sizeof(int))" % (id, len(efficiencies)))
+                self._write("allocate(TB(%d) %% vector(%d))" % (id, len(efficiencies)))
+                self._write("allocate(TBid(%d) %% vector(%d))" % (id, len(efficiencies)))
                 for i, eff in enumerate(efficiencies):
                     symbol, efficiency = eff
-                    self._write("TBid(%d,%d) = %s"
+                    self._write("TBid(%d) %% vector(%d) = %s"
                                 % (id, i+1, format(mechanism.species(symbol).id, '.17e').replace("e","d")))
-                    self._write("TB(%d,%d) = %s ! %s"
+                    self._write("TB(%d) %% vector(%d) = %s ! %s"
                                 % (id, i+1, format(efficiency, '.17e').replace("e","d"), symbol))
             else:
                 self._write("nTB(%d) = 0" % (id))
@@ -6954,7 +6965,7 @@ class FPickler(CMill):
         alpha = ["mixture"]
         for i, eff in enumerate(efficiencies):
             symbol, efficiency = eff
-            factor = "(TB(%d,%d) - 1)" % (reaction.id, i+1)
+            factor = "(TB(%d) %% vector(%d) - 1)" % (reaction.id, i+1)
             conc = "sc(%d+1)" % mechanism.species(symbol).id
             alpha.append("%s*%s" % (factor, conc))
 
