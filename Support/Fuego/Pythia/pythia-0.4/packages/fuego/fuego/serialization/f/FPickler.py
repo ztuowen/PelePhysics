@@ -7215,6 +7215,7 @@ class FPickler(CMill):
     #    self._write('#define egtransetPATM egtransetpatm_')
     #    self._write('#endif')
 
+        self._write()
         self._write('subroutine egtransetPATM(PATM)')
         self._indent()
         self._write()
@@ -8535,10 +8536,10 @@ class FPickler(CMill):
 
     def _cpNASA(self, parameters):
         self._write('%s &' % ('%+15.8e' % parameters[0]).replace("e", "d"))
-        self._write('%s &' % ('%+15.8e * tc(1)' % parameters[1]).replace("e", "d"))
-        self._write('%s &' % ('%+15.8e * tc(2)' % parameters[2]).replace("e", "d"))
-        self._write('%s &' % ('%+15.8e * tc(3)' % parameters[3]).replace("e", "d"))
-        self._write('%s' % ('%+15.8e * tc(4)' % parameters[4]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(2)' % parameters[1]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(3)' % parameters[2]).replace("e", "d"))
+        self._write('%s &' % ('%+15.8e * tc(4)' % parameters[3]).replace("e", "d"))
+        self._write('%s' % ('%+15.8e * tc(5)' % parameters[4]).replace("e", "d"))
         return
 
     #def _dcpdTNASA(self, parameters):
