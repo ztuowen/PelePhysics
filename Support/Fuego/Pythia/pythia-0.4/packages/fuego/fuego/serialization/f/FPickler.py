@@ -1097,9 +1097,15 @@ class FPickler(CMill):
 
             A, beta, E = reaction.arrhenius
             self._write("! (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
-            self._write("fwd_A(%d)     = %s" % (id,format(A, '.17e').replace("e","d")))
-            self._write("fwd_beta(%d)  = %s" % (id,format(beta, '.17e').replace("e","d")))
-            self._write("fwd_Ea(%d)    = %s" % (id,format(E, '.17e').replace("e","d")))
+            mynumber = format(A, '.17g').replace("e","d")
+            if 'd' not in mynumber: mynumber = mynumber + 'd0'
+            self._write("fwd_A(%d)     = %s" % (id,mynumber))
+            mynumber = format(beta, '.17g').replace("e","d")
+            if 'd' not in mynumber: mynumber = mynumber + 'd0'
+            self._write("fwd_beta(%d)  = %s" % (id,mynumber))
+            mynumber = format(E, '.17g').replace("e","d")
+            if 'd' not in mynumber: mynumber = mynumber + 'd0'
+            self._write("fwd_Ea(%d)    = %s" % (id,mynumber))
 
             dim = self._phaseSpaceUnits(reaction.reactants)
             thirdBody = reaction.thirdBody
@@ -1111,39 +1117,67 @@ class FPickler(CMill):
             else:
                 uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 1 PD, TB
                 low_A, low_beta, low_E = low
-                self._write("low_A(%d)     = %s" % (id,format(low_A, '.17e').replace("e","d")))
-                self._write("low_beta(%d)  = %s" % (id,format(low_beta, '.17e').replace("e","d")))
-                self._write("low_Ea(%d)    = %s" % (id,format(low_E, '.17e').replace("e","d")))
+                mynumber = format(low_A, '.17g').replace("e","d")
+                if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                self._write("low_A(%d)     = %s" % (id,mynumber))
+                mynumber = format(low_beta, '.17g').replace("e","d")
+                if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                self._write("low_beta(%d)  = %s" % (id,mynumber))
+                mynumber = format(low_E, '.17g').replace("e","d")
+                if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                self._write("low_Ea(%d)    = %s" % (id,mynumber))
                 if reaction.troe:
                     troe = reaction.troe
                     ntroe = len(troe)
                     is_troe = True
-                    self._write("troe_a(%d)    = %s" % (id,format(troe[0], '.17e').replace("e","d")))
+                    mynumber = format(troe[0], '.17g').replace("e","d")
+                    if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                    self._write("troe_a(%d)    = %s" % (id,mynumber))
                     if ntroe>1:
-                        self._write("troe_Tsss(%d) = %s" % (id,format(troe[1], '.17e').replace("e","d")))
+                        mynumber = format(troe[1], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("troe_Tsss(%d) = %s" % (id,mynumber))
                     if ntroe>2:
-                        self._write("troe_Ts(%d)   = %s" % (id,format(troe[2], '.17e').replace("e","d")))
+                        mynumber = format(troe[2], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("troe_Ts(%d)   = %s" % (id,mynumber))
                     if ntroe>3:
-                        self._write("troe_Tss(%d)  = %s" % (id,format(troe[3], '.17e').replace("e","d")))
+                        mynumber = format(troe[3], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("troe_Tss(%d)  = %s" % (id,mynumber))
                     self._write("troe_len(%d)  = %d" % (id,ntroe))
                 if reaction.sri:
                     sri = reaction.sri
                     nsri = len(sri)
                     is_sri = True
-                    self._write("sri_a(%d)     = %s" % (id,format(sri[0], '.17e').replace("e","d")))
+                    mynumber = format(sri[0], '.17g').replace("e","d")
+                    if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                    self._write("sri_a(%d)     = %s" % (id,mynumber))
                     if nsri>1:
-                        self._write("sri_b(%d)     = %s" % (id,format(sri[1], '.17e').replace("e","d")))
+                        mynumber = format(sri[1], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("sri_b(%d)     = %s" % (id,mynumber))
                     if nsri>2:
-                        self._write("sri_c(%d)     = %s" % (id,format(sri[2], '.17e').replace("e","d")))
+                        mynumber = format(sri[2], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("sri_c(%d)     = %s" % (id,mynumber))
                     if nsri>3:
-                        self._write("sri_d(%d)     = %s" % (id,format(sri[3], '.17e').replace("e","d")))
+                        mynumber = format(sri[3], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("sri_d(%d)     = %s" % (id,mynumber))
                     if nsri>4:
-                        self._write("sri_e(%d)     = %s" % (id,format(sri[4], '.17e').replace("e","d")))
+                        mynumber = format(sri[4], '.17g').replace("e","d")
+                        if 'd' not in mynumber: mynumber = mynumber + 'd0'
+                        self._write("sri_e(%d)     = %s" % (id,mynumber))
                     self._write("sri_len(%d)   = %d" % (id,nsri))
 
-            self._write("prefactor_units(%d)  = %s" % (id,format(uc.value, '.17e').replace("e","d")))
+            mynumber = format(uc.value, '.17g').replace("e","d")
+            if 'd' not in mynumber: mynumber = mynumber + 'd0'
+            self._write("prefactor_units(%d)  = %s" % (id,mynumber))
             aeuc = self._activationEnergyUnits(reaction.units["activation"])
-            self._write("activation_units(%d) = %s" % (id,format(aeuc / Rc / kelvin, '.17e').replace("e","d")))
+            mynumber = format(aeuc / Rc / kelvin, '.17g').replace("e","d")
+            if 'd' not in mynumber: mynumber = mynumber + 'd0'
+            self._write("activation_units(%d) = %s" % (id,mynumber))
             self._write("phase_units(%d)      = 1d-%d" % (id,dim*6))
 
             if low:
@@ -1158,10 +1192,14 @@ class FPickler(CMill):
                 self._write("if (.not. allocated(TBid(%d) %% vector)) allocate(TBid(%d) %% vector(%d))" % (id, id, len(efficiencies)))
                 for i, eff in enumerate(efficiencies):
                     symbol, efficiency = eff
+                    mynumber = format(mechanism.species(symbol).id, '.17g').replace("e","d")
+                    if 'd' not in mynumber: mynumber = mynumber + 'd0'
                     self._write("TBid(%d) %% vector(%d) = %s"
-                                % (id, i+1, format(mechanism.species(symbol).id, '.17e').replace("e","d")))
+                                % (id, i+1, mynumber))
+                    mynumber = format(efficiency, '.17g').replace("e","d")
+                    if 'd' not in mynumber: mynumber = mynumber + 'd0'
                     self._write("TB(%d) %% vector(%d) = %s ! %s"
-                                % (id, i+1, format(efficiency, '.17e').replace("e","d"), symbol))
+                                % (id, i+1, mynumber, symbol))
             else:
                 self._write("nTB(%d) = 0" % (id))
 
