@@ -73,6 +73,11 @@ double precision :: activation_units_DEF(21), prefactor_units_DEF(21), phase_uni
 integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21), TBid_DEF(21,21)
 double precision :: TB_DEF(21,21)
 
+! productionRate() static variables
+double precision :: T_save = -1
+double precision :: k_f_save(21)
+double precision :: Kc_save(21)
+
 contains
 
 subroutine SetAllDefaults()
@@ -1005,9 +1010,6 @@ subroutine productionRate(wdot, sc, T)
 
     double precision :: tc(5)
     double precision :: invT
-    double precision :: T_save
-    double precision :: k_f_save(21)
-    double precision :: Kc_save(21)
     double precision :: qdot, q_f(21), q_r(21)
     integer :: i
 
@@ -1228,74 +1230,72 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     double precision :: Corr(21)
     double precision :: alpha_troe(2)
     double precision :: redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe
-    double precision :: X, F_sri
-    double precision :: k_f_save(21)
     double precision :: tmp1, tmp2, tmp3
     integer :: i
 
     ! reaction 1: H + O2 (+M) <=> HO2 (+M)
-    qf(1) = sc(1+1)*sc(3+1)
-    qr(1) = sc(6+1)
+    qf(1) = sc(2)*sc(4)
+    qr(1) = sc(7)
     ! reaction 2: H2O2 (+M) <=> OH + OH (+M)
-    qf(2) = sc(7+1)
-    qr(2) = sc(5+1)*sc(5+1)
+    qf(2) = sc(8)
+    qr(2) = sc(6)*sc(6)
     ! reaction 3: H2 + M <=> H + H + M
-    qf(3) = sc(0+1)
-    qr(3) = sc(3+1)*sc(3+1)
+    qf(3) = sc(1)
+    qr(3) = sc(4)*sc(4)
     ! reaction 4: O + O + M <=> O2 + M
-    qf(4) = sc(4+1)*sc(4+1)
-    qr(4) = sc(1+1)
+    qf(4) = sc(5)*sc(5)
+    qr(4) = sc(2)
     ! reaction 5: O + H + M <=> OH + M
-    qf(5) = sc(3+1)*sc(4+1)
-    qr(5) = sc(5+1)
+    qf(5) = sc(4)*sc(5)
+    qr(5) = sc(6)
     ! reaction 6: H + OH + M <=> H2O + M
-    qf(6) = sc(3+1)*sc(5+1)
-    qr(6) = sc(2+1)
+    qf(6) = sc(4)*sc(6)
+    qr(6) = sc(3)
     ! reaction 7: H + O2 <=> O + OH
-    qf(7) = sc(1+1)*sc(3+1)
-    qr(7) = sc(4+1)*sc(5+1)
+    qf(7) = sc(2)*sc(4)
+    qr(7) = sc(5)*sc(6)
     ! reaction 8: O + H2 <=> H + OH
-    qf(8) = sc(0+1)*sc(4+1)
-    qr(8) = sc(3+1)*sc(5+1)
+    qf(8) = sc(1)*sc(5)
+    qr(8) = sc(4)*sc(6)
     ! reaction 9: H2 + OH <=> H2O + H
-    qf(9) = sc(0+1)*sc(5+1)
-    qr(9) = sc(2+1)*sc(3+1)
+    qf(9) = sc(1)*sc(6)
+    qr(9) = sc(3)*sc(4)
     ! reaction 10: O + H2O <=> OH + OH
-    qf(10) = sc(2+1)*sc(4+1)
-    qr(10) = sc(5+1)*sc(5+1)
+    qf(10) = sc(3)*sc(5)
+    qr(10) = sc(6)*sc(6)
     ! reaction 11: HO2 + H <=> H2 + O2
-    qf(11) = sc(3+1)*sc(6+1)
-    qr(11) = sc(0+1)*sc(1+1)
+    qf(11) = sc(4)*sc(7)
+    qr(11) = sc(1)*sc(2)
     ! reaction 12: HO2 + H <=> OH + OH
-    qf(12) = sc(3+1)*sc(6+1)
-    qr(12) = sc(5+1)*sc(5+1)
+    qf(12) = sc(4)*sc(7)
+    qr(12) = sc(6)*sc(6)
     ! reaction 13: HO2 + O <=> O2 + OH
-    qf(13) = sc(4+1)*sc(6+1)
-    qr(13) = sc(1+1)*sc(5+1)
+    qf(13) = sc(5)*sc(7)
+    qr(13) = sc(2)*sc(6)
     ! reaction 14: HO2 + OH <=> H2O + O2
-    qf(14) = sc(5+1)*sc(6+1)
-    qr(14) = sc(1+1)*sc(2+1)
+    qf(14) = sc(6)*sc(7)
+    qr(14) = sc(2)*sc(3)
     ! reaction 15: HO2 + HO2 <=> H2O2 + O2
-    qf(15) = sc(6+1)*sc(6+1)
-    qr(15) = sc(1+1)*sc(7+1)
+    qf(15) = sc(7)*sc(7)
+    qr(15) = sc(2)*sc(8)
     ! reaction 16: HO2 + HO2 <=> H2O2 + O2
-    qf(16) = sc(6+1)*sc(6+1)
-    qr(16) = sc(1+1)*sc(7+1)
+    qf(16) = sc(7)*sc(7)
+    qr(16) = sc(2)*sc(8)
     ! reaction 17: H2O2 + H <=> H2O + OH
-    qf(17) = sc(3+1)*sc(7+1)
-    qr(17) = sc(2+1)*sc(5+1)
+    qf(17) = sc(4)*sc(8)
+    qr(17) = sc(3)*sc(6)
     ! reaction 18: H2O2 + H <=> HO2 + H2
-    qf(18) = sc(3+1)*sc(7+1)
-    qr(18) = sc(0+1)*sc(6+1)
+    qf(18) = sc(4)*sc(8)
+    qr(18) = sc(1)*sc(7)
     ! reaction 19: H2O2 + O <=> OH + HO2
-    qf(19) = sc(4+1)*sc(7+1)
-    qr(19) = sc(5+1)*sc(6+1)
+    qf(19) = sc(5)*sc(8)
+    qr(19) = sc(6)*sc(7)
     ! reaction 20: H2O2 + OH <=> HO2 + H2O
-    qf(20) = sc(5+1)*sc(7+1)
-    qr(20) = sc(2+1)*sc(6+1)
+    qf(20) = sc(6)*sc(8)
+    qr(20) = sc(3)*sc(7)
     ! reaction 21: H2O2 + OH <=> HO2 + H2O
-    qf(21) = sc(5+1)*sc(7+1)
-    qr(21) = sc(2+1)*sc(6+1)
+    qf(21) = sc(6)*sc(8)
+    qr(21) = sc(3)*sc(7)
 
     T = tc(2)
 
@@ -1312,8 +1312,8 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     ! troe
     alpha_troe(1) = mixture + (TB(1,1) - 1)*sc(0+1) + (TB(1,2) - 1)*sc(2+1) + (TB(1,3) - 1)*sc(1+1)
     alpha_troe(2) = mixture + (TB(2,1) - 1)*sc(0+1) + (TB(2,2) - 1)*sc(2+1)
-    do i=1, 2
 
+    do i=1, 2
         redP = alpha_troe(i-0) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)
         F = redP / (1.d0 + redP)
         logPred = log10(redP)

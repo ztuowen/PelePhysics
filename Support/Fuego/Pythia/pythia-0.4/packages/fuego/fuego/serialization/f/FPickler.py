@@ -128,6 +128,12 @@ class FPickler(CMill):
         self._write('double precision :: TB_DEF(%d,%d)' 
                     % (nReactions,nReactions))
 
+        self._write()
+        self._write('! productionRate() static variables')
+        self._write('double precision :: T_save = -1')
+        self._write('double precision :: k_f_save(%d)' % nReactions)
+        self._write('double precision :: Kc_save(%d)' % nReactions)
+
         # build reverse reaction map
         #rmap = {}
         #for i, reaction in zip(range(nReactions), mechanism.reaction()):
@@ -4885,24 +4891,6 @@ class FPickler(CMill):
         nsimple    = isimple[1]    - isimple[0]
         nspecial   = ispecial[1]   - ispecial[0]
 
-        # OMP stuff
-        #self._write()
-        #self._write('static double T_save = -1;')
-        #self._write('#ifdef _OPENMP')
-        #self._write('#pragma omp threadprivate(T_save)')
-        #self._write('#endif')
-        #self._write()
-        #self._write('static double k_f_save[%d];' % nReactions)
-        #self._write('#ifdef _OPENMP')
-        #self._write('#pragma omp threadprivate(k_f_save)')
-        #self._write('#endif')
-        #self._write()
-        #self._write('static double Kc_save[%d];' % nReactions)
-        #self._write('#ifdef _OPENMP')
-        #self._write('#pragma omp threadprivate(Kc_save)')
-        #self._write('#endif')
-        #self._write()
-
         # main function
         self._write()
         self._write('! compute the production rate for each species')
@@ -4916,9 +4904,6 @@ class FPickler(CMill):
         self._write()
         self._write('double precision :: tc(5)')
         self._write('double precision :: invT')
-        self._write('double precision :: T_save')
-        self._write('double precision :: k_f_save(%d)' % nReactions)
-        self._write('double precision :: Kc_save(%d)' % nReactions)
         self._write('double precision :: qdot, q_f(%d), q_r(%d)' % (nReactions, nReactions))
         self._write('integer :: i')
 
@@ -5076,17 +5061,16 @@ class FPickler(CMill):
         self._write('double precision :: Corr(%d)' % nclassd)
         if ntroe > 0:
             self._write('double precision :: alpha_troe(%d)' % ntroe)
+            self._write('double precision :: redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe')
         if nsri > 0:
             self._write('double precision :: alpha_sri(%d)' % nsri)
+            self._write('double precision :: X, F_sri')
         if nlindemann > 0:
             if nlindemann > 1:
                 self._write("double precision :: alpha_lindemann(%d)" % nlindemann)
             else:
                 self._write("double precision :: alpha_lindemann")
 
-        self._write('double precision :: redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe')
-        self._write('double precision :: X, F_sri')
-        self._write('double precision :: k_f_save(%d)' % nReactions)
         self._write('double precision :: tmp1, tmp2, tmp3')
         self._write('integer :: i')
         self._write()
@@ -5137,6 +5121,7 @@ class FPickler(CMill):
                     else:
                         self._write("alpha_troe(%d) = %s" %(ii,alpha))
                         alpha_d[alpha] = "alpha_troe(%d)" % ii
+            self._write()
 
             #if ntroe >= 4:
             #    self._outdent()
@@ -5151,7 +5136,6 @@ class FPickler(CMill):
             #    self._indent()
             #    self._indent()
             self._write("do i=%d, %d" %(itroe[0]+1,itroe[1]))
-            self._write()
             self._indent()
             self._write("redP = alpha_troe(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)" % itroe[0])
             self._write("F = redP / (1.d0 + redP)")
@@ -6907,7 +6891,7 @@ class FPickler(CMill):
         phi = []
 
         for symbol, coefficient in sorted(reagents,key=lambda x:mechanism.species(x[0]).id):
-            conc = "sc(%d+1)" % mechanism.species(symbol).id
+            conc = "sc(%d)" % (mechanism.species(symbol).id+1)
             phi += [conc] * coefficient
 
         return "*".join(phi)
