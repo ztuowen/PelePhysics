@@ -23,6 +23,25 @@ module fuego_module
   public :: ckrp
   public :: ckwc
   public :: ckindx
+  public :: ckinit
+  public :: ckfinalize
+  public :: egtransetCOFTD
+  public :: egtransetKTDIF
+  public :: egtransetCOFD
+  public :: egtransetCOFLAM
+  public :: egtransetCOFETA
+  public :: egtransetNLIN
+  public :: egtransetZROT
+  public :: egtransetPOL
+  public :: egtransetDIP
+  public :: egtransetSIG
+  public :: egtransetEPS
+  public :: egtransetWT
+  public :: egtransetNLITE
+  public :: egtransetKK
+  public :: egtransetNO
+  public :: egtransetLENRMC
+  public :: egtransetLENIMC
 
 ! Inverse molecular weights
 double precision, parameter :: imw(9) = (/ &
@@ -36,15 +55,370 @@ double precision, parameter :: imw(9) = (/ &
     1.d0 / 34.014740d0,  & ! H2O2
     1.d0 / 28.013400d0/)  ! N2
 
-
-
 double precision :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
 double precision :: low_A(21), low_beta(21), low_Ea(21)
+double precision :: rev_A(21), rev_beta(21), rev_Ea(21)
 double precision :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
+double precision :: sri_a(21), sri_b(21), sri_c(21), sri_d(21), sri_e(21)
 double precision :: activation_units(21), prefactor_units(21), phase_units(21)
-integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21), TBid(21)
+integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21), TBid(21,21)
 double precision :: TB(21,21)
+
+double precision :: fwd_A_DEF(21), fwd_beta_DEF(21), fwd_Ea_DEF(21)
+double precision :: low_A_DEF(21), low_beta_DEF(21), low_Ea_DEF(21)
+double precision :: rev_A_DEF(21), rev_beta_DEF(21), rev_Ea_DEF(21)
+double precision :: troe_a_DEF(21),troe_Ts_DEF(21), troe_Tss_DEF(21), troe_Tsss_DEF(21)
+double precision :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), sri_e_DEF(21)
+double precision :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
+integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21), TBid_DEF(21,21)
+double precision :: TB_DEF(21,21)
+integer :: rxn_map(21) = (/ 6,7,8,9,2,3,4,5,0,10,11,12,13,14,15,1,16,17,18,19,20 /)
+
 contains
+
+subroutine SetAllDefaults()
+
+    integer :: i,j
+
+    do i=1, 21
+        !if (nTB_DEF[i] != 0) {
+            nTB_DEF(i) = 0
+            !free(TB_DEF[i]);
+            !free(TBid_DEF[i]);
+        !}
+
+        fwd_A_DEF(i)    = fwd_A(i)
+        fwd_beta_DEF(i) = fwd_beta(i)
+        fwd_Ea_DEF(i)   = fwd_Ea(i)
+
+        low_A_DEF(i)    = low_A(i)
+        low_beta_DEF(i) = low_beta(i)
+        low_Ea_DEF(i)   = low_Ea(i)
+
+        rev_A_DEF(i)    = rev_A(i)
+        rev_beta_DEF(i) = rev_beta(i)
+        rev_Ea_DEF(i)   = rev_Ea(i)
+
+        troe_a_DEF(i)    = troe_a(i)
+        troe_Ts_DEF(i)   = troe_Ts(i)
+        troe_Tss_DEF(i)  = troe_Tss(i)
+        troe_Tsss_DEF(i) = troe_Tsss(i)
+
+        sri_a_DEF(i) = sri_a(i)
+        sri_b_DEF(i) = sri_b(i)
+        sri_c_DEF(i) = sri_c(i)
+        sri_d_DEF(i) = sri_d(i)
+        sri_e_DEF(i) = sri_e(i)
+
+        is_PD_DEF(i)    = is_PD(i)
+        troe_len_DEF(i) = troe_len(i)
+        sri_len_DEF(i)  = sri_len(i)
+
+        activation_units_DEF(i) = activation_units(i)
+        prefactor_units_DEF(i)  = prefactor_units(i)
+        phase_units_DEF(i)      = phase_units(i)
+
+        nTB_DEF(i)  = nTB(i)
+        !if (nTB_DEF(i) != 0) then
+           !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))
+           !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))
+           do j=1, nTB_DEF(i)
+             TB_DEF(i,j) = TB(i,j)
+             TBid_DEF(i,j) = TBid(i,j)
+           end do
+        !end if
+    end do
+end subroutine
+
+
+! Finalizes parameter database
+subroutine ckfinalize()
+
+  integer :: i
+
+  !do i=1, 21
+    !free(TB[i])
+    !TB[i] = 0
+    !free(TBid[i])
+    !TBid[i] = 0
+    !nTB[i] = 0
+
+    !free(TB_DEF[i])
+    !TB_DEF[i] = 0
+    !free(TBid_DEF[i])
+    !TBid_DEF[i] = 0
+    !nTB_DEF[i] = 0
+  !end do
+end subroutine
+
+! Initializes parameter database
+subroutine ckinit()
+
+    ! (0):  H + O2 <=> O + OH
+    fwd_A(7)     = 3547000000000000
+    fwd_beta(7)  = -0.40600000000000003
+    fwd_Ea(7)    = 16599
+    prefactor_units(7)  = 1.0000000000000002e-06
+    activation_units(7) = 0.50321666580471969
+    phase_units(7)      = 1d-12
+    is_PD(7) = 0
+    nTB(7) = 0
+
+    ! (1):  O + H2 <=> H + OH
+    fwd_A(8)     = 50800
+    fwd_beta(8)  = 2.6699999999999999
+    fwd_Ea(8)    = 6290
+    prefactor_units(8)  = 1.0000000000000002e-06
+    activation_units(8) = 0.50321666580471969
+    phase_units(8)      = 1d-12
+    is_PD(8) = 0
+    nTB(8) = 0
+
+    ! (2):  H2 + OH <=> H2O + H
+    fwd_A(9)     = 216000000
+    fwd_beta(9)  = 1.51
+    fwd_Ea(9)    = 3430
+    prefactor_units(9)  = 1.0000000000000002e-06
+    activation_units(9) = 0.50321666580471969
+    phase_units(9)      = 1d-12
+    is_PD(9) = 0
+    nTB(9) = 0
+
+    ! (3):  O + H2O <=> OH + OH
+    fwd_A(10)     = 2970000
+    fwd_beta(10)  = 2.02
+    fwd_Ea(10)    = 13400
+    prefactor_units(10)  = 1.0000000000000002e-06
+    activation_units(10) = 0.50321666580471969
+    phase_units(10)      = 1d-12
+    is_PD(10) = 0
+    nTB(10) = 0
+
+    ! (4):  H2 + M <=> H + H + M
+    fwd_A(3)     = 4.577e+19
+    fwd_beta(3)  = -1.3999999999999999
+    fwd_Ea(3)    = 104380
+    prefactor_units(3)  = 1.0000000000000002e-06
+    activation_units(3) = 0.50321666580471969
+    phase_units(3)      = 1d-6
+    is_PD(3) = 0
+    nTB(3) = 2
+    !TB(3) = (double *) malloc(2 * sizeof(double))
+    !TBid(3) = (int *) malloc(2 * sizeof(int))
+    TBid(4,1) = 0
+    TB(4,1) = 2.5 ! H2
+    TBid(4,2) = 2
+    TB(4,2) = 12 ! H2O
+
+    ! (5):  O + O + M <=> O2 + M
+    fwd_A(4)     = 6165000000000000
+    fwd_beta(4)  = -0.5
+    fwd_Ea(4)    = 0
+    prefactor_units(4)  = 1.0000000000000002e-12
+    activation_units(4) = 0.50321666580471969
+    phase_units(4)      = 1d-12
+    is_PD(4) = 0
+    nTB(4) = 2
+    !TB(4) = (double *) malloc(2 * sizeof(double))
+    !TBid(4) = (int *) malloc(2 * sizeof(int))
+    TBid(5,1) = 0
+    TB(5,1) = 2.5 ! H2
+    TBid(5,2) = 2
+    TB(5,2) = 12 ! H2O
+
+    ! (6):  O + H + M <=> OH + M
+    fwd_A(5)     = 4.714e+18
+    fwd_beta(5)  = -1
+    fwd_Ea(5)    = 0
+    prefactor_units(5)  = 1.0000000000000002e-12
+    activation_units(5) = 0.50321666580471969
+    phase_units(5)      = 1d-12
+    is_PD(5) = 0
+    nTB(5) = 2
+    !TB(5) = (double *) malloc(2 * sizeof(double))
+    !TBid(5) = (int *) malloc(2 * sizeof(int))
+    TBid(6,1) = 0
+    TB(6,1) = 2.5 ! H2
+    TBid(6,2) = 2
+    TB(6,2) = 12 ! H2O
+
+    ! (7):  H + OH + M <=> H2O + M
+    fwd_A(6)     = 3.8000000000000004e+22
+    fwd_beta(6)  = -2
+    fwd_Ea(6)    = 0
+    prefactor_units(6)  = 1.0000000000000002e-12
+    activation_units(6) = 0.50321666580471969
+    phase_units(6)      = 1d-12
+    is_PD(6) = 0
+    nTB(6) = 2
+    !TB(6) = (double *) malloc(2 * sizeof(double))
+    !TBid(6) = (int *) malloc(2 * sizeof(int))
+    TBid(7,1) = 0
+    TB(7,1) = 2.5 ! H2
+    TBid(7,2) = 2
+    TB(7,2) = 12 ! H2O
+
+    ! (8):  H + O2 (+M) <=> HO2 (+M)
+    fwd_A(1)     = 1475000000000
+    fwd_beta(1)  = 0.59999999999999998
+    fwd_Ea(1)    = 0
+    low_A(1)     = 6.366e+20
+    low_beta(1)  = -1.72
+    low_Ea(1)    = 524.79999999999995
+    troe_a(1)    = 0.80000000000000004
+    troe_Tsss(1) = 1.0000000000000001e-30
+    troe_Ts(1)   = 1e+30
+    troe_len(1)  = 3
+    prefactor_units(1)  = 1.0000000000000002e-06
+    activation_units(1) = 0.50321666580471969
+    phase_units(1)      = 1d-12
+    is_PD(1) = 1
+    nTB(1) = 3
+    !TB(1) = (double *) malloc(3 * sizeof(double))
+    !TBid(1) = (int *) malloc(3 * sizeof(int))
+    TBid(2,1) = 0
+    TB(2,1) = 2 ! H2
+    TBid(2,2) = 2
+    TB(2,2) = 11 ! H2O
+    TBid(2,3) = 1
+    TB(2,3) = 0.78000000000000003 ! O2
+
+    ! (9):  HO2 + H <=> H2 + O2
+    fwd_A(11)     = 16600000000000
+    fwd_beta(11)  = 0
+    fwd_Ea(11)    = 823
+    prefactor_units(11)  = 1.0000000000000002e-06
+    activation_units(11) = 0.50321666580471969
+    phase_units(11)      = 1d-12
+    is_PD(11) = 0
+    nTB(11) = 0
+
+    ! (10):  HO2 + H <=> OH + OH
+    fwd_A(12)     = 70790000000000
+    fwd_beta(12)  = 0
+    fwd_Ea(12)    = 295
+    prefactor_units(12)  = 1.0000000000000002e-06
+    activation_units(12) = 0.50321666580471969
+    phase_units(12)      = 1d-12
+    is_PD(12) = 0
+    nTB(12) = 0
+
+    ! (11):  HO2 + O <=> O2 + OH
+    fwd_A(13)     = 32500000000000
+    fwd_beta(13)  = 0
+    fwd_Ea(13)    = 0
+    prefactor_units(13)  = 1.0000000000000002e-06
+    activation_units(13) = 0.50321666580471969
+    phase_units(13)      = 1d-12
+    is_PD(13) = 0
+    nTB(13) = 0
+
+    ! (12):  HO2 + OH <=> H2O + O2
+    fwd_A(14)     = 28900000000000
+    fwd_beta(14)  = 0
+    fwd_Ea(14)    = -497
+    prefactor_units(14)  = 1.0000000000000002e-06
+    activation_units(14) = 0.50321666580471969
+    phase_units(14)      = 1d-12
+    is_PD(14) = 0
+    nTB(14) = 0
+
+    ! (13):  HO2 + HO2 <=> H2O2 + O2
+    fwd_A(15)     = 420000000000000
+    fwd_beta(15)  = 0
+    fwd_Ea(15)    = 11982
+    prefactor_units(15)  = 1.0000000000000002e-06
+    activation_units(15) = 0.50321666580471969
+    phase_units(15)      = 1d-12
+    is_PD(15) = 0
+    nTB(15) = 0
+
+    ! (14):  HO2 + HO2 <=> H2O2 + O2
+    fwd_A(16)     = 130000000000
+    fwd_beta(16)  = 0
+    fwd_Ea(16)    = -1629.3
+    prefactor_units(16)  = 1.0000000000000002e-06
+    activation_units(16) = 0.50321666580471969
+    phase_units(16)      = 1d-12
+    is_PD(16) = 0
+    nTB(16) = 0
+
+    ! (15):  H2O2 (+M) <=> OH + OH (+M)
+    fwd_A(2)     = 295100000000000
+    fwd_beta(2)  = 0
+    fwd_Ea(2)    = 48430
+    low_A(2)     = 1.202e+17
+    low_beta(2)  = 0
+    low_Ea(2)    = 45500
+    troe_a(2)    = 0.5
+    troe_Tsss(2) = 1.0000000000000001e-30
+    troe_Ts(2)   = 1e+30
+    troe_len(2)  = 3
+    prefactor_units(2)  = 1
+    activation_units(2) = 0.50321666580471969
+    phase_units(2)      = 1d-6
+    is_PD(2) = 1
+    nTB(2) = 2
+    !TB(2) = (double *) malloc(2 * sizeof(double))
+    !TBid(2) = (int *) malloc(2 * sizeof(int))
+    TBid(3,1) = 0
+    TB(3,1) = 2.5 ! H2
+    TBid(3,2) = 2
+    TB(3,2) = 12 ! H2O
+
+    ! (16):  H2O2 + H <=> H2O + OH
+    fwd_A(17)     = 24100000000000
+    fwd_beta(17)  = 0
+    fwd_Ea(17)    = 3970
+    prefactor_units(17)  = 1.0000000000000002e-06
+    activation_units(17) = 0.50321666580471969
+    phase_units(17)      = 1d-12
+    is_PD(17) = 0
+    nTB(17) = 0
+
+    ! (17):  H2O2 + H <=> HO2 + H2
+    fwd_A(18)     = 48200000000000
+    fwd_beta(18)  = 0
+    fwd_Ea(18)    = 7950
+    prefactor_units(18)  = 1.0000000000000002e-06
+    activation_units(18) = 0.50321666580471969
+    phase_units(18)      = 1d-12
+    is_PD(18) = 0
+    nTB(18) = 0
+
+    ! (18):  H2O2 + O <=> OH + HO2
+    fwd_A(19)     = 9550000
+    fwd_beta(19)  = 2
+    fwd_Ea(19)    = 3970
+    prefactor_units(19)  = 1.0000000000000002e-06
+    activation_units(19) = 0.50321666580471969
+    phase_units(19)      = 1d-12
+    is_PD(19) = 0
+    nTB(19) = 0
+
+    ! (19):  H2O2 + OH <=> HO2 + H2O
+    fwd_A(20)     = 1000000000000
+    fwd_beta(20)  = 0
+    fwd_Ea(20)    = 0
+    prefactor_units(20)  = 1.0000000000000002e-06
+    activation_units(20) = 0.50321666580471969
+    phase_units(20)      = 1d-12
+    is_PD(20) = 0
+    nTB(20) = 0
+
+    ! (20):  H2O2 + OH <=> HO2 + H2O
+    fwd_A(21)     = 580000000000000
+    fwd_beta(21)  = 0
+    fwd_Ea(21)    = 9557
+    prefactor_units(21)  = 1.0000000000000002e-06
+    activation_units(21) = 0.50321666580471969
+    phase_units(21)      = 1d-12
+    is_PD(21) = 0
+    nTB(21) = 0
+
+    call SetAllDefaults()
+end subroutine
+
 
 ! A few mechanism parameters
 subroutine ckindx(iwrk, rwrk, mm, kk, ii, nfit)
@@ -1854,6 +2228,685 @@ subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
 
     t = t1
     ierr = 0
+
+end subroutine
+
+subroutine egtransetLENIMC(LENIMC)
+
+    integer, intent(out) :: LENIMC
+
+    LENIMC = 38
+
+end subroutine
+
+subroutine egtransetLENRMC(LENRMC)
+
+    integer, intent(out) :: LENRMC
+
+    LENRMC = 1854
+
+end subroutine
+
+subroutine egtransetNO(NO)
+
+    integer, intent(out) :: NO
+
+    NO = 4
+
+end subroutine
+
+subroutine egtransetKK(KK)
+
+    integer, intent(out) :: KK
+
+    KK = 9
+
+end subroutine
+
+subroutine egtransetNLITE(NLITE)
+
+    integer, intent(out) :: NLITE
+
+    NLITE = 2
+
+end subroutine
+subroutine egtransetPATM(PATM)
+
+    double precision, intent(out) :: PATM
+
+    PATM = 0.1013250000000000d+07
+
+end subroutine
+
+! the molecular weights in g/mol
+subroutine egtransetWT(WT)
+
+    double precision, intent(out) :: WT(9)
+
+    WT(1) = 2.01594000d+00
+    WT(2) = 3.19988000d+01
+    WT(3) = 1.80153400d+01
+    WT(4) = 1.00797000d+00
+    WT(5) = 1.59994000d+01
+    WT(6) = 1.70073700d+01
+    WT(7) = 3.30067700d+01
+    WT(8) = 3.40147400d+01
+    WT(9) = 2.80134000d+01
+
+end subroutine
+
+! the lennard-jones potential well depth eps/kb in K
+subroutine egtransetEPS(EPS)
+
+    double precision, intent(out) :: EPS(9)
+
+    EPS(4) = 1.45000000d+02
+    EPS(5) = 8.00000000d+01
+    EPS(6) = 8.00000000d+01
+    EPS(7) = 1.07400000d+02
+    EPS(8) = 1.07400000d+02
+    EPS(1) = 3.80000000d+01
+    EPS(2) = 1.07400000d+02
+    EPS(3) = 5.72400000d+02
+    EPS(9) = 9.75300000d+01
+
+end subroutine
+
+! the lennard-jones collision diameter in Angstroms
+subroutine egtransetSIG(SIG)
+
+    double precision, intent(out) :: SIG(9)
+
+    SIG(4) = 2.05000000d+00
+    SIG(5) = 2.75000000d+00
+    SIG(6) = 2.75000000d+00
+    SIG(7) = 3.45800000d+00
+    SIG(8) = 3.45800000d+00
+    SIG(1) = 2.92000000d+00
+    SIG(2) = 3.45800000d+00
+    SIG(3) = 2.60500000d+00
+    SIG(9) = 3.62100000d+00
+
+end subroutine
+
+! the dipole moment in Debye
+subroutine egtransetDIP(DIP)
+
+    double precision, intent(out) :: DIP(9)
+
+    DIP(4) = 0.00000000d+00
+    DIP(5) = 0.00000000d+00
+    DIP(6) = 0.00000000d+00
+    DIP(7) = 0.00000000d+00
+    DIP(8) = 0.00000000d+00
+    DIP(1) = 0.00000000d+00
+    DIP(2) = 0.00000000d+00
+    DIP(3) = 1.84400000d+00
+    DIP(9) = 0.00000000d+00
+
+end subroutine
+
+! the polarizability in cubic Angstroms
+subroutine egtransetPOL(POL)
+
+    double precision, intent(out) :: POL(9)
+
+    POL(4) = 0.00000000d+00
+    POL(5) = 0.00000000d+00
+    POL(6) = 0.00000000d+00
+    POL(7) = 0.00000000d+00
+    POL(8) = 0.00000000d+00
+    POL(1) = 7.90000000d-01
+    POL(2) = 1.60000000d+00
+    POL(3) = 0.00000000d+00
+    POL(9) = 1.76000000d+00
+
+end subroutine
+
+! the rotational relaxation collision number at 298 K
+subroutine egtransetZROT(ZROT)
+
+    double precision, intent(out) :: ZROT(9)
+
+    ZROT(4) = 0.00000000d+00
+    ZROT(5) = 0.00000000d+00
+    ZROT(6) = 0.00000000d+00
+    ZROT(7) = 1.00000000d+00
+    ZROT(8) = 3.80000000d+00
+    ZROT(1) = 2.80000000d+02
+    ZROT(2) = 3.80000000d+00
+    ZROT(3) = 4.00000000d+00
+    ZROT(9) = 4.00000000d+00
+
+end subroutine
+
+! 0: monoatomic, 1: linear, 2: nonlinear
+subroutine egtransetNLIN(NLIN)
+
+    integer, intent(out) :: NLIN(9)
+
+    NLIN(4) = 0
+    NLIN(5) = 0
+    NLIN(6) = 1
+    NLIN(7) = 2
+    NLIN(8) = 2
+    NLIN(1) = 1
+    NLIN(2) = 1
+    NLIN(3) = 2
+    NLIN(9) = 1
+
+end subroutine
+
+
+! Poly fits for the viscosities, dim NO*KK
+subroutine egtransetCOFETA(COFETA)
+
+    double precision, intent(out) :: COFETA(36)
+
+    COFETA(1) = -1.37549435d+01
+    COFETA(2) = 9.65530587d-01
+    COFETA(3) = -4.45720114d-02
+    COFETA(4) = 2.05871810d-03
+    COFETA(5) = -1.68118868d+01
+    COFETA(6) = 2.52362554d+00
+    COFETA(7) = -2.49309128d-01
+    COFETA(8) = 1.10211025d-02
+    COFETA(9) = -1.17770937d+01
+    COFETA(10) = -8.26742721d-01
+    COFETA(11) = 3.39009079d-01
+    COFETA(12) = -2.00674327d-02
+    COFETA(13) = -1.98744496d+01
+    COFETA(14) = 3.41660514d+00
+    COFETA(15) = -3.63206306d-01
+    COFETA(16) = 1.58671021d-02
+    COFETA(17) = -1.48001581d+01
+    COFETA(18) = 1.79491990d+00
+    COFETA(19) = -1.54008440d-01
+    COFETA(20) = 6.86719439d-03
+    COFETA(21) = -1.47696103d+01
+    COFETA(22) = 1.79491990d+00
+    COFETA(23) = -1.54008440d-01
+    COFETA(24) = 6.86719439d-03
+    COFETA(25) = -1.67963797d+01
+    COFETA(26) = 2.52362554d+00
+    COFETA(27) = -2.49309128d-01
+    COFETA(28) = 1.10211025d-02
+    COFETA(29) = -1.67813391d+01
+    COFETA(30) = 2.52362554d+00
+    COFETA(31) = -2.49309128d-01
+    COFETA(32) = 1.10211025d-02
+    COFETA(33) = -1.62526779d+01
+    COFETA(34) = 2.24839597d+00
+    COFETA(35) = -2.13428438d-01
+    COFETA(36) = 9.46192413d-03
+
+end subroutine
+
+
+! Poly fits for the conductivities, dim NO*KK
+subroutine egtransetCOFLAM(COFLAM)
+
+    double precision, intent(out) :: COFLAM(36)
+
+    COFLAM(1) = 1.11035551d+01
+    COFLAM(2) = -1.31884089d+00
+    COFLAM(3) = 2.44042735d-01
+    COFLAM(4) = -8.99837633d-03
+    COFLAM(5) = -2.51299170d+00
+    COFLAM(6) = 3.15166792d+00
+    COFLAM(7) = -3.10009273d-01
+    COFLAM(8) = 1.34523096d-02
+    COFLAM(9) = 2.21730076d+01
+    COFLAM(10) = -8.46933644d+00
+    COFLAM(11) = 1.46153515d+00
+    COFLAM(12) = -7.29500936d-02
+    COFLAM(13) = -3.24539191d-01
+    COFLAM(14) = 3.41660514d+00
+    COFLAM(15) = -3.63206306d-01
+    COFLAM(16) = 1.58671021d-02
+    COFLAM(17) = 1.98513952d+00
+    COFLAM(18) = 1.79491990d+00
+    COFLAM(19) = -1.54008440d-01
+    COFLAM(20) = 6.86719439d-03
+    COFLAM(21) = 1.60618734d+01
+    COFLAM(22) = -4.10626869d+00
+    COFLAM(23) = 6.63571339d-01
+    COFLAM(24) = -2.97906324d-02
+    COFLAM(25) = 5.56023763d-01
+    COFLAM(26) = 1.59073590d+00
+    COFLAM(27) = -5.28053839d-02
+    COFLAM(28) = 4.07601571d-04
+    COFLAM(29) = 1.48801857d+00
+    COFLAM(30) = 1.06175905d+00
+    COFLAM(31) = 5.72200266d-02
+    COFLAM(32) = -6.38393531d-03
+    COFLAM(33) = 1.15507419d+01
+    COFLAM(34) = -2.91453917d+00
+    COFLAM(35) = 5.55045765d-01
+    COFLAM(36) = -2.75173485d-02
+
+end subroutine
+
+! Poly fits for the diffusion coefficients, dim NO*KK*KK
+subroutine egtransetCOFD(COFD)
+
+    double precision, intent(out) :: COFD(324)
+
+    COFD(1) = -1.02395222d+01
+    COFD(2) = 2.15403244d+00
+    COFD(3) = -6.97480266d-02
+    COFD(4) = 3.23666871d-03
+    COFD(5) = -1.15797750d+01
+    COFD(6) = 2.43235504d+00
+    COFD(7) = -1.02890179d-01
+    COFD(8) = 4.52903603d-03
+    COFD(9) = -1.68758926d+01
+    COFD(10) = 4.49460303d+00
+    COFD(11) = -3.64766132d-01
+    COFD(12) = 1.56457153d-02
+    COFD(13) = -1.11808682d+01
+    COFD(14) = 2.66936727d+00
+    COFD(15) = -1.34411514d-01
+    COFD(16) = 5.92957488d-03
+    COFD(17) = -1.06250182d+01
+    COFD(18) = 2.15849701d+00
+    COFD(19) = -6.53886401d-02
+    COFD(20) = 2.81453370d-03
+    COFD(21) = -1.06283453d+01
+    COFD(22) = 2.15849701d+00
+    COFD(23) = -6.53886401d-02
+    COFD(24) = 2.81453370d-03
+    COFD(25) = -1.15806808d+01
+    COFD(26) = 2.43235504d+00
+    COFD(27) = -1.02890179d-01
+    COFD(28) = 4.52903603d-03
+    COFD(29) = -1.15815344d+01
+    COFD(30) = 2.43235504d+00
+    COFD(31) = -1.02890179d-01
+    COFD(32) = 4.52903603d-03
+    COFD(33) = -1.13253458d+01
+    COFD(34) = 2.31195095d+00
+    COFD(35) = -8.63988037d-02
+    COFD(36) = 3.77573452d-03
+    COFD(37) = -1.15797750d+01
+    COFD(38) = 2.43235504d+00
+    COFD(39) = -1.02890179d-01
+    COFD(40) = 4.52903603d-03
+    COFD(41) = -1.53110708d+01
+    COFD(42) = 3.37317428d+00
+    COFD(43) = -2.24900439d-01
+    COFD(44) = 9.81228151d-03
+    COFD(45) = -2.10640014d+01
+    COFD(46) = 5.50980695d+00
+    COFD(47) = -4.78335488d-01
+    COFD(48) = 1.98515434d-02
+    COFD(49) = -1.43712864d+01
+    COFD(50) = 3.70920439d+00
+    COFD(51) = -2.67274113d-01
+    COFD(52) = 1.15967481d-02
+    COFD(53) = -1.40864894d+01
+    COFD(54) = 3.07458927d+00
+    COFD(55) = -1.86899591d-01
+    COFD(56) = 8.19829781d-03
+    COFD(57) = -1.41066459d+01
+    COFD(58) = 3.07458927d+00
+    COFD(59) = -1.86899591d-01
+    COFD(60) = 8.19829781d-03
+    COFD(61) = -1.53187643d+01
+    COFD(62) = 3.37317428d+00
+    COFD(63) = -2.24900439d-01
+    COFD(64) = 9.81228151d-03
+    COFD(65) = -1.53261114d+01
+    COFD(66) = 3.37317428d+00
+    COFD(67) = -2.24900439d-01
+    COFD(68) = 9.81228151d-03
+    COFD(69) = -1.50096240d+01
+    COFD(70) = 3.25515933d+00
+    COFD(71) = -2.09710110d-01
+    COFD(72) = 9.15941830d-03
+    COFD(73) = -1.68758926d+01
+    COFD(74) = 4.49460303d+00
+    COFD(75) = -3.64766132d-01
+    COFD(76) = 1.56457153d-02
+    COFD(77) = -2.10640014d+01
+    COFD(78) = 5.50980695d+00
+    COFD(79) = -4.78335488d-01
+    COFD(80) = 1.98515434d-02
+    COFD(81) = -1.31492641d+01
+    COFD(82) = 1.48004311d+00
+    COFD(83) = 1.60499553d-01
+    COFD(84) = -1.19765679d-02
+    COFD(85) = -1.93611051d+01
+    COFD(86) = 5.51579726d+00
+    COFD(87) = -4.76061961d-01
+    COFD(88) = 1.96329391d-02
+    COFD(89) = -1.91096797d+01
+    COFD(90) = 5.02608697d+00
+    COFD(91) = -4.26959993d-01
+    COFD(92) = 1.80709910d-02
+    COFD(93) = -1.91256261d+01
+    COFD(94) = 5.02608697d+00
+    COFD(95) = -4.26959993d-01
+    COFD(96) = 1.80709910d-02
+    COFD(97) = -2.04177482d+01
+    COFD(98) = 5.31457079d+00
+    COFD(99) = -4.58216496d-01
+    COFD(100) = 1.91825910d-02
+    COFD(101) = -2.04230073d+01
+    COFD(102) = 5.31457079d+00
+    COFD(103) = -4.58216496d-01
+    COFD(104) = 1.91825910d-02
+    COFD(105) = -2.08123325d+01
+    COFD(106) = 5.42470154d+00
+    COFD(107) = -4.69700416d-01
+    COFD(108) = 1.95706904d-02
+    COFD(109) = -1.11808682d+01
+    COFD(110) = 2.66936727d+00
+    COFD(111) = -1.34411514d-01
+    COFD(112) = 5.92957488d-03
+    COFD(113) = -1.43712864d+01
+    COFD(114) = 3.70920439d+00
+    COFD(115) = -2.67274113d-01
+    COFD(116) = 1.15967481d-02
+    COFD(117) = -1.93611051d+01
+    COFD(118) = 5.51579726d+00
+    COFD(119) = -4.76061961d-01
+    COFD(120) = 1.96329391d-02
+    COFD(121) = -1.43693056d+01
+    COFD(122) = 4.03992999d+00
+    COFD(123) = -3.08044800d-01
+    COFD(124) = 1.32757775d-02
+    COFD(125) = -1.31860117d+01
+    COFD(126) = 3.38003453d+00
+    COFD(127) = -2.25783856d-01
+    COFD(128) = 9.85028660d-03
+    COFD(129) = -1.31877711d+01
+    COFD(130) = 3.38003453d+00
+    COFD(131) = -2.25783856d-01
+    COFD(132) = 9.85028660d-03
+    COFD(133) = -1.43717529d+01
+    COFD(134) = 3.70920439d+00
+    COFD(135) = -2.67274113d-01
+    COFD(136) = 1.15967481d-02
+    COFD(137) = -1.43721922d+01
+    COFD(138) = 3.70920439d+00
+    COFD(139) = -2.67274113d-01
+    COFD(140) = 1.15967481d-02
+    COFD(141) = -1.40298830d+01
+    COFD(142) = 3.55837688d+00
+    COFD(143) = -2.47785790d-01
+    COFD(144) = 1.07555332d-02
+    COFD(145) = -1.06250182d+01
+    COFD(146) = 2.15849701d+00
+    COFD(147) = -6.53886401d-02
+    COFD(148) = 2.81453370d-03
+    COFD(149) = -1.40864894d+01
+    COFD(150) = 3.07458927d+00
+    COFD(151) = -1.86899591d-01
+    COFD(152) = 8.19829781d-03
+    COFD(153) = -1.91096797d+01
+    COFD(154) = 5.02608697d+00
+    COFD(155) = -4.26959993d-01
+    COFD(156) = 1.80709910d-02
+    COFD(157) = -1.31860117d+01
+    COFD(158) = 3.38003453d+00
+    COFD(159) = -2.25783856d-01
+    COFD(160) = 9.85028660d-03
+    COFD(161) = -1.29877365d+01
+    COFD(162) = 2.80841511d+00
+    COFD(163) = -1.52629888d-01
+    COFD(164) = 6.72604927d-03
+    COFD(165) = -1.30027772d+01
+    COFD(166) = 2.80841511d+00
+    COFD(167) = -1.52629888d-01
+    COFD(168) = 6.72604927d-03
+    COFD(169) = -1.40916052d+01
+    COFD(170) = 3.07458927d+00
+    COFD(171) = -1.86899591d-01
+    COFD(172) = 8.19829781d-03
+    COFD(173) = -1.40964661d+01
+    COFD(174) = 3.07458927d+00
+    COFD(175) = -1.86899591d-01
+    COFD(176) = 8.19829781d-03
+    COFD(177) = -1.38756407d+01
+    COFD(178) = 2.98558426d+00
+    COFD(179) = -1.75507216d-01
+    COFD(180) = 7.71173691d-03
+    COFD(181) = -1.06283453d+01
+    COFD(182) = 2.15849701d+00
+    COFD(183) = -6.53886401d-02
+    COFD(184) = 2.81453370d-03
+    COFD(185) = -1.41066459d+01
+    COFD(186) = 3.07458927d+00
+    COFD(187) = -1.86899591d-01
+    COFD(188) = 8.19829781d-03
+    COFD(189) = -1.91256261d+01
+    COFD(190) = 5.02608697d+00
+    COFD(191) = -4.26959993d-01
+    COFD(192) = 1.80709910d-02
+    COFD(193) = -1.31877711d+01
+    COFD(194) = 3.38003453d+00
+    COFD(195) = -2.25783856d-01
+    COFD(196) = 9.85028660d-03
+    COFD(197) = -1.30027772d+01
+    COFD(198) = 2.80841511d+00
+    COFD(199) = -1.52629888d-01
+    COFD(200) = 6.72604927d-03
+    COFD(201) = -1.30182843d+01
+    COFD(202) = 2.80841511d+00
+    COFD(203) = -1.52629888d-01
+    COFD(204) = 6.72604927d-03
+    COFD(205) = -1.41119732d+01
+    COFD(206) = 3.07458927d+00
+    COFD(207) = -1.86899591d-01
+    COFD(208) = 8.19829781d-03
+    COFD(209) = -1.41170372d+01
+    COFD(210) = 3.07458927d+00
+    COFD(211) = -1.86899591d-01
+    COFD(212) = 8.19829781d-03
+    COFD(213) = -1.38948667d+01
+    COFD(214) = 2.98558426d+00
+    COFD(215) = -1.75507216d-01
+    COFD(216) = 7.71173691d-03
+    COFD(217) = -1.15806808d+01
+    COFD(218) = 2.43235504d+00
+    COFD(219) = -1.02890179d-01
+    COFD(220) = 4.52903603d-03
+    COFD(221) = -1.53187643d+01
+    COFD(222) = 3.37317428d+00
+    COFD(223) = -2.24900439d-01
+    COFD(224) = 9.81228151d-03
+    COFD(225) = -2.04177482d+01
+    COFD(226) = 5.31457079d+00
+    COFD(227) = -4.58216496d-01
+    COFD(228) = 1.91825910d-02
+    COFD(229) = -1.43717529d+01
+    COFD(230) = 3.70920439d+00
+    COFD(231) = -2.67274113d-01
+    COFD(232) = 1.15967481d-02
+    COFD(233) = -1.40916052d+01
+    COFD(234) = 3.07458927d+00
+    COFD(235) = -1.86899591d-01
+    COFD(236) = 8.19829781d-03
+    COFD(237) = -1.41119732d+01
+    COFD(238) = 3.07458927d+00
+    COFD(239) = -1.86899591d-01
+    COFD(240) = 8.19829781d-03
+    COFD(241) = -1.53265780d+01
+    COFD(242) = 3.37317428d+00
+    COFD(243) = -2.24900439d-01
+    COFD(244) = 9.81228151d-03
+    COFD(245) = -1.53340417d+01
+    COFD(246) = 3.37317428d+00
+    COFD(247) = -2.24900439d-01
+    COFD(248) = 9.81228151d-03
+    COFD(249) = -1.50168028d+01
+    COFD(250) = 3.25515933d+00
+    COFD(251) = -2.09710110d-01
+    COFD(252) = 9.15941830d-03
+    COFD(253) = -1.15815344d+01
+    COFD(254) = 2.43235504d+00
+    COFD(255) = -1.02890179d-01
+    COFD(256) = 4.52903603d-03
+    COFD(257) = -1.53261114d+01
+    COFD(258) = 3.37317428d+00
+    COFD(259) = -2.24900439d-01
+    COFD(260) = 9.81228151d-03
+    COFD(261) = -2.04230073d+01
+    COFD(262) = 5.31457079d+00
+    COFD(263) = -4.58216496d-01
+    COFD(264) = 1.91825910d-02
+    COFD(265) = -1.43721922d+01
+    COFD(266) = 3.70920439d+00
+    COFD(267) = -2.67274113d-01
+    COFD(268) = 1.15967481d-02
+    COFD(269) = -1.40964661d+01
+    COFD(270) = 3.07458927d+00
+    COFD(271) = -1.86899591d-01
+    COFD(272) = 8.19829781d-03
+    COFD(273) = -1.41170372d+01
+    COFD(274) = 3.07458927d+00
+    COFD(275) = -1.86899591d-01
+    COFD(276) = 8.19829781d-03
+    COFD(277) = -1.53340417d+01
+    COFD(278) = 3.37317428d+00
+    COFD(279) = -2.24900439d-01
+    COFD(280) = 9.81228151d-03
+    COFD(281) = -1.53416186d+01
+    COFD(282) = 3.37317428d+00
+    COFD(283) = -2.24900439d-01
+    COFD(284) = 9.81228151d-03
+    COFD(285) = -1.50236516d+01
+    COFD(286) = 3.25515933d+00
+    COFD(287) = -2.09710110d-01
+    COFD(288) = 9.15941830d-03
+    COFD(289) = -1.13253458d+01
+    COFD(290) = 2.31195095d+00
+    COFD(291) = -8.63988037d-02
+    COFD(292) = 3.77573452d-03
+    COFD(293) = -1.50096240d+01
+    COFD(294) = 3.25515933d+00
+    COFD(295) = -2.09710110d-01
+    COFD(296) = 9.15941830d-03
+    COFD(297) = -2.08123325d+01
+    COFD(298) = 5.42470154d+00
+    COFD(299) = -4.69700416d-01
+    COFD(300) = 1.95706904d-02
+    COFD(301) = -1.40298830d+01
+    COFD(302) = 3.55837688d+00
+    COFD(303) = -2.47785790d-01
+    COFD(304) = 1.07555332d-02
+    COFD(305) = -1.38756407d+01
+    COFD(306) = 2.98558426d+00
+    COFD(307) = -1.75507216d-01
+    COFD(308) = 7.71173691d-03
+    COFD(309) = -1.38948667d+01
+    COFD(310) = 2.98558426d+00
+    COFD(311) = -1.75507216d-01
+    COFD(312) = 7.71173691d-03
+    COFD(313) = -1.50168028d+01
+    COFD(314) = 3.25515933d+00
+    COFD(315) = -2.09710110d-01
+    COFD(316) = 9.15941830d-03
+    COFD(317) = -1.50236516d+01
+    COFD(318) = 3.25515933d+00
+    COFD(319) = -2.09710110d-01
+    COFD(320) = 9.15941830d-03
+    COFD(321) = -1.47639290d+01
+    COFD(322) = 3.15955654d+00
+    COFD(323) = -1.97590757d-01
+    COFD(324) = 8.64692156d-03
+
+end subroutine
+
+! List of specs with small weight, dim NLITE
+subroutine egtransetKTDIF(KTDIF)
+
+    integer, intent(out) :: KTDIF(2)
+
+    KTDIF(1) = 1
+    KTDIF(2) = 4
+
+end subroutine
+
+
+! Poly fits for thermal diff ratios, dim NO*NLITE*KK
+subroutine egtransetCOFTD(COFTD)
+
+    double precision, intent(out) :: COFTD(72)
+
+    COFTD(1) = 0.00000000d+00
+    COFTD(2) = 0.00000000d+00
+    COFTD(3) = 0.00000000d+00
+    COFTD(4) = 0.00000000d+00
+    COFTD(5) = 4.42739084d-01
+    COFTD(6) = 7.11770818d-05
+    COFTD(7) = -3.84768062d-08
+    COFTD(8) = 6.86323437d-12
+    COFTD(9) = 6.02028221d-02
+    COFTD(10) = 5.61561867d-04
+    COFTD(11) = -2.55372862d-07
+    COFTD(12) = 3.63389913d-11
+    COFTD(13) = -1.52534742d-01
+    COFTD(14) = -5.46404022d-05
+    COFTD(15) = 2.93412470d-08
+    COFTD(16) = -4.87091914d-12
+    COFTD(17) = 4.15583337d-01
+    COFTD(18) = 1.09738399d-05
+    COFTD(19) = -3.96021963d-09
+    COFTD(20) = 1.14414443d-12
+    COFTD(21) = 4.21932443d-01
+    COFTD(22) = 1.11414935d-05
+    COFTD(23) = -4.02072219d-09
+    COFTD(24) = 1.16162418d-12
+    COFTD(25) = 4.44452569d-01
+    COFTD(26) = 7.14525507d-05
+    COFTD(27) = -3.86257187d-08
+    COFTD(28) = 6.88979640d-12
+    COFTD(29) = 4.46070183d-01
+    COFTD(30) = 7.17126069d-05
+    COFTD(31) = -3.87662996d-08
+    COFTD(32) = 6.91487226d-12
+    COFTD(33) = 4.45261966d-01
+    COFTD(34) = 4.94697174d-05
+    COFTD(35) = -2.63023442d-08
+    COFTD(36) = 4.90306217d-12
+    COFTD(37) = 1.52534742d-01
+    COFTD(38) = 5.46404022d-05
+    COFTD(39) = -2.93412470d-08
+    COFTD(40) = 4.87091914d-12
+    COFTD(41) = 2.20482843d-01
+    COFTD(42) = 4.80164288d-04
+    COFTD(43) = -2.32927944d-07
+    COFTD(44) = 3.46470436d-11
+    COFTD(45) = -1.41883744d-01
+    COFTD(46) = 7.66558810d-04
+    COFTD(47) = -3.06550003d-07
+    COFTD(48) = 4.02959502d-11
+    COFTD(49) = 0.00000000d+00
+    COFTD(50) = 0.00000000d+00
+    COFTD(51) = 0.00000000d+00
+    COFTD(52) = 0.00000000d+00
+    COFTD(53) = 2.70010150d-01
+    COFTD(54) = 3.61555093d-04
+    COFTD(55) = -1.80744752d-07
+    COFTD(56) = 2.75321248d-11
+    COFTD(57) = 2.72041664d-01
+    COFTD(58) = 3.64275376d-04
+    COFTD(59) = -1.82104647d-07
+    COFTD(60) = 2.77392722d-11
+    COFTD(61) = 2.20907853d-01
+    COFTD(62) = 4.81089870d-04
+    COFTD(63) = -2.33376944d-07
+    COFTD(64) = 3.47138305d-11
+    COFTD(65) = 2.21308399d-01
+    COFTD(66) = 4.81962174d-04
+    COFTD(67) = -2.33800100d-07
+    COFTD(68) = 3.47767730d-11
+    COFTD(69) = 2.40744421d-01
+    COFTD(70) = 4.45343451d-04
+    COFTD(71) = -2.18173874d-07
+    COFTD(72) = 3.26958506d-11
 
 end subroutine
 

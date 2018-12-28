@@ -12,6 +12,7 @@
 module actual_network
 
   use chemistry_module, only : nspecies, chemistry_init, chemistry_close, chemistry_initialized, spec_names, elem_names, rwrk, iwrk
+  use fuego_module, only : ckindx
 
   implicit none
 

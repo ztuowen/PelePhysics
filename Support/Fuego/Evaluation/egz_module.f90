@@ -56,6 +56,8 @@ contains
 
   ! This subroutine should be called outside OMP PARALLEL
   subroutine egz_init(use_bulk_visc_in)
+    use fuego_module, only : egtransetKK, egtransetNO, egtransetWT, egtransetEPS, egtransetSIG, egtransetDIP, egtransetPOL, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD
+
     logical, intent(in) :: use_bulk_visc_in
 
     use_bulk_visc = use_bulk_visc_in

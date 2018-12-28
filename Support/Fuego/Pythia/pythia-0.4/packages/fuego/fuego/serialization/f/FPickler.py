@@ -91,54 +91,236 @@ class FPickler(CMill):
                text += '/)  '
             self._write(text + '! %s' % species.symbol)
         self._outdent()
-        self._write()
 
-        self._write()
         nReactions = len(mechanism.reaction())
         self._write()
         self._write('double precision :: fwd_A(%d), fwd_beta(%d), fwd_Ea(%d)' 
                     % (nReactions,nReactions,nReactions))
         self._write('double precision :: low_A(%d), low_beta(%d), low_Ea(%d)' 
                     % (nReactions,nReactions,nReactions))
-        #self._write('static double rev_A(%d), rev_beta(%d), rev_Ea(%d)' 
-        #            % (nReactions,nReactions,nReactions))
+        self._write('double precision :: rev_A(%d), rev_beta(%d), rev_Ea(%d)' 
+                    % (nReactions,nReactions,nReactions))
         self._write('double precision :: troe_a(%d),troe_Ts(%d), troe_Tss(%d), troe_Tsss(%d)' 
                     % (nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double sri_a(%d), sri_b(%d), sri_c(%d), sri_d(%d), sri_e(%d)'
-        #            % (nReactions,nReactions,nReactions,nReactions,nReactions))
+        self._write('double precision :: sri_a(%d), sri_b(%d), sri_c(%d), sri_d(%d), sri_e(%d)'
+                    % (nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('double precision :: activation_units(%d), prefactor_units(%d), phase_units(%d)'
                     % (nReactions,nReactions,nReactions))
-        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d), TBid(%d)' 
-                    % (nReactions,nReactions,nReactions,nReactions,nReactions))
+        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d), TBid(%d,%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('double precision :: TB(%d,%d)' % (nReactions,nReactions))
 
-        #self._write()
-        #self._write('static double fwd_A_DEF[%d], fwd_beta_DEF[%d], fwd_Ea_DEF[%d];' 
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static double low_A_DEF[%d], low_beta_DEF[%d], low_Ea_DEF[%d];' 
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static double rev_A_DEF[%d], rev_beta_DEF[%d], rev_Ea_DEF[%d];' 
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static double troe_a_DEF[%d],troe_Ts_DEF[%d], troe_Tss_DEF[%d], troe_Tsss_DEF[%d];' 
-        #            % (nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double sri_a_DEF[%d], sri_b_DEF[%d], sri_c_DEF[%d], sri_d_DEF[%d], sri_e_DEF[%d];'
-        #            % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double activation_units_DEF[%d], prefactor_units_DEF[%d], phase_units_DEF[%d];'
-        #            % (nReactions,nReactions,nReactions))
-        #self._write('static int is_PD_DEF[%d], troe_len_DEF[%d], sri_len_DEF[%d], nTB_DEF[%d], *TBid_DEF[%d];' 
-        #            % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        #self._write('static double *TB_DEF[%d];' 
-        #            % (nReactions))
+        self._write()
+        self._write('double precision :: fwd_A_DEF(%d), fwd_beta_DEF(%d), fwd_Ea_DEF(%d)' 
+                    % (nReactions,nReactions,nReactions))
+        self._write('double precision :: low_A_DEF(%d), low_beta_DEF(%d), low_Ea_DEF(%d)' 
+                    % (nReactions,nReactions,nReactions))
+        self._write('double precision :: rev_A_DEF(%d), rev_beta_DEF(%d), rev_Ea_DEF(%d)' 
+                    % (nReactions,nReactions,nReactions))
+        self._write('double precision :: troe_a_DEF(%d),troe_Ts_DEF(%d), troe_Tss_DEF(%d), troe_Tsss_DEF(%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions))
+        self._write('double precision :: sri_a_DEF(%d), sri_b_DEF(%d), sri_c_DEF(%d), sri_d_DEF(%d), sri_e_DEF(%d)'
+                    % (nReactions,nReactions,nReactions,nReactions,nReactions))
+        self._write('double precision :: activation_units_DEF(%d), prefactor_units_DEF(%d), phase_units_DEF(%d)'
+                    % (nReactions,nReactions,nReactions))
+        self._write('integer :: is_PD_DEF(%d), troe_len_DEF(%d), sri_len_DEF(%d), nTB_DEF(%d), TBid_DEF(%d,%d)' 
+                    % (nReactions,nReactions,nReactions,nReactions,nReactions,nReactions))
+        self._write('double precision :: TB_DEF(%d,%d)' 
+                    % (nReactions,nReactions))
 
-        ## build reverse reaction map
-        #rmap = {}
-        #for i, reaction in zip(range(nReactions), mechanism.reaction()):
-        #    rmap[reaction.orig_id-1] = i
-        #
-        #self._write('static int rxn_map[%d] = {%s};' % (nReactions, ",".join(str(rmap[x]) for x in range(len(rmap)))))
+        # build reverse reaction map
+        rmap = {}
+        for i, reaction in zip(range(nReactions), mechanism.reaction()):
+            rmap[reaction.orig_id-1] = i
+        
+        self._write('integer :: rxn_map(%d) = (/ %s /)' % (nReactions, ",".join(str(rmap[x]) for x in range(len(rmap)))))
+        self._write()
+       
+        return
+
+    def _renderDocument(self, mechanism, options=None):
+
+        self._setSpecies(mechanism)
+
+        self.reactionIndex = mechanism._sort_reactions()
+
+        self._start_module()
+        #self._includes()
+        #self._declarations(mechanism)
+        self._statics(mechanism)
+        self._module_contains(mechanism)
+        self._ckinit(mechanism)
+
+        #self._main(mechanism)
+
+        # chemkin wrappers
+        self._ckindx(mechanism)
+        #self._ckxnum(mechanism)
+        #self._cksnum(mechanism)
+        self._cksyme(mechanism)
+        self._cksyms(mechanism)
+        self._ckrp(mechanism)
+        
+        #self._ckpx(mechanism)
+        self._ckpy(mechanism)
+        #self._vckpy(mechanism)
+        #self._ckpc(mechanism)
+        #self._ckrhox(mechanism)
+        self._ckrhoy(mechanism)
+        #self._ckrhoc(mechanism)
+        self._ckwt(mechanism)
+        #self._ckawt(mechanism)
+        #self._ckmmwy(mechanism)
+        #self._ckmmwx(mechanism)
+        #self._ckmmwc(mechanism)
+        self._ckytx(mechanism)
+        self._vckytx(mechanism)
+        #self._ckytcp(mechanism)
+        self._ckytcr(mechanism)
+        self._ckxty(mechanism)
+        #self._ckxtcp(mechanism)
+        #self._ckxtcr(mechanism)
+        #self._ckctx(mechanism)
+        #self._ckcty(mechanism)
+        
+        #self._ckcpor(mechanism)
+        #self._ckhort(mechanism)
+        #self._cksor(mechanism)
+        
+        #self._ckcvml(mechanism)
+        #self._ckcpml(mechanism)
+        #self._ckuml(mechanism)
+        #self._ckhml(mechanism)
+        #self._ckgml(mechanism)
+        #self._ckaml(mechanism)
+        #self._cksml(mechanism)
+        
+        self._ckcvms(mechanism)
+        self._ckcpms(mechanism)
+        self._ckums(mechanism)
+        self._ckhms(mechanism)
+        self._vckhms(mechanism)
+        #self._ckgms(mechanism)
+        #self._ckams(mechanism)
+        #self._cksms(mechanism)
+
+        #self._ckcpbl(mechanism)
+        self._ckcpbs(mechanism)
+        #self._ckcvbl(mechanism)
+        self._ckcvbs(mechanism)
+        
+        #self._ckhbml(mechanism)
+        #self._ckhbms(mechanism)
+        #self._ckubml(mechanism)
+        self._ckubms(mechanism)
+        #self._cksbml(mechanism)
+        #self._cksbms(mechanism)
+        #self._ckgbml(mechanism)
+        #self._ckgbms(mechanism)
+        #self._ckabml(mechanism)
+        #self._ckabms(mechanism)
+
+        self._ckwc(mechanism)
+        #self._ckwyp(mechanism)
+        #self._ckwxp(mechanism)
+        #self._ckwyr(mechanism)
+        #self._vckwyr(mechanism)
+        #self._ckwxr(mechanism)
+
+        #self._ckqc(mechanism)
+        #self._ckkfkr(mechanism)
+        #self._ckqyp(mechanism)
+        #self._ckqxp(mechanism)
+        #self._ckqyr(mechanism)
+        #self._ckqxr(mechanism)
+
+        #self._cknu(mechanism)
+        #self._ckncf(mechanism)
+
+        #self._ckabe(mechanism)
+
+        #self._ckeqc(mechanism)
+        #self._ckeqyp(mechanism)
+        #self._ckeqxp(mechanism)
+        #self._ckeqyr(mechanism)
+        #self._ckeqxr(mechanism)
+        
+        # Fuego Functions
+        self._productionRate(mechanism)
+        #self._vproductionRate(mechanism)
+        #self._DproductionRate(mechanism)
+        #self._ajac(mechanism)
+        #self._dthermodT(mechanism)
+        #self._progressRate(mechanism)
+        #self._progressRateFR(mechanism)
+        #self._equilibriumConstants(mechanism)
+        self._thermo(mechanism)
+        self._molecularWeight(mechanism)
+        #self._atomicWeight(mechanism)
+        self._T_given_ey(mechanism)
+        #self._T_given_hy(mechanism)
+        #self._getCriticalParameters(mechanism)
+        self._trans(mechanism)
+        self._end_module()
+        return
 
 
-        #self._write('')
+    def _start_module(self):
+        self._rep += [
+            'module fuego_module',
+            '',
+            '  implicit none',
+            '  private',
+            '  public :: ckcpms',
+            '  public :: ckums',
+            '  public :: ckrhoy',
+            '  public :: ckcvms',
+            '  public :: ckxty',
+            '  public :: ckytcr',
+            '  public :: ckytx',
+            '  public :: ckhms',
+            '  public :: vckytx',
+            '  public :: vckhms',
+            '  public :: ckcvbs',
+            '  public :: ckubms',
+            '  public :: ckcpbs',
+            '  public :: ckpy',
+            '  public :: get_t_given_ey',
+            '  public :: cksyme',
+            '  public :: cksyms',
+            '  public :: ckwt',
+            '  public :: ckrp',
+            '  public :: ckwc',
+            '  public :: ckindx',
+            '  public :: ckinit',
+            '  public :: ckfinalize',
+            '  public :: egtransetCOFTD',
+            '  public :: egtransetKTDIF',
+            '  public :: egtransetCOFD',
+            '  public :: egtransetCOFLAM',
+            '  public :: egtransetCOFETA',
+            '  public :: egtransetNLIN',
+            '  public :: egtransetZROT',
+            '  public :: egtransetPOL',
+            '  public :: egtransetDIP',
+            '  public :: egtransetSIG',
+            '  public :: egtransetEPS',
+            '  public :: egtransetWT',
+            '  public :: egtransetNLITE',
+            '  public :: egtransetKK',
+            '  public :: egtransetNO',
+            '  public :: egtransetLENRMC',
+            '  public :: egtransetLENIMC',
+            ]
+        return
+
+    def _module_contains(self, mechanism):
+        self._rep += [
+            'contains'
+            ]
+
+        nReactions = len(mechanism.reaction())
+        self._write()
         #self._write('void GET_REACTION_MAP(int *rmap)')
         #self._write('{')
         #self._indent()
@@ -267,221 +449,61 @@ class FPickler(CMill):
         #self._write("    }")
         #self._write("}")
         #self._write()
-        #self._write("void SetAllDefaults()")
-        #self._write("{")
-        #self._write("    for (int i=0; i<%d; i++) {" % (nReactions))
-        #self._write("        if (nTB_DEF[i] != 0) {")
-        #self._write("            nTB_DEF[i] = 0;")
-        #self._write("            free(TB_DEF[i]);")
-        #self._write("            free(TBid_DEF[i]);")
-        #self._write("        }")
-        #self._write("")
-        #self._write("        fwd_A_DEF[i]    = fwd_A[i];")
-        #self._write("        fwd_beta_DEF[i] = fwd_beta[i];")
-        #self._write("        fwd_Ea_DEF[i]   = fwd_Ea[i];")
-        #self._write("")
-        #self._write("        low_A_DEF[i]    = low_A[i];")
-        #self._write("        low_beta_DEF[i] = low_beta[i];")
-        #self._write("        low_Ea_DEF[i]   = low_Ea[i];")
-        #self._write("")
-        #self._write("        rev_A_DEF[i]    = rev_A[i];")
-        #self._write("        rev_beta_DEF[i] = rev_beta[i];")
-        #self._write("        rev_Ea_DEF[i]   = rev_Ea[i];")
-        #self._write("")
-        #self._write("        troe_a_DEF[i]    = troe_a[i];")
-        #self._write("        troe_Ts_DEF[i]   = troe_Ts[i];")
-        #self._write("        troe_Tss_DEF[i]  = troe_Tss[i];")
-        #self._write("        troe_Tsss_DEF[i] = troe_Tsss[i];")
-        #self._write("")
-        #self._write("        sri_a_DEF[i] = sri_a[i];")
-        #self._write("        sri_b_DEF[i] = sri_b[i];")
-        #self._write("        sri_c_DEF[i] = sri_c[i];")
-        #self._write("        sri_d_DEF[i] = sri_d[i];")
-        #self._write("        sri_e_DEF[i] = sri_e[i];")
-        #self._write("")
-        #self._write("        is_PD_DEF[i]    = is_PD[i];")
-        #self._write("        troe_len_DEF[i] = troe_len[i];")
-        #self._write("        sri_len_DEF[i]  = sri_len[i];")
-        #self._write("")
-        #self._write("        activation_units_DEF[i] = activation_units[i];")
-        #self._write("        prefactor_units_DEF[i]  = prefactor_units[i];")
-        #self._write("        phase_units_DEF[i]      = phase_units[i];")
-        #self._write("")
-        #self._write("        nTB_DEF[i]  = nTB[i];")
-        #self._write("        if (nTB_DEF[i] != 0) {")
-        #self._write("           TB_DEF[i] = (double *) malloc(sizeof(double) * nTB_DEF[i]);")
-        #self._write("           TBid_DEF[i] = (int *) malloc(sizeof(int) * nTB_DEF[i]);")
-        #self._write("           for (int j=0; j<nTB_DEF[i]; j++) {")
-        #self._write("             TB_DEF[i][j] = TB[i][j];")
-        #self._write("             TBid_DEF[i][j] = TBid[i][j];")
-        #self._write("           }")
-        #self._write("        }")
-        #self._write("    }")
-        #self._write("}")
-                
-        return
+        self._write("subroutine SetAllDefaults()")
+        self._write()
+        self._write('    integer :: i,j')
+        self._write()
+        self._write("    do i=1, %d" % (nReactions))
+        self._write("        !if (nTB_DEF[i] != 0) {")
+        self._write("            nTB_DEF(i) = 0")
+        self._write("            !free(TB_DEF[i]);")
+        self._write("            !free(TBid_DEF[i]);")
+        self._write("        !}")
+        self._write("")
+        self._write("        fwd_A_DEF(i)    = fwd_A(i)")
+        self._write("        fwd_beta_DEF(i) = fwd_beta(i)")
+        self._write("        fwd_Ea_DEF(i)   = fwd_Ea(i)")
+        self._write("")
+        self._write("        low_A_DEF(i)    = low_A(i)")
+        self._write("        low_beta_DEF(i) = low_beta(i)")
+        self._write("        low_Ea_DEF(i)   = low_Ea(i)")
+        self._write("")
+        self._write("        rev_A_DEF(i)    = rev_A(i)")
+        self._write("        rev_beta_DEF(i) = rev_beta(i)")
+        self._write("        rev_Ea_DEF(i)   = rev_Ea(i)")
+        self._write("")
+        self._write("        troe_a_DEF(i)    = troe_a(i)")
+        self._write("        troe_Ts_DEF(i)   = troe_Ts(i)")
+        self._write("        troe_Tss_DEF(i)  = troe_Tss(i)")
+        self._write("        troe_Tsss_DEF(i) = troe_Tsss(i)")
+        self._write("")
+        self._write("        sri_a_DEF(i) = sri_a(i)")
+        self._write("        sri_b_DEF(i) = sri_b(i)")
+        self._write("        sri_c_DEF(i) = sri_c(i)")
+        self._write("        sri_d_DEF(i) = sri_d(i)")
+        self._write("        sri_e_DEF(i) = sri_e(i)")
+        self._write("")
+        self._write("        is_PD_DEF(i)    = is_PD(i)")
+        self._write("        troe_len_DEF(i) = troe_len(i)")
+        self._write("        sri_len_DEF(i)  = sri_len(i)")
+        self._write("")
+        self._write("        activation_units_DEF(i) = activation_units(i)")
+        self._write("        prefactor_units_DEF(i)  = prefactor_units(i)")
+        self._write("        phase_units_DEF(i)      = phase_units(i)")
+        self._write("")
+        self._write("        nTB_DEF(i)  = nTB(i)")
+        self._write("        !if (nTB_DEF(i) != 0) then")
+        self._write("           !TB_DEF(i) = (double *) malloc(sizeof(double) * nTB_DEF(i))")
+        self._write("           !TBid_DEF(i) = (int *) malloc(sizeof(int) * nTB_DEF(i))")
+        self._write("           do j=1, nTB_DEF(i)")
+        self._write("             TB_DEF(i,j) = TB(i,j)")
+        self._write("             TBid_DEF(i,j) = TBid(i,j)")
+        self._write("           end do")
+        self._write("        !end if")
+        self._write("    end do")
+        self._write("end subroutine")
+        self._write()
 
-    def _renderDocument(self, mechanism, options=None):
-
-        self._setSpecies(mechanism)
-
-        self.reactionIndex = mechanism._sort_reactions()
-
-        self._start_module()
-        #self._includes()
-        #self._declarations(mechanism)
-        self._statics(mechanism)
-        #self._ckinit(mechanism)
-        self._module_contains()
-
-        #self._main(mechanism)
-
-        # chemkin wrappers
-        self._ckindx(mechanism)
-        #self._ckxnum(mechanism)
-        #self._cksnum(mechanism)
-        self._cksyme(mechanism)
-        self._cksyms(mechanism)
-        self._ckrp(mechanism)
-        
-        #self._ckpx(mechanism)
-        self._ckpy(mechanism)
-        #self._vckpy(mechanism)
-        #self._ckpc(mechanism)
-        #self._ckrhox(mechanism)
-        self._ckrhoy(mechanism)
-        #self._ckrhoc(mechanism)
-        self._ckwt(mechanism)
-        #self._ckawt(mechanism)
-        #self._ckmmwy(mechanism)
-        #self._ckmmwx(mechanism)
-        #self._ckmmwc(mechanism)
-        self._ckytx(mechanism)
-        self._vckytx(mechanism)
-        #self._ckytcp(mechanism)
-        self._ckytcr(mechanism)
-        self._ckxty(mechanism)
-        #self._ckxtcp(mechanism)
-        #self._ckxtcr(mechanism)
-        #self._ckctx(mechanism)
-        #self._ckcty(mechanism)
-        
-        #self._ckcpor(mechanism)
-        #self._ckhort(mechanism)
-        #self._cksor(mechanism)
-        
-        #self._ckcvml(mechanism)
-        #self._ckcpml(mechanism)
-        #self._ckuml(mechanism)
-        #self._ckhml(mechanism)
-        #self._ckgml(mechanism)
-        #self._ckaml(mechanism)
-        #self._cksml(mechanism)
-        
-        self._ckcvms(mechanism)
-        self._ckcpms(mechanism)
-        self._ckums(mechanism)
-        self._ckhms(mechanism)
-        self._vckhms(mechanism)
-        #self._ckgms(mechanism)
-        #self._ckams(mechanism)
-        #self._cksms(mechanism)
-
-        #self._ckcpbl(mechanism)
-        self._ckcpbs(mechanism)
-        #self._ckcvbl(mechanism)
-        self._ckcvbs(mechanism)
-        
-        #self._ckhbml(mechanism)
-        #self._ckhbms(mechanism)
-        #self._ckubml(mechanism)
-        self._ckubms(mechanism)
-        #self._cksbml(mechanism)
-        #self._cksbms(mechanism)
-        #self._ckgbml(mechanism)
-        #self._ckgbms(mechanism)
-        #self._ckabml(mechanism)
-        #self._ckabms(mechanism)
-
-        self._ckwc(mechanism)
-        #self._ckwyp(mechanism)
-        #self._ckwxp(mechanism)
-        #self._ckwyr(mechanism)
-        #self._vckwyr(mechanism)
-        #self._ckwxr(mechanism)
-
-        #self._ckqc(mechanism)
-        #self._ckkfkr(mechanism)
-        #self._ckqyp(mechanism)
-        #self._ckqxp(mechanism)
-        #self._ckqyr(mechanism)
-        #self._ckqxr(mechanism)
-
-        #self._cknu(mechanism)
-        #self._ckncf(mechanism)
-
-        #self._ckabe(mechanism)
-
-        #self._ckeqc(mechanism)
-        #self._ckeqyp(mechanism)
-        #self._ckeqxp(mechanism)
-        #self._ckeqyr(mechanism)
-        #self._ckeqxr(mechanism)
-        
-        # Fuego Functions
-        self._productionRate(mechanism)
-        #self._vproductionRate(mechanism)
-        #self._DproductionRate(mechanism)
-        #self._ajac(mechanism)
-        #self._dthermodT(mechanism)
-        #self._progressRate(mechanism)
-        #self._progressRateFR(mechanism)
-        #self._equilibriumConstants(mechanism)
-        self._thermo(mechanism)
-        self._molecularWeight(mechanism)
-        #self._atomicWeight(mechanism)
-        self._T_given_ey(mechanism)
-        #self._T_given_hy(mechanism)
-        #self._getCriticalParameters(mechanism)
-        #self._trans(mechanism)
-        self._end_module()
-        return
-
-
-    def _start_module(self):
-        self._rep += [
-            'module fuego_module',
-            '',
-            '  implicit none',
-            '  private',
-            '  public :: ckcpms',
-            '  public :: ckums',
-            '  public :: ckrhoy',
-            '  public :: ckcvms',
-            '  public :: ckxty',
-            '  public :: ckytcr',
-            '  public :: ckytx',
-            '  public :: ckhms',
-            '  public :: vckytx',
-            '  public :: vckhms',
-            '  public :: ckcvbs',
-            '  public :: ckubms',
-            '  public :: ckcpbs',
-            '  public :: ckpy',
-            '  public :: get_t_given_ey',
-            '  public :: cksyme',
-            '  public :: cksyms',
-            '  public :: ckwt',
-            '  public :: ckrp',
-            '  public :: ckwc',
-            '  public :: ckindx',
-            ]
-        return
-
-    def _module_contains(self):
-        self._rep += [
-            'contains'
-            ]
         return
 
     def _end_module(self):
@@ -1013,119 +1035,127 @@ class FPickler(CMill):
     #    self._write('}')
     #    return
 
-    #def _ckinit(self, mechanism):
+    def _ckinit(self, mechanism):
 
-    #    nElement = len(mechanism.element())
-    #    nSpecies = len(mechanism.species())
-    #    nReactions = len(mechanism.reaction())
-    #    
-    #    self._write()
-    #    self._write(self.line(' Finalizes parameter database'))
-    #    self._write('void CKFINALIZE()')
-    #    self._write('{')
-    #    self._write('  for (int i=0; i<%d; ++i) {' % (nReactions))
-    #    self._write('    free(TB[i]); TB[i] = 0; ')
-    #    self._write('    free(TBid[i]); TBid[i] = 0;')
-    #    self._write('    nTB[i] = 0;')
-    #    self._write()
-    #    self._write('    free(TB_DEF[i]); TB_DEF[i] = 0; ')
-    #    self._write('    free(TBid_DEF[i]); TBid_DEF[i] = 0;')
-    #    self._write('    nTB_DEF[i] = 0;')
-    #    self._write('  }')
-    #    self._write('}')
-    #    self._write()
-    #    self._write(self.line(' Initializes parameter database'))
-    #    self._write('void CKINIT'+sym+'()')
-    #    self._write('{')
+        nElement = len(mechanism.element())
+        nSpecies = len(mechanism.species())
+        nReactions = len(mechanism.reaction())
+        
+        self._write()
+        self._write('! Finalizes parameter database')
+        self._write('subroutine ckfinalize()')
+        self._write()
+        self._write('  integer :: i')
+        self._write()
+        self._write('  !do i=1, %d' % nReactions)
+        self._write('    !free(TB[i])')
+        self._write('    !TB[i] = 0')
+        self._write('    !free(TBid[i])')
+        self._write('    !TBid[i] = 0')
+        self._write('    !nTB[i] = 0')
+        self._write()
+        self._write('    !free(TB_DEF[i])')
+        self._write('    !TB_DEF[i] = 0')
+        self._write('    !free(TBid_DEF[i])')
+        self._write('    !TBid_DEF[i] = 0')
+        self._write('    !nTB_DEF[i] = 0')
+        self._write('  !end do')
+        self._write('end subroutine')
+        self._write()
+        self._write('! Initializes parameter database')
+        self._write('subroutine ckinit'+sym+'()')
+        self._write()
 
-    #    self._indent()
+        self._indent()
 
-    #    # build reverse reaction map
-    #    rmap = {}
-    #    for i, reaction in zip(range(nReactions), mechanism.reaction()):
-    #        rmap[reaction.orig_id-1] = i
+        # build reverse reaction map
+        rmap = {}
+        for i, reaction in zip(range(nReactions), mechanism.reaction()):
+            rmap[reaction.orig_id-1] = i
 
-    #    for j in range(nReactions):
-    #        reaction = mechanism.reaction()[rmap[j]]
-    #        id = reaction.id - 1
+        for j in range(nReactions):
+            reaction = mechanism.reaction()[rmap[j]]
+            id = reaction.id # - 1
 
-    #        A, beta, E = reaction.arrhenius
-    #        self._write("// (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
-    #        self._write("fwd_A[%d]     = %.17g;" % (id,A))
-    #        self._write("fwd_beta[%d]  = %.17g;" % (id,beta))
-    #        self._write("fwd_Ea[%d]    = %.17g;" % (id,E))
+            A, beta, E = reaction.arrhenius
+            self._write("! (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
+            self._write("fwd_A(%d)     = %.17g" % (id,A))
+            self._write("fwd_beta(%d)  = %.17g" % (id,beta))
+            self._write("fwd_Ea(%d)    = %.17g" % (id,E))
 
-    #        dim = self._phaseSpaceUnits(reaction.reactants)
-    #        thirdBody = reaction.thirdBody
-    #        low = reaction.low
-    #        if not thirdBody:
-    #            uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 3 !PD, !TB
-    #        elif not low:
-    #            uc = self._prefactorUnits(reaction.units["prefactor"], -dim) # Case 2 !PD, TB
-    #        else:
-    #            uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 1 PD, TB
-    #            low_A, low_beta, low_E = low
-    #            self._write("low_A[%d]     = %.17g;" % (id,low_A))
-    #            self._write("low_beta[%d]  = %.17g;" % (id,low_beta))
-    #            self._write("low_Ea[%d]    = %.17g;" % (id,low_E))
-    #            if reaction.troe:
-    #                troe = reaction.troe
-    #                ntroe = len(troe)
-    #                is_troe = True
-    #                self._write("troe_a[%d]    = %.17g;" % (id,troe[0]))
-    #                if ntroe>1:
-    #                    self._write("troe_Tsss[%d] = %.17g;" % (id,troe[1]))
-    #                if ntroe>2:
-    #                    self._write("troe_Ts[%d]   = %.17g;" % (id,troe[2]))
-    #                if ntroe>3:
-    #                    self._write("troe_Tss[%d]  = %.17g;" % (id,troe[3]))
-    #                self._write("troe_len[%d]  = %d;" % (id,ntroe))
-    #            if reaction.sri:
-    #                sri = reaction.sri
-    #                nsri = len(sri)
-    #                is_sri = True
-    #                self._write("sri_a[%d]     = %.17g;" % (id,sri[0]))
-    #                if nsri>1:
-    #                    self._write("sri_b[%d]     = %.17g;" % (id,sri[1]))
-    #                if nsri>2:
-    #                    self._write("sri_c[%d]     = %.17g;" % (id,sri[2]))
-    #                if nsri>3:
-    #                    self._write("sri_d[%d]     = %.17g;" % (id,sri[3]))
-    #                if nsri>4:
-    #                    self._write("sri_e[%d]     = %.17g;" % (id,sri[4]))
-    #                self._write("sri_len[%d]   = %d;" % (id,nsri))
+            dim = self._phaseSpaceUnits(reaction.reactants)
+            thirdBody = reaction.thirdBody
+            low = reaction.low
+            if not thirdBody:
+                uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 3 !PD, !TB
+            elif not low:
+                uc = self._prefactorUnits(reaction.units["prefactor"], -dim) # Case 2 !PD, TB
+            else:
+                uc = self._prefactorUnits(reaction.units["prefactor"], 1-dim) # Case 1 PD, TB
+                low_A, low_beta, low_E = low
+                self._write("low_A(%d)     = %.17g" % (id,low_A))
+                self._write("low_beta(%d)  = %.17g" % (id,low_beta))
+                self._write("low_Ea(%d)    = %.17g" % (id,low_E))
+                if reaction.troe:
+                    troe = reaction.troe
+                    ntroe = len(troe)
+                    is_troe = True
+                    self._write("troe_a(%d)    = %.17g" % (id,troe[0]))
+                    if ntroe>1:
+                        self._write("troe_Tsss(%d) = %.17g" % (id,troe[1]))
+                    if ntroe>2:
+                        self._write("troe_Ts(%d)   = %.17g" % (id,troe[2]))
+                    if ntroe>3:
+                        self._write("troe_Tss(%d)  = %.17g" % (id,troe[3]))
+                    self._write("troe_len(%d)  = %d" % (id,ntroe))
+                if reaction.sri:
+                    sri = reaction.sri
+                    nsri = len(sri)
+                    is_sri = True
+                    self._write("sri_a(%d)     = %.17g" % (id,sri[0]))
+                    if nsri>1:
+                        self._write("sri_b(%d)     = %.17g" % (id,sri[1]))
+                    if nsri>2:
+                        self._write("sri_c(%d)     = %.17g" % (id,sri[2]))
+                    if nsri>3:
+                        self._write("sri_d(%d)     = %.17g" % (id,sri[3]))
+                    if nsri>4:
+                        self._write("sri_e(%d)     = %.17g" % (id,sri[4]))
+                    self._write("sri_len(%d)   = %d" % (id,nsri))
 
-    #        self._write("prefactor_units[%d]  = %.17g;" % (id,uc.value))
-    #        aeuc = self._activationEnergyUnits(reaction.units["activation"])
-    #        self._write("activation_units[%d] = %.17g;" % (id,aeuc / Rc / kelvin))
-    #        self._write("phase_units[%d]      = 1e-%d;" % (id,dim*6))
+            self._write("prefactor_units(%d)  = %.17g" % (id,uc.value))
+            aeuc = self._activationEnergyUnits(reaction.units["activation"])
+            self._write("activation_units(%d) = %.17g" % (id,aeuc / Rc / kelvin))
+            self._write("phase_units(%d)      = 1d-%d" % (id,dim*6))
 
-    #        if low:
-    #            self._write("is_PD[%d] = 1;" % (id) )
-    #        else:
-    #            self._write("is_PD[%d] = 0;" % (id) )
+            if low:
+                self._write("is_PD(%d) = 1" % (id) )
+            else:
+                self._write("is_PD(%d) = 0" % (id) )
 
 
-    #        if thirdBody:
-    #            efficiencies = reaction.efficiencies
-    #            self._write("nTB[%d] = %d;" % (id, len(efficiencies)))
-    #            self._write("TB[%d] = (double *) malloc(%d * sizeof(double));" % (id, len(efficiencies)))
-    #            self._write("TBid[%d] = (int *) malloc(%d * sizeof(int));" % (id, len(efficiencies)))
-    #            for i, eff in enumerate(efficiencies):
-    #                symbol, efficiency = eff
-    #                self._write("TBid[%d][%d] = %.17g; TB[%d][%d] = %.17g; // %s"
-    #                            % (id, i, mechanism.species(symbol).id, id, i, efficiency, symbol ))
-    #        else:
-    #            self._write("nTB[%d] = 0;" % (id))
+            if thirdBody:
+                efficiencies = reaction.efficiencies
+                self._write("nTB(%d) = %d" % (id, len(efficiencies)))
+                self._write("!TB(%d) = (double *) malloc(%d * sizeof(double))" % (id, len(efficiencies)))
+                self._write("!TBid(%d) = (int *) malloc(%d * sizeof(int))" % (id, len(efficiencies)))
+                for i, eff in enumerate(efficiencies):
+                    symbol, efficiency = eff
+                    self._write("TBid(%d,%d) = %.17g"
+                                % (id+1, i+1, mechanism.species(symbol).id))
+                    self._write("TB(%d,%d) = %.17g ! %s"
+                                % (id+1, i+1, efficiency, symbol))
+            else:
+                self._write("nTB(%d) = 0" % (id))
 
-    #        self._write()
+            self._write()
 
-    #    self._write("SetAllDefaults();")
-    #    self._outdent()
-    #    self._write("}")
-    #    self._write()
-    #        
-    #    return
+        self._write("call SetAllDefaults()")
+        self._outdent()
+        self._write("end subroutine")
+        self._write()
+            
+        return
 
     def _thermo(self, mechanism):
         speciesInfo = self._analyzeThermodynamics(mechanism)
@@ -1141,29 +1171,29 @@ class FPickler(CMill):
         return
 
 
-    #def _trans(self, mechanism):
-    #    speciesTransport = self._analyzeTransport(mechanism)
-    #    NLITE=0
-    #    idxLightSpecs = []
-    #    for spec in self.species:
-    #        if spec.weight < 5.0:
-    #            NLITE+=1
-    #            idxLightSpecs.append(spec.id)
-    #    self._miscTransInfo(KK=self.nSpecies, NLITE=NLITE)
-    #    self._wt()
-    #    self._eps(speciesTransport)
-    #    self._sig(speciesTransport)
-    #    self._dip(speciesTransport)
-    #    self._pol(speciesTransport)
-    #    self._zrot(speciesTransport)
-    #    self._nlin(speciesTransport)
+    def _trans(self, mechanism):
+        speciesTransport = self._analyzeTransport(mechanism)
+        NLITE=0
+        idxLightSpecs = []
+        for spec in self.species:
+            if spec.weight < 5.0:
+                NLITE+=1
+                idxLightSpecs.append(spec.id)
+        self._miscTransInfo(KK=self.nSpecies, NLITE=NLITE)
+        self._wt()
+        self._eps(speciesTransport)
+        self._sig(speciesTransport)
+        self._dip(speciesTransport)
+        self._pol(speciesTransport)
+        self._zrot(speciesTransport)
+        self._nlin(speciesTransport)
 
-    #    self._viscosity(speciesTransport, NTFit=50)
-    #    self._diffcoefs(speciesTransport, NTFit=50)
-    #    self._lightSpecs(idxLightSpecs)
-    #    self._thermaldiffratios(speciesTransport, idxLightSpecs, NTFit=50)
+        self._viscosity(speciesTransport, NTFit=50)
+        self._diffcoefs(speciesTransport, NTFit=50)
+        self._lightSpecs(idxLightSpecs)
+        self._thermaldiffratios(speciesTransport, idxLightSpecs, NTFit=50)
 
-    #    return
+        return
 
 
     #def _dthermodT(self, mechanism):
@@ -6797,39 +6827,39 @@ class FPickler(CMill):
 
     #    return
 
-    #def _prefactorUnits(self, code, exponent):
+    def _prefactorUnits(self, code, exponent):
 
-    #    if code == "mole/cm**3":
-    #        units = mole / cm**3
-    #    elif code == "moles":
-    #        units = mole / cm**3
-    #    elif code == "molecules":
-    #        import pyre
-    #        units = 1.0 / avogadro / cm**3
-    #    else:
-    #        import pyre
-    #        pyre.debug.Firewall.hit("unknown prefactor units '%s'" % code)
-    #        return 1
+        if code == "mole/cm**3":
+            units = mole / cm**3
+        elif code == "moles":
+            units = mole / cm**3
+        elif code == "molecules":
+            import pyre
+            units = 1.0 / avogadro / cm**3
+        else:
+            import pyre
+            pyre.debug.Firewall.hit("unknown prefactor units '%s'" % code)
+            return 1
 
-    #    return units ** exponent / second
+        return units ** exponent / second
 
 
-    #def _activationEnergyUnits(self, code):
-    #    if code == "cal/mole":
-    #        units = cal / mole
-    #    elif code == "kcal/mole":
-    #        units = kcal /mole
-    #    elif code == "joules/mole":
-    #        units = J / mole
-    #    elif code == "kjoules/mole":
-    #        units = kJ / mole
-    #    elif code == "kelvins":
-    #        units = Rc * kelvin
-    #    else:
-    #        pyre.debug.Firewall.hit("unknown activation energy units '%s'" % code)
-    #        return 1
+    def _activationEnergyUnits(self, code):
+        if code == "cal/mole":
+            units = cal / mole
+        elif code == "kcal/mole":
+            units = kcal /mole
+        elif code == "joules/mole":
+            units = J / mole
+        elif code == "kjoules/mole":
+            units = kJ / mole
+        elif code == "kelvins":
+            units = Rc * kelvin
+        else:
+            pyre.debug.Firewall.hit("unknown activation energy units '%s'" % code)
+            return 1
 
-    #    return units
+        return units
 
 
     #def _equilibriumConstants(self, mechanism):
@@ -6913,12 +6943,12 @@ class FPickler(CMill):
     #    return "*".join(phi)
 
 
-    #def _phaseSpaceUnits(self, reagents):
-    #    dim = 0
-    #    for symbol, coefficient in reagents:
-    #        dim += coefficient
+    def _phaseSpaceUnits(self, reagents):
+        dim = 0
+        for symbol, coefficient in reagents:
+            dim += coefficient
 
-    #    return dim
+        return dim
 
 
     def _enhancement(self, mechanism, reaction):
@@ -7155,29 +7185,24 @@ class FPickler(CMill):
         return
 
 
-    #def _miscTransInfo(self, KK, NLITE, NO=4):
+    def _miscTransInfo(self, KK, NLITE, NO=4):
 
-    #    self._write()
-    #    self._write()
-    #    LENIMC = 4*KK+NLITE
-    #    self._generateTransRoutineInteger(["egtransetLENIMC", "EGTRANSETLENIMC", "egtransetlenimc", "egtransetlenimc_", "LENIMC"], LENIMC)
+        self._write()
+        LENIMC = 4*KK+NLITE
+        self._generateTransRoutineInteger(["egtransetLENIMC", "EGTRANSETLENIMC", "egtransetlenimc", "egtransetlenimc_", "LENIMC"], LENIMC)
 
-    #    self._write()
-    #    self._write()
-    #    LENRMC = (19+2*NO+NO*NLITE)*KK+(15+NO)*KK**2
-    #    self._generateTransRoutineInteger(["egtransetLENRMC", "EGTRANSETLENRMC", "egtransetlenrmc", "egtransetlenrmc_", "LENRMC"], LENRMC)
+        self._write()
+        LENRMC = (19+2*NO+NO*NLITE)*KK+(15+NO)*KK**2
+        self._generateTransRoutineInteger(["egtransetLENRMC", "EGTRANSETLENRMC", "egtransetlenrmc", "egtransetlenrmc_", "LENRMC"], LENRMC)
 
-    #    self._write()
-    #    self._write()
-    #    self._generateTransRoutineInteger(["egtransetNO", "EGTRANSETNO", "egtransetno", "egtransetno_", "NO"], NO)
+        self._write()
+        self._generateTransRoutineInteger(["egtransetNO", "EGTRANSETNO", "egtransetno", "egtransetno_", "NO"], NO)
 
-    #    self._write()
-    #    self._write()
-    #    self._generateTransRoutineInteger(["egtransetKK", "EGTRANSETKK", "egtransetkk", "egtransetkk_", "KK"], KK)
+        self._write()
+        self._generateTransRoutineInteger(["egtransetKK", "EGTRANSETKK", "egtransetkk", "egtransetkk_", "KK"], KK)
 
-    #    self._write()
-    #    self._write()
-    #    self._generateTransRoutineInteger(["egtransetNLITE", "EGTRANSETNLITE", "egtransetnlite", "egtransetnlite_", "NLITE"], NLITE)
+        self._write()
+        self._generateTransRoutineInteger(["egtransetNLITE", "EGTRANSETNLITE", "egtransetnlite", "egtransetnlite_", "NLITE"], NLITE)
 
     #    self._write()
     #    self._write()
@@ -7190,607 +7215,601 @@ class FPickler(CMill):
     #    self._write('#define egtransetPATM egtransetpatm_')
     #    self._write('#endif')
 
-    #    self._write('void egtransetPATM(double* PATM) {')
+        self._write('subroutine egtransetPATM(PATM)')
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: PATM')
+        self._write()
+        self._write('PATM = 0.1013250000000000d+07')
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        return
 
-    #    self._indent()
 
-    #    self._write('*PATM =   0.1013250000000000E+07;}')
+    def _wt(self):
+        self._write()
+        self._write('! the molecular weights in g/mol')
 
-    #    self._outdent()
-
-    #    return
-
-
-    #def _wt(self):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the molecular weights in g/mol'))
-
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetWT EGTRANSETWT')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetWT egtransetwt')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetWT egtransetwt_')
-    #    self._write('#endif')
-
-    #    self._write('void %s(double* %s ) {' % ("egtransetWT", "WT"))
-
-    #    self._indent()
-
-    #    for species in self.species:
-    #        self._write('%s[%d] = %.8E;' % ("WT", species.id, float(species.weight)))
-
-    #    self._outdent()
-
-    #    self._write('};')
-
-    #    return
-
-
-    #def _eps(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the lennard-jones potential well depth eps/kb in K'))
-
-    #    #i=0
-    #    #expression=[]
-    #    #for species in mechanism.species():
-    #    #    expression[i] = float(species.trans[0].eps)
-    #    #    i++
-    #    self._generateTransRoutineSimple(["egtransetEPS", "EGTRANSETEPS", "egtranseteps", "egtranseteps_", "EPS"], 1, speciesTransport)
-
-    #    return
-    #
-
-    #def _sig(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the lennard-jones collision diameter in Angstroms'))
-    #    self._generateTransRoutineSimple(["egtransetSIG", "EGTRANSETSIG", "egtransetsig", "egtransetsig_", "SIG"], 2, speciesTransport)
-
-    #    return
-
-
-    #def _dip(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the dipole moment in Debye'))
-    #    self._generateTransRoutineSimple(["egtransetDIP", "EGTRANSETDIP", "egtransetdip", "egtransetdip_", "DIP"], 3, speciesTransport)
-
-    #    return
-
-
-    #def _pol(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the polarizability in cubic Angstroms'))
-    #    self._generateTransRoutineSimple(["egtransetPOL", "EGTRANSETPOL", "egtransetpol", "egtransetpol_", "POL"], 4, speciesTransport)
-
-    #    return
-
-
-    #def _zrot(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('the rotational relaxation collision number at 298 K'))
-    #    self._generateTransRoutineSimple(["egtransetZROT", "EGTRANSETZROT", "egtransetzrot", "egtransetzrot_", "ZROT"], 5, speciesTransport)
-
-    #    return
-
-
-    #def _nlin(self, speciesTransport):
-
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('0: monoatomic, 1: linear, 2: nonlinear'))
-    #    #self._generateTransRoutineSimple(["egtransetNLIN", "EGTRANSETNLIN", "egtransetNLIN", "egtransetNLIN_", "NLIN"], 0, speciesTransport)
-
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetNLIN EGTRANSETNLIN')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetNLIN egtransetnlin')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetNLIN egtransetnlin_')
-    #    self._write('#endif')
-
-    #    self._write('void egtransetNLIN(int* NLIN) {')
-
-    #    self._indent()
-
-    #    for species in speciesTransport:
-    #        self._write('%s[%d] = %d;' % ('NLIN', species.id, int(speciesTransport[species][0])))
-
-    #    self._outdent()
-
-    #    self._write('};')
-
-    #    return
-
-
-    #def _viscosity(self, speciesTransport, NTFit):
-
-    #    #compute single constants in g/cm/s
-    #    kb = 1.3806503e-16
-    #    Na = 6.02214199e23 
-    #    RU = 8.31447e7
-    #    #conversion coefs
-    #    AtoCM = 1.0e-8
-    #    DEBYEtoCGS = 1.0e-18
-    #    #temperature increment  
-    #    dt = (self.highT-self.lowT) / (NTFit-1)
-    #    #factor dependent upon the molecule
-    #    m_crot = np.zeros(self.nSpecies)
-    #    m_cvib = np.zeros(self.nSpecies)
-    #    isatm = np.zeros(self.nSpecies)
-    #    for spec in speciesTransport:
-    #        if int(speciesTransport[spec][0]) == 0:
-    #            m_crot[spec.id] = 0.0
-    #            m_cvib[spec.id] = 0.0
-    #            isatm[spec.id] = 0.0
-    #        elif int(speciesTransport[spec][0]) == 1:
-    #            m_crot[spec.id] = 1.0
-    #            m_cvib[spec.id] = 5.0 / 2.0
-    #            isatm[spec.id] = 1.0
-    #        else:
-    #            m_crot[spec.id] = 1.5
-    #            m_cvib[spec.id] = 3.0
-    #            isatm[spec.id] = 1.0
-    #    #viscosities coefs (4 per spec)
-    #    cofeta = {}
-    #    #conductivities coefs (4 per spec)
-    #    coflam = {}
-    #    for spec in speciesTransport:
-    #        spvisc = []
-    #        spcond = []
-    #        tlog = []
-    #        for n in range(NTFit):
-    #            t = self.lowT + dt*n
-    #            #variables
-    #            #eq. (2)
-    #            tr = t/ float(speciesTransport[spec][1])
-    #            conversion = DEBYEtoCGS * DEBYEtoCGS / AtoCM / AtoCM / AtoCM / kb 
-    #            dst = 0.5 * conversion * float(speciesTransport[spec][3])**2 / (float(speciesTransport[spec][1]) \
-    #                    * float(speciesTransport[spec][2])**3)
-    #            #viscosity of spec at t
-    #            #eq. (1)
-    #            conversion = AtoCM * AtoCM
-    #            visc = (5.0 / 16.0) * np.sqrt(np.pi * self.species[spec.id].weight * kb * t / Na) / \
-    #                (self.om22_CHEMKIN(tr,dst) * np.pi * \
-    #                float(speciesTransport[spec][2]) * float(speciesTransport[spec][2]) * conversion)
-    #            #conductivity of spec at t
-    #            #eq. (30)
-    #            conversion = AtoCM * AtoCM
-    #            m_red = self.species[spec.id].weight / (2.0 * Na)
-    #            diffcoef = (3.0 / 16.0) * np.sqrt(2.0 * np.pi * kb**3 * t**3 / m_red) /  \
-    #                    (10.0 * np.pi * self.om11_CHEMKIN(tr,dst) * float(speciesTransport[spec][2]) * \
-    #                    float(speciesTransport[spec][2]) * conversion)
-    #            #eq. (19)
-    #            cv_vib_R = (self._getCVdRspecies(t, spec) - m_cvib[spec.id]) * isatm[spec.id]
-    #            rho_atm = 10.0 * self.species[spec.id].weight /(RU * t)
-    #            f_vib = rho_atm * diffcoef / visc
-    #            #eq. (20)
-    #            A = 2.5 - f_vib
-    #            #eqs. (21) + (32-33)
-    #            cv_rot_R = m_crot[spec.id]
-    #            #note: the T corr is not applied in CANTERA
-    #            B = (float(speciesTransport[spec][5]) \
-    #                    * self.Fcorr(298.0, float(speciesTransport[spec][1])) / self.Fcorr(t, float(speciesTransport[spec][1])) \
-    #                    + (2.0 / np.pi) * ((5.0 / 3.0 ) * cv_rot_R  + f_vib))
-    #            #eq. (18)
-    #            f_rot = f_vib * (1.0 + 2.0 / np.pi * A / B )
-    #            #eq. (17) 
-    #            cv_trans_R = 3.0 / 2.0 
-    #            f_trans = 5.0 / 2.0 * (1.0 - 2.0 / np.pi * A / B * cv_rot_R / cv_trans_R )
-    #            if (int(speciesTransport[spec][0]) == 0):
-    #                cond = (visc * RU / self.species[spec.id].weight) * \
-    #                        (5.0 / 2.0) * cv_trans_R
-    #            else:
-    #                cond = (visc * RU / self.species[spec.id].weight) * \
-    #                    (f_trans * cv_trans_R + f_rot * cv_rot_R + f_vib * cv_vib_R)
-
-    #            #log transformation for polyfit
-    #            tlog.append(np.log(t))
-    #            spvisc.append(np.log(visc))
-    #            spcond.append(np.log(cond))
-
-    #        cofeta[spec.id] = np.polyfit(tlog, spvisc, 3)
-    #        coflam[spec.id] = np.polyfit(tlog, spcond, 3)
-
-    #    #header for visco
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Poly fits for the viscosities, dim NO*KK'))
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetCOFETA EGTRANSETCOFETA')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetCOFETA egtransetcofeta')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetCOFETA egtransetcofeta_')
-    #    self._write('#endif')
-
-    #    #visco coefs
-    #    self._write('void egtransetCOFETA(double* COFETA) {')
-
-    #    self._indent()
-
-    #    for spec in self.species:
-    #        for i in range(4):
-    #            self._write('%s[%d] = %.8E;' % ('COFETA', spec.id*4+i, cofeta[spec.id][3-i]))
-
-    #    self._outdent()
-
-    #    self._write('};')
-
-    #    #header for cond
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Poly fits for the conductivities, dim NO*KK'))
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetCOFLAM EGTRANSETCOFLAM')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetCOFLAM egtransetcoflam')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetCOFLAM egtransetcoflam_')
-    #    self._write('#endif')
-
-    #    #visco coefs
-    #    self._write('void egtransetCOFLAM(double* COFLAM) {')
-
-    #    self._indent()
-
-    #    for spec in self.species:
-    #        for i in range(4):
-    #            self._write('%s[%d] = %.8E;' % ('COFLAM', spec.id*4+i, coflam[spec.id][3-i]))
-
-    #    self._outdent()
-
-    #    self._write('};')
-
-    #    return
-
-
-    #def _thermaldiffratios(self, speciesTransport, lightSpecList, NTFit):
-
-    #    # This is an overhaul of CHEMKIN version III
-    #    #REORDERING OF SPECS
-    #    specOrdered = []
-    #    for i in range(self.nSpecies):
-    #        for spec in speciesTransport:
-    #            if spec.id == i:
-    #                specOrdered.append(spec)
-    #                break
-
-    #    #compute single constants in g/cm/s
-    #    kb = 1.3806503e-16
-    #    #conversion coefs
-    #    DEBYEtoCGS = 1.0e-18
-    #    AtoCM = 1.0e-8
-    #    #temperature increment  
-    #    dt = (self.highT-self.lowT) / (NTFit-1)
-    #    #diff ratios (4 per spec pair involving light species) 
-    #    coftd = []
-    #    k = -1
-    #    for i,spec1 in enumerate(specOrdered):
-    #        if (i != spec1.id):
-    #            print "Problem in _thermaldiffratios computation"
-    #            stop
-    #        if spec1.id in lightSpecList:
-    #            k = k + 1
-    #            if (lightSpecList[k] != spec1.id):
-    #                print "Problem in  _thermaldiffratios computation"
-    #                stop
-    #            coftd.append([])
-    #            epsi = float(speciesTransport[spec1][1]) * kb
-    #            sigi = float(speciesTransport[spec1][2]) * AtoCM
-    #            poli = float(speciesTransport[spec1][4]) * AtoCM * AtoCM * AtoCM
-    #            #eq. (12)
-    #            poliRed = poli / sigi**3
-    #            for j,spec2 in enumerate(specOrdered):
-    #                if (j != spec2.id):
-    #                    print "Problem in _thermaldiffratios computation"
-    #                    stop
-    #                #eq. (53)
-    #                Wji = (self.species[spec2.id].weight - self.species[spec1.id].weight) / \
-    #                        (self.species[spec1.id].weight + self.species[spec2.id].weight) 
-    #                epsj = float(speciesTransport[spec2][1]) * kb
-    #                sigj = float(speciesTransport[spec2][2]) * AtoCM
-    #                dipj = float(speciesTransport[spec2][3]) * DEBYEtoCGS
-    #                #eq. (13)
-    #                dipjRed = dipj / np.sqrt(epsj*sigj**3)
-    #                epsRatio = epsj / epsi
-    #                tse = 1.0 + 0.25*poliRed*dipjRed**2*np.sqrt(epsRatio)
-    #                eok = tse**2 * np.sqrt(float(speciesTransport[spec1][1]) * float(speciesTransport[spec2][1]))
-    #                #enter the loop on temperature
-    #                spthdiffcoef = []
-    #                tTab = []
-    #                for n in range(NTFit):
-    #                   t = self.lowT + dt*n
-    #                   tslog = np.log(t) - np.log(eok)
-    #                   #eq. (53)
-    #                   thdifcoeff = 15.0 / 2.0 * Wji * (2.0 * self.astar(tslog) + 5.0) * (6.0 * self.cstar(tslog) - 5.0) / \
-    #                           (self.astar(tslog) * (16.0 * self.astar(tslog) - 12.0 * self.bstar(tslog) + 55.0))
-
-    #                   #log transformation for polyfit
-    #                   tTab.append(t)
-    #                   spthdiffcoef.append(thdifcoeff)
-
-    #                coftd[k].append(np.polyfit(tTab, spthdiffcoef, 3))
-
-    #    #header for thermal diff ratios
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Poly fits for thermal diff ratios, dim NO*NLITE*KK'))
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetCOFTD EGTRANSETCOFTD')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetCOFTD egtransetcoftd')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetCOFTD egtransetcoftd_')
-    #    self._write('#endif')
-
-    #    #visco coefs
-    #    self._write('void egtransetCOFTD(double* COFTD) {')
-
-    #    self._indent()
-
-    #    for i in range(len(coftd)):
-    #        for j in range(self.nSpecies):
-    #            for k in range(4):
-    #                self._write('%s[%d] = %.8E;' % ('COFTD', i*4*self.nSpecies+j*4+k, coftd[i][j][3-k]))
-
-    #    self._outdent()
-
-    #    self._write('};')
-
-    #    return
-
-
-    #def _diffcoefs(self, speciesTransport, NTFit):
-
-    #    #REORDERING OF SPECS
-    #    specOrdered = []
-    #    for i in range(self.nSpecies):
-    #        for spec in speciesTransport:
-    #            if spec.id == i:
-    #                specOrdered.append(spec)
-    #                break
-    #    #checks
-    #    #for spec in speciesTransport:
-    #    #    print spec.symbol, spec.id
-    #    #for i in range(self.nSpecies):
-    #    #    print i, specOrdered[i].id, specOrdered[i].symbol
-    #    #stop
-
-    #    #compute single constants in g/cm/s
-    #    kb = 1.3806503e-16
-    #    Na = 6.02214199e23 
-    #    #conversion coefs
-    #    AtoCM = 1.0e-8
-    #    DEBYEtoCGS = 1.0e-18
-    #    PATM = 0.1013250000000000E+07
-    #    #temperature increment  
-    #    dt = (self.highT-self.lowT) / (NTFit-1)
-    #    #diff coefs (4 per spec pair) 
-    #    cofd = []
-    #    for i,spec1 in enumerate(specOrdered):
-    #        cofd.append([])
-    #        if (i != spec1.id):
-    #            print "Problem in _diffcoefs computation"
-    #            stop
-    #        for j,spec2 in enumerate(specOrdered[0:i+1]):
-    #            if (j != spec2.id):
-    #                print "Problem in _diffcoefs computation"
-    #                stop
-    #            #eq. (9)
-    #            sigm = (0.5 * (float(speciesTransport[spec1][2]) + float(speciesTransport[spec2][2])) * AtoCM)\
-    #                    * self.Xi(spec1, spec2, speciesTransport)**(1.0/6.0)
-    #            #eq. (4)
-    #            m_red = self.species[spec1.id].weight * self.species[spec2.id].weight / \
-    #                    (self.species[spec1.id].weight + self.species[spec2.id].weight) / Na
-    #            #eq. (8) & (14)
-    #            epsm_k = np.sqrt(float(speciesTransport[spec1][1]) * float(speciesTransport[spec2][1])) \
-    #                    * self.Xi(spec1, spec2, speciesTransport)**2.0
-
-    #            #eq. (15)
-    #            conversion = DEBYEtoCGS * DEBYEtoCGS / kb  
-    #            dst = 0.5 * conversion * float(speciesTransport[spec1][3]) * float(speciesTransport[spec2][3]) / \
-    #                (epsm_k * sigm**3)
-    #            if self.Xi_bool(spec1, spec2, speciesTransport)==False:
-    #                dst = 0.0
-    #            #enter the loop on temperature
-    #            spdiffcoef = []
-    #            tlog = []
-    #            for n in range(NTFit):
-    #               t = self.lowT + dt*n
-    #               tr = t/ epsm_k
-    #               #eq. (3)
-    #               #note: these are "corrected" in CHEMKIN not in CANTERA... we chose not to
-    #               difcoeff = 3.0 / 16.0 * 1 / PATM * (np.sqrt(2.0 * np.pi * t**3 * kb**3 / m_red) / \
-    #                       ( np.pi * sigm * sigm * self.om11_CHEMKIN(tr,dst)))
-
-    #               #log transformation for polyfit
-    #               tlog.append(np.log(t))
-    #               spdiffcoef.append(np.log(difcoeff))
-
-    #            cofd[i].append(np.polyfit(tlog, spdiffcoef, 3))
-
-    #    #use the symmetry for upper triangular terms 
-    #    #note: starting with this would be preferable (only one bigger loop)
-    #    #note2: or write stuff differently !
-    #    #for i,spec1 in enumerate(specOrdered):
-    #    #    for j,spec2 in enumerate(specOrdered[i+1:]):
-    #    #        cofd[i].append(cofd[spec2.id][spec1.id])
-
-    #    #header for diffusion coefs
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('Poly fits for the diffusion coefficients, dim NO*KK*KK'))
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetCOFD EGTRANSETCOFD')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetCOFD egtransetcofd')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetCOFD egtransetcofd_')
-    #    self._write('#endif')
-
-    #    #coefs
-    #    self._write('void egtransetCOFD(double* COFD) {')
-
-    #    self._indent()
-
-    #    for i,spec1 in enumerate(specOrdered):
-    #        #for j,spec2 in enumerate(specOrdered):
-    #        for j,spec2 in enumerate(specOrdered[0:i+1]):
-    #            for k in range(4):
-    #                #self._write('%s[%d] = %.8E;' % ('COFD', i*self.nSpecies*4+j*4+k, cofd[j][i][3-k]))
-    #                self._write('%s[%d] = %.8E;' % ('COFD', i*self.nSpecies*4+j*4+k, cofd[i][j][3-k]))
-    #        for j,spec2 in enumerate(specOrdered[i+1:]):
-    #            for k in range(4):
-    #                self._write('%s[%d] = %.8E;' % ('COFD', i*self.nSpecies*4+(j+i+1)*4+k, cofd[j+i+1][i][3-k]))
-
-    #    self._outdent()
-
-    #    self._write('};')
-    #    
-    #    return
-
-
-    #def _lightSpecs(self, speclist):
-    #    
-    #    #header 
-    #    self._write()
-    #    self._write()
-    #    self._write(self.line('List of specs with small weight, dim NLITE'))
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define egtransetKTDIF EGTRANSETKTDIF')
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define egtransetKTDIF egtransetktdif')
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define egtransetKTDIF egtransetktdif_')
-    #    self._write('#endif')
-
-    #    #coefs
-    #    self._write('void egtransetKTDIF(int* KTDIF) {')
-
-    #    self._indent()
-
-    #    for i in range(len(speclist)):
-    #        self._write('%s[%d] = %d;' % ('KTDIF', i, speclist[i]+1))
-
-    #    self._outdent()
-
-    #    self._write('};')
-    #    
-    #    return
-
-
-    #def astar(self, tslog):
-
-    #    aTab = [.1106910525E+01, -.7065517161E-02,-.1671975393E-01,
-    #            .1188708609E-01,  .7569367323E-03,-.1313998345E-02,
-    #            .1720853282E-03]
-
-    #    B = aTab[6]
-    #    for i in range(6):
-    #        B = aTab[5-i] + B*tslog
-
-    #    return B
-
-
-    #def bstar(self, tslog):
-
-    #    bTab = [.1199673577E+01, -.1140928763E+00,-.2147636665E-02,
-    #            .2512965407E-01, -.3030372973E-02,-.1445009039E-02,
-    #            .2492954809E-03]
-
-    #    B = bTab[6]
-    #    for i in range(6):
-    #        B = bTab[5-i] + B*tslog
-
-    #    return B
-
-
-    #def cstar(self, tslog):
-
-    #    cTab = [ .8386993788E+00,  .4748325276E-01, .3250097527E-01,
-    #            -.1625859588E-01, -.2260153363E-02, .1844922811E-02,
-    #            -.2115417788E-03]
-
-    #    B = cTab[6]
-    #    for i in range(6):
-    #        B = cTab[5-i] + B*tslog
-
-    #    return B
-
-
-    #def Xi(self, spec1, spec2, speciesTransport):
-
-    #    dipmin = 1e-20
-    #    #1 is polar, 2 is nonpolar
-    #    #err in eq. (11) ?
-    #    if (float(speciesTransport[spec2][3]) < dipmin) and (float(speciesTransport[spec1][3]) > dipmin):
-    #        xi = 1.0 + 1.0/4.0 * self.redPol(spec2, speciesTransport)*self.redDip(spec1, speciesTransport) *\
-    #                self.redDip(spec1, speciesTransport) *\
-    #                np.sqrt(float(speciesTransport[spec1][1]) / float(speciesTransport[spec2][1]))
-    #    #1 is nonpolar, 2 is polar
-    #    elif (float(speciesTransport[spec2][3]) > dipmin) and (float(speciesTransport[spec1][3]) < dipmin):
-    #        xi = 1.0 + 1.0/4.0 * self.redPol(spec1, speciesTransport)*self.redDip(spec2, speciesTransport) *\
-    #                self.redDip(spec2, speciesTransport) *\
-    #                np.sqrt(float(speciesTransport[spec2][1]) / float(speciesTransport[spec1][1]))
-    #    #normal case, either both polar or both nonpolar
-    #    else:
-    #        xi = 1.0
-
-    #    return xi
-
-
-    #def Xi_bool(self, spec1, spec2, speciesTransport):
-
-    #    dipmin = 1e-20
-    #    #1 is polar, 2 is nonpolar
-    #    #err in eq. (11) ?
-    #    if (float(speciesTransport[spec2][3]) < dipmin) and (float(speciesTransport[spec1][3]) > dipmin):
-    #        xi_b = False
-    #    #1 is nonpolar, 2 is polar
-    #    elif (float(speciesTransport[spec2][3]) > dipmin) and (float(speciesTransport[spec1][3]) < dipmin):
-    #        xi_b = False
-    #    #normal case, either both polar or both nonpolar
-    #    else:
-    #        xi_b = True
-
-    #    return xi_b
-
-
-    #def redPol(self, spec, speciesTransport): 
-
-    #    return (float(speciesTransport[spec][4]) / float(speciesTransport[spec][2])**3.0)
-
-
-    #def redDip(self, spec, speciesTransport): 
-
-    #    #compute single constants in g/cm/s
-    #    kb = 1.3806503e-16
-    #    #conversion coefs
-    #    AtoCM = 1.0e-8
-    #    DEBYEtoCGS = 1.0e-18
-    #    convert = DEBYEtoCGS / np.sqrt( kb * AtoCM**3.0 )
-    #    return convert * float(speciesTransport[spec][3]) / \
-    #            np.sqrt(float(speciesTransport[spec][1]) * float(speciesTransport[spec][2])**3.0)
-
-
-    #def Fcorr(self, t, eps_k):
-
-    #    thtwo = 3.0 / 2.0
-    #    return 1 + np.pi**(thtwo) / 2.0 * np.sqrt(eps_k / t) + \
-    #            (np.pi**2 / 4.0 + 2.0) * (eps_k / t) + \
-    #            (np.pi * eps_k / t)**(thtwo)
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetWT EGTRANSETWT')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetWT egtransetwt')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetWT egtransetwt_')
+        #self._write('#endif')
+
+        self._write('subroutine %s(%s)' % ("egtransetWT", "WT"))
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: %s(%d)' % ("WT",len(self.species)))
+        self._write()
+        for species in self.species:
+            self._write('%s(%d) = %s' % ("WT", species.id+1, format(float(species.weight), '.8e').replace("e","d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        return
+
+
+    def _eps(self, speciesTransport):
+        self._write()
+        self._write('! the lennard-jones potential well depth eps/kb in K')
+
+        #i=0
+        #expression=[]
+        #for species in mechanism.species():
+        #    expression[i] = float(species.trans[0].eps)
+        #    i++
+        self._generateTransRoutineSimple(["egtransetEPS", "EGTRANSETEPS", "egtranseteps", "egtranseteps_", "EPS"], 1, speciesTransport)
+
+        return
+
+
+    def _sig(self, speciesTransport):
+        self._write()
+        self._write('! the lennard-jones collision diameter in Angstroms')
+        self._generateTransRoutineSimple(["egtransetSIG", "EGTRANSETSIG", "egtransetsig", "egtransetsig_", "SIG"], 2, speciesTransport)
+
+        return
+
+
+    def _dip(self, speciesTransport):
+        self._write()
+        self._write('! the dipole moment in Debye')
+        self._generateTransRoutineSimple(["egtransetDIP", "EGTRANSETDIP", "egtransetdip", "egtransetdip_", "DIP"], 3, speciesTransport)
+
+        return
+
+
+    def _pol(self, speciesTransport):
+        self._write()
+        self._write('! the polarizability in cubic Angstroms')
+        self._generateTransRoutineSimple(["egtransetPOL", "EGTRANSETPOL", "egtransetpol", "egtransetpol_", "POL"], 4, speciesTransport)
+
+        return
+
+
+    def _zrot(self, speciesTransport):
+        self._write()
+        self._write('! the rotational relaxation collision number at 298 K')
+        self._generateTransRoutineSimple(["egtransetZROT", "EGTRANSETZROT", "egtransetzrot", "egtransetzrot_", "ZROT"], 5, speciesTransport)
+
+        return
+
+
+    def _nlin(self, speciesTransport):
+        self._write()
+        self._write('! 0: monoatomic, 1: linear, 2: nonlinear')
+        #self._generateTransRoutineSimple(["egtransetNLIN", "EGTRANSETNLIN", "egtransetNLIN", "egtransetNLIN_", "NLIN"], 0, speciesTransport)
+
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetNLIN EGTRANSETNLIN')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetNLIN egtransetnlin')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetNLIN egtransetnlin_')
+        #self._write('#endif')
+
+        self._write('subroutine egtransetNLIN(NLIN)')
+        self._indent()
+        self._write()
+        self._write('integer, intent(out) :: NLIN(%d)' % (len(speciesTransport)))
+        self._write()
+        for species in speciesTransport:
+            self._write('%s(%d) = %d' % ('NLIN', species.id+1, int(speciesTransport[species][0])))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        return
+
+
+    def _viscosity(self, speciesTransport, NTFit):
+
+        #compute single constants in g/cm/s
+        kb = 1.3806503e-16
+        Na = 6.02214199e23 
+        RU = 8.31447e7
+        #conversion coefs
+        AtoCM = 1.0e-8
+        DEBYEtoCGS = 1.0e-18
+        #temperature increment  
+        dt = (self.highT-self.lowT) / (NTFit-1)
+        #factor dependent upon the molecule
+        m_crot = np.zeros(self.nSpecies)
+        m_cvib = np.zeros(self.nSpecies)
+        isatm = np.zeros(self.nSpecies)
+        for spec in speciesTransport:
+            if int(speciesTransport[spec][0]) == 0:
+                m_crot[spec.id] = 0.0
+                m_cvib[spec.id] = 0.0
+                isatm[spec.id] = 0.0
+            elif int(speciesTransport[spec][0]) == 1:
+                m_crot[spec.id] = 1.0
+                m_cvib[spec.id] = 5.0 / 2.0
+                isatm[spec.id] = 1.0
+            else:
+                m_crot[spec.id] = 1.5
+                m_cvib[spec.id] = 3.0
+                isatm[spec.id] = 1.0
+        #viscosities coefs (4 per spec)
+        cofeta = {}
+        #conductivities coefs (4 per spec)
+        coflam = {}
+        for spec in speciesTransport:
+            spvisc = []
+            spcond = []
+            tlog = []
+            for n in range(NTFit):
+                t = self.lowT + dt*n
+                #variables
+                #eq. (2)
+                tr = t/ float(speciesTransport[spec][1])
+                conversion = DEBYEtoCGS * DEBYEtoCGS / AtoCM / AtoCM / AtoCM / kb 
+                dst = 0.5 * conversion * float(speciesTransport[spec][3])**2 / (float(speciesTransport[spec][1]) \
+                        * float(speciesTransport[spec][2])**3)
+                #viscosity of spec at t
+                #eq. (1)
+                conversion = AtoCM * AtoCM
+                visc = (5.0 / 16.0) * np.sqrt(np.pi * self.species[spec.id].weight * kb * t / Na) / \
+                    (self.om22_CHEMKIN(tr,dst) * np.pi * \
+                    float(speciesTransport[spec][2]) * float(speciesTransport[spec][2]) * conversion)
+                #conductivity of spec at t
+                #eq. (30)
+                conversion = AtoCM * AtoCM
+                m_red = self.species[spec.id].weight / (2.0 * Na)
+                diffcoef = (3.0 / 16.0) * np.sqrt(2.0 * np.pi * kb**3 * t**3 / m_red) /  \
+                        (10.0 * np.pi * self.om11_CHEMKIN(tr,dst) * float(speciesTransport[spec][2]) * \
+                        float(speciesTransport[spec][2]) * conversion)
+                #eq. (19)
+                cv_vib_R = (self._getCVdRspecies(t, spec) - m_cvib[spec.id]) * isatm[spec.id]
+                rho_atm = 10.0 * self.species[spec.id].weight /(RU * t)
+                f_vib = rho_atm * diffcoef / visc
+                #eq. (20)
+                A = 2.5 - f_vib
+                #eqs. (21) + (32-33)
+                cv_rot_R = m_crot[spec.id]
+                #note: the T corr is not applied in CANTERA
+                B = (float(speciesTransport[spec][5]) \
+                        * self.Fcorr(298.0, float(speciesTransport[spec][1])) / self.Fcorr(t, float(speciesTransport[spec][1])) \
+                        + (2.0 / np.pi) * ((5.0 / 3.0 ) * cv_rot_R  + f_vib))
+                #eq. (18)
+                f_rot = f_vib * (1.0 + 2.0 / np.pi * A / B )
+                #eq. (17) 
+                cv_trans_R = 3.0 / 2.0 
+                f_trans = 5.0 / 2.0 * (1.0 - 2.0 / np.pi * A / B * cv_rot_R / cv_trans_R )
+                if (int(speciesTransport[spec][0]) == 0):
+                    cond = (visc * RU / self.species[spec.id].weight) * \
+                            (5.0 / 2.0) * cv_trans_R
+                else:
+                    cond = (visc * RU / self.species[spec.id].weight) * \
+                        (f_trans * cv_trans_R + f_rot * cv_rot_R + f_vib * cv_vib_R)
+
+                #log transformation for polyfit
+                tlog.append(np.log(t))
+                spvisc.append(np.log(visc))
+                spcond.append(np.log(cond))
+
+            cofeta[spec.id] = np.polyfit(tlog, spvisc, 3)
+            coflam[spec.id] = np.polyfit(tlog, spcond, 3)
+
+        #header for visco
+        self._write()
+        self._write()
+        self._write('! Poly fits for the viscosities, dim NO*KK')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetCOFETA EGTRANSETCOFETA')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetCOFETA egtransetcofeta')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetCOFETA egtransetcofeta_')
+        #self._write('#endif')
+
+        #visco coefs
+        self._write('subroutine egtransetCOFETA(COFETA)')
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: COFETA(%d)' % (len(self.species)*4))
+        self._write()
+        for spec in self.species:
+            for i in range(4):
+                self._write('%s(%d) = %s' % ('COFETA', spec.id*4+i+1, format(cofeta[spec.id][3-i], '.8e').replace("e", "d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        #header for cond
+        self._write()
+        self._write()
+        self._write('! Poly fits for the conductivities, dim NO*KK')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetCOFLAM EGTRANSETCOFLAM')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetCOFLAM egtransetcoflam')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetCOFLAM egtransetcoflam_')
+        #self._write('#endif')
+
+        #visco coefs
+        self._write('subroutine egtransetCOFLAM(COFLAM)')
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: COFLAM(%d)' % (len(self.species)*4))
+        self._write()
+        for spec in self.species:
+            for i in range(4):
+                self._write('%s(%d) = %s' % ('COFLAM', spec.id*4+i+1, format(coflam[spec.id][3-i], '.8e').replace("e","d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        return
+
+
+    def _thermaldiffratios(self, speciesTransport, lightSpecList, NTFit):
+
+        # This is an overhaul of CHEMKIN version III
+        #REORDERING OF SPECS
+        specOrdered = []
+        for i in range(self.nSpecies):
+            for spec in speciesTransport:
+                if spec.id == i:
+                    specOrdered.append(spec)
+                    break
+
+        #compute single constants in g/cm/s
+        kb = 1.3806503e-16
+        #conversion coefs
+        DEBYEtoCGS = 1.0e-18
+        AtoCM = 1.0e-8
+        #temperature increment  
+        dt = (self.highT-self.lowT) / (NTFit-1)
+        #diff ratios (4 per spec pair involving light species) 
+        coftd = []
+        k = -1
+        for i,spec1 in enumerate(specOrdered):
+            if (i != spec1.id):
+                print "Problem in _thermaldiffratios computation"
+                stop
+            if spec1.id in lightSpecList:
+                k = k + 1
+                if (lightSpecList[k] != spec1.id):
+                    print "Problem in  _thermaldiffratios computation"
+                    stop
+                coftd.append([])
+                epsi = float(speciesTransport[spec1][1]) * kb
+                sigi = float(speciesTransport[spec1][2]) * AtoCM
+                poli = float(speciesTransport[spec1][4]) * AtoCM * AtoCM * AtoCM
+                #eq. (12)
+                poliRed = poli / sigi**3
+                for j,spec2 in enumerate(specOrdered):
+                    if (j != spec2.id):
+                        print "Problem in _thermaldiffratios computation"
+                        stop
+                    #eq. (53)
+                    Wji = (self.species[spec2.id].weight - self.species[spec1.id].weight) / \
+                            (self.species[spec1.id].weight + self.species[spec2.id].weight) 
+                    epsj = float(speciesTransport[spec2][1]) * kb
+                    sigj = float(speciesTransport[spec2][2]) * AtoCM
+                    dipj = float(speciesTransport[spec2][3]) * DEBYEtoCGS
+                    #eq. (13)
+                    dipjRed = dipj / np.sqrt(epsj*sigj**3)
+                    epsRatio = epsj / epsi
+                    tse = 1.0 + 0.25*poliRed*dipjRed**2*np.sqrt(epsRatio)
+                    eok = tse**2 * np.sqrt(float(speciesTransport[spec1][1]) * float(speciesTransport[spec2][1]))
+                    #enter the loop on temperature
+                    spthdiffcoef = []
+                    tTab = []
+                    for n in range(NTFit):
+                       t = self.lowT + dt*n
+                       tslog = np.log(t) - np.log(eok)
+                       #eq. (53)
+                       thdifcoeff = 15.0 / 2.0 * Wji * (2.0 * self.astar(tslog) + 5.0) * (6.0 * self.cstar(tslog) - 5.0) / \
+                               (self.astar(tslog) * (16.0 * self.astar(tslog) - 12.0 * self.bstar(tslog) + 55.0))
+
+                       #log transformation for polyfit
+                       tTab.append(t)
+                       spthdiffcoef.append(thdifcoeff)
+
+                    coftd[k].append(np.polyfit(tTab, spthdiffcoef, 3))
+
+        #header for thermal diff ratios
+        self._write()
+        self._write()
+        self._write('! Poly fits for thermal diff ratios, dim NO*NLITE*KK')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetCOFTD EGTRANSETCOFTD')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetCOFTD egtransetcoftd')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetCOFTD egtransetcoftd_')
+        #self._write('#endif')
+
+        #visco coefs
+        self._write('subroutine egtransetCOFTD(COFTD)')
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: COFTD(%d)' % (len(coftd)*self.nSpecies*4))
+        self._write()
+        for i in range(len(coftd)):
+            for j in range(self.nSpecies):
+                for k in range(4):
+                    self._write('%s(%d) = %s' % ('COFTD', i*4*self.nSpecies+j*4+k+1, format(coftd[i][j][3-k], '.8e').replace("e","d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+
+        return
+
+
+    def _diffcoefs(self, speciesTransport, NTFit):
+
+        #REORDERING OF SPECS
+        specOrdered = []
+        for i in range(self.nSpecies):
+            for spec in speciesTransport:
+                if spec.id == i:
+                    specOrdered.append(spec)
+                    break
+        #checks
+        #for spec in speciesTransport:
+        #    print spec.symbol, spec.id
+        #for i in range(self.nSpecies):
+        #    print i, specOrdered[i].id, specOrdered[i].symbol
+        #stop
+
+        #compute single constants in g/cm/s
+        kb = 1.3806503e-16
+        Na = 6.02214199e23 
+        #conversion coefs
+        AtoCM = 1.0e-8
+        DEBYEtoCGS = 1.0e-18
+        PATM = 0.1013250000000000E+07
+        #temperature increment  
+        dt = (self.highT-self.lowT) / (NTFit-1)
+        #diff coefs (4 per spec pair) 
+        cofd = []
+        for i,spec1 in enumerate(specOrdered):
+            cofd.append([])
+            if (i != spec1.id):
+                print "Problem in _diffcoefs computation"
+                stop
+            for j,spec2 in enumerate(specOrdered[0:i+1]):
+                if (j != spec2.id):
+                    print "Problem in _diffcoefs computation"
+                    stop
+                #eq. (9)
+                sigm = (0.5 * (float(speciesTransport[spec1][2]) + float(speciesTransport[spec2][2])) * AtoCM)\
+                        * self.Xi(spec1, spec2, speciesTransport)**(1.0/6.0)
+                #eq. (4)
+                m_red = self.species[spec1.id].weight * self.species[spec2.id].weight / \
+                        (self.species[spec1.id].weight + self.species[spec2.id].weight) / Na
+                #eq. (8) & (14)
+                epsm_k = np.sqrt(float(speciesTransport[spec1][1]) * float(speciesTransport[spec2][1])) \
+                        * self.Xi(spec1, spec2, speciesTransport)**2.0
+
+                #eq. (15)
+                conversion = DEBYEtoCGS * DEBYEtoCGS / kb  
+                dst = 0.5 * conversion * float(speciesTransport[spec1][3]) * float(speciesTransport[spec2][3]) / \
+                    (epsm_k * sigm**3)
+                if self.Xi_bool(spec1, spec2, speciesTransport)==False:
+                    dst = 0.0
+                #enter the loop on temperature
+                spdiffcoef = []
+                tlog = []
+                for n in range(NTFit):
+                   t = self.lowT + dt*n
+                   tr = t/ epsm_k
+                   #eq. (3)
+                   #note: these are "corrected" in CHEMKIN not in CANTERA... we chose not to
+                   difcoeff = 3.0 / 16.0 * 1 / PATM * (np.sqrt(2.0 * np.pi * t**3 * kb**3 / m_red) / \
+                           ( np.pi * sigm * sigm * self.om11_CHEMKIN(tr,dst)))
+
+                   #log transformation for polyfit
+                   tlog.append(np.log(t))
+                   spdiffcoef.append(np.log(difcoeff))
+
+                cofd[i].append(np.polyfit(tlog, spdiffcoef, 3))
+
+        #use the symmetry for upper triangular terms 
+        #note: starting with this would be preferable (only one bigger loop)
+        #note2: or write stuff differently !
+        #for i,spec1 in enumerate(specOrdered):
+        #    for j,spec2 in enumerate(specOrdered[i+1:]):
+        #        cofd[i].append(cofd[spec2.id][spec1.id])
+
+        #header for diffusion coefs
+        self._write()
+        self._write('! Poly fits for the diffusion coefficients, dim NO*KK*KK')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetCOFD EGTRANSETCOFD')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetCOFD egtransetcofd')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetCOFD egtransetcofd_')
+        #self._write('#endif')
+
+        #coefs
+        self._write('subroutine egtransetCOFD(COFD)')
+        self._indent()
+        self._write()
+        cofd_size = 0
+        for i,spec1 in enumerate(specOrdered):
+            for j,spec2 in enumerate(specOrdered[0:i+1]):
+                for k in range(4):
+                    cofd_size = cofd_size + 1
+            for j,spec2 in enumerate(specOrdered[i+1:]):
+                for k in range(4):
+                    cofd_size = cofd_size + 1
+        self._write('double precision, intent(out) :: COFD(%d)' % (cofd_size))
+        self._write()
+        for i,spec1 in enumerate(specOrdered):
+            #for j,spec2 in enumerate(specOrdered):
+            for j,spec2 in enumerate(specOrdered[0:i+1]):
+                for k in range(4):
+                    #self._write('%s[%d] = %.8E;' % ('COFD', i*self.nSpecies*4+j*4+k, cofd[j][i][3-k]))
+                    self._write('%s(%d) = %s' % ('COFD', i*self.nSpecies*4+j*4+k+1, format(cofd[i][j][3-k], '.8e').replace("e","d")))
+            for j,spec2 in enumerate(specOrdered[i+1:]):
+                for k in range(4):
+                    self._write('%s(%d) = %s' % ('COFD', i*self.nSpecies*4+(j+i+1)*4+k+1, format(cofd[j+i+1][i][3-k], '.8e').replace("e","d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        
+        return
+
+
+    def _lightSpecs(self, speclist):
+        
+        #header 
+        self._write()
+        self._write('! List of specs with small weight, dim NLITE')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define egtransetKTDIF EGTRANSETKTDIF')
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define egtransetKTDIF egtransetktdif')
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define egtransetKTDIF egtransetktdif_')
+        #self._write('#endif')
+
+        #coefs
+        self._write('subroutine egtransetKTDIF(KTDIF)')
+        self._indent()
+        self._write()
+        self._write('integer, intent(out) :: KTDIF(%d)' % len(speclist))
+        self._write()
+        for i in range(len(speclist)):
+            self._write('%s(%d) = %d' % ('KTDIF', i+1, speclist[i]+1))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
+        
+        return
+
+
+    def astar(self, tslog):
+
+        aTab = [.1106910525E+01, -.7065517161E-02,-.1671975393E-01,
+                .1188708609E-01,  .7569367323E-03,-.1313998345E-02,
+                .1720853282E-03]
+
+        B = aTab[6]
+        for i in range(6):
+            B = aTab[5-i] + B*tslog
+
+        return B
+
+
+    def bstar(self, tslog):
+
+        bTab = [.1199673577E+01, -.1140928763E+00,-.2147636665E-02,
+                .2512965407E-01, -.3030372973E-02,-.1445009039E-02,
+                .2492954809E-03]
+
+        B = bTab[6]
+        for i in range(6):
+            B = bTab[5-i] + B*tslog
+
+        return B
+
+
+    def cstar(self, tslog):
+
+        cTab = [ .8386993788E+00,  .4748325276E-01, .3250097527E-01,
+                -.1625859588E-01, -.2260153363E-02, .1844922811E-02,
+                -.2115417788E-03]
+
+        B = cTab[6]
+        for i in range(6):
+            B = cTab[5-i] + B*tslog
+
+        return B
+
+
+    def Xi(self, spec1, spec2, speciesTransport):
+
+        dipmin = 1e-20
+        #1 is polar, 2 is nonpolar
+        #err in eq. (11) ?
+        if (float(speciesTransport[spec2][3]) < dipmin) and (float(speciesTransport[spec1][3]) > dipmin):
+            xi = 1.0 + 1.0/4.0 * self.redPol(spec2, speciesTransport)*self.redDip(spec1, speciesTransport) *\
+                    self.redDip(spec1, speciesTransport) *\
+                    np.sqrt(float(speciesTransport[spec1][1]) / float(speciesTransport[spec2][1]))
+        #1 is nonpolar, 2 is polar
+        elif (float(speciesTransport[spec2][3]) > dipmin) and (float(speciesTransport[spec1][3]) < dipmin):
+            xi = 1.0 + 1.0/4.0 * self.redPol(spec1, speciesTransport)*self.redDip(spec2, speciesTransport) *\
+                    self.redDip(spec2, speciesTransport) *\
+                    np.sqrt(float(speciesTransport[spec2][1]) / float(speciesTransport[spec1][1]))
+        #normal case, either both polar or both nonpolar
+        else:
+            xi = 1.0
+
+        return xi
+
+
+    def Xi_bool(self, spec1, spec2, speciesTransport):
+
+        dipmin = 1e-20
+        #1 is polar, 2 is nonpolar
+        #err in eq. (11) ?
+        if (float(speciesTransport[spec2][3]) < dipmin) and (float(speciesTransport[spec1][3]) > dipmin):
+            xi_b = False
+        #1 is nonpolar, 2 is polar
+        elif (float(speciesTransport[spec2][3]) > dipmin) and (float(speciesTransport[spec1][3]) < dipmin):
+            xi_b = False
+        #normal case, either both polar or both nonpolar
+        else:
+            xi_b = True
+
+        return xi_b
+
+
+    def redPol(self, spec, speciesTransport): 
+
+        return (float(speciesTransport[spec][4]) / float(speciesTransport[spec][2])**3.0)
+
+
+    def redDip(self, spec, speciesTransport): 
+
+        #compute single constants in g/cm/s
+        kb = 1.3806503e-16
+        #conversion coefs
+        AtoCM = 1.0e-8
+        DEBYEtoCGS = 1.0e-18
+        convert = DEBYEtoCGS / np.sqrt( kb * AtoCM**3.0 )
+        return convert * float(speciesTransport[spec][3]) / \
+                np.sqrt(float(speciesTransport[spec][1]) * float(speciesTransport[spec][2])**3.0)
+
+
+    def Fcorr(self, t, eps_k):
+
+        thtwo = 3.0 / 2.0
+        return 1 + np.pi**(thtwo) / 2.0 * np.sqrt(eps_k / t) + \
+                (np.pi**2 / 4.0 + 2.0) * (eps_k / t) + \
+                (np.pi * eps_k / t)**(thtwo)
 
 
     #def om11(self, tr, dst):
@@ -7886,206 +7905,206 @@ class FPickler(CMill):
     #    return self.om22(tr,dst)/astar_interp
 
 
-    #def om11_CHEMKIN(self, tr, dst):
+    def om11_CHEMKIN(self, tr, dst):
 
-    #    # This is an overhaul of CANTERA version 2.3
-    #    #range of dst
-    #    dstTab = [0.0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
+        # This is an overhaul of CANTERA version 2.3
+        #range of dst
+        dstTab = [0.0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
 
-    #    #range of tr
-    #    trTab = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-    #            1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0,
-    #            5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0,
-    #            18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 75.0, 100.0]
+        #range of tr
+        trTab = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+                1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0,
+                5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0,
+                18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 75.0, 100.0]
 
-    #    #tab of omega11 corresp. to (tr, dst)
-    #    #CANTERA
-    #    omegaTab = [4.008, 4.002, 4.655, 5.52, 6.454, 8.214, 9.824, 11.31,
-    #            3.130 , 3.164 , 3.355 , 3.721 , 4.198 , 5.23  , 6.225 , 7.160,
-    #            2.649 , 2.657 , 2.77  , 3.002 , 3.319 , 4.054 , 4.785 , 5.483 ,
-    #            2.314 , 2.32  , 2.402 , 2.572 , 2.812 , 3.386 , 3.972 , 4.539 ,
-    #            2.066 , 2.073 , 2.14  , 2.278 , 2.472 , 2.946 , 3.437 , 3.918 ,
-    #            1.877 , 1.885 , 1.944 , 2.06  , 2.225 , 2.628 , 3.054 , 3.747 ,
-    #            1.729 , 1.738 , 1.79  , 1.893 , 2.036 , 2.388 , 2.763 , 3.137 ,
-    #            1.6122, 1.622 , 1.67  , 1.76  , 1.886 , 2.198 , 2.535 , 2.872 ,
-    #            1.517 , 1.527 , 1.572 , 1.653 , 1.765 , 2.044 , 2.35  , 2.657 ,
-    #            1.44  , 1.45  , 1.49  , 1.564 , 1.665 , 1.917 , 2.196 , 2.4780,
-    #            1.3204, 1.33  , 1.364 , 1.425 , 1.51  , 1.72  , 1.956 , 2.199,
-    #            1.234 , 1.24  , 1.272 , 1.324 , 1.394 , 1.573 , 1.777 , 1.99,
-    #            1.168 , 1.176 , 1.202 , 1.246 , 1.306 , 1.46  , 1.64  , 1.827,
-    #            1.1166, 1.124 , 1.146 , 1.185 , 1.237 , 1.372 , 1.53  , 1.7,
-    #            1.075 , 1.082 , 1.102 , 1.135 , 1.181 , 1.3   , 1.441 , 1.592,
-    #            1.0006, 1.005 , 1.02  , 1.046 , 1.08  , 1.17  , 1.278 , 1.397,
-    #             .95  ,  .9538,  .9656,  .9852, 1.012 , 1.082 , 1.168 , 1.265,
-    #             .9131,  .9162,  .9256,  .9413,  .9626, 1.019 , 1.09  , 1.17,
-    #             .8845,  .8871,  .8948,  .9076,  .9252,  .972 , 1.03  , 1.098,
-    #             .8428,  .8446,  .850 ,  .859 ,  .8716,  .9053,  .9483,  .9984,
-    #             .813 ,  .8142,  .8183,  .825 ,  .8344,  .8598,  .8927,  .9316,
-    #             .7898,  .791 ,  .794 ,  .7993,  .8066,  .8265,  .8526,  .8836,
-    #             .7711,  .772 ,  .7745,  .7788,  .7846,  .8007,  .822 ,  .8474,
-    #             .7555,  .7562,  .7584,  .7619,  .7667,  .78  ,  .7976,  .8189,
-    #             .7422,  .743 ,  .7446,  .7475,  .7515,  .7627,  .7776,  .796 ,
-    #             .72022, .7206,  .722 ,  .7241,  .7271,  .7354,  .7464,  .76  ,
-    #             .7025,  .703 ,  .704 ,  .7055,  .7078,  .7142,  .7228,  .7334,
-    #             .68776, .688,   .6888,  .6901,  .6919,  .697 ,  .704 ,  .7125,
-    #             .6751,  .6753,  .676 ,  .677 ,  .6785,  .6827,  .6884,  .6955,
-    #             .664 ,  .6642,  .6648,  .6657,  .6669,  .6704,  .6752,  .681,
-    #             .6414,  .6415,  .6418,  .6425,  .6433,  .6457,  .649 ,  .653,
-    #             .6235,  .6236,  .6239,  .6243,  .6249,  .6267,  .629 ,  .632,
-    #             .60882, .6089,  .6091,  .6094,  .61  ,  .6112,  .613 ,  .6154,
-    #             .5964,  .5964,  .5966,  .597 ,  .5972,  .5983,  .600 ,  .6017,
-    #             .5763,  .5763,  .5764,  .5766,  .5768,  .5775,  .5785,  .58,
-    #             .5415,  .5415,  .5416,  .5416,  .5418,  .542 ,  .5424,  .543,
-    #             .518 ,  .518 ,  .5182,  .5184,  .5184,  .5185,  .5186,  .5187]
+        #tab of omega11 corresp. to (tr, dst)
+        #CANTERA
+        omegaTab = [4.008, 4.002, 4.655, 5.52, 6.454, 8.214, 9.824, 11.31,
+                3.130 , 3.164 , 3.355 , 3.721 , 4.198 , 5.23  , 6.225 , 7.160,
+                2.649 , 2.657 , 2.77  , 3.002 , 3.319 , 4.054 , 4.785 , 5.483 ,
+                2.314 , 2.32  , 2.402 , 2.572 , 2.812 , 3.386 , 3.972 , 4.539 ,
+                2.066 , 2.073 , 2.14  , 2.278 , 2.472 , 2.946 , 3.437 , 3.918 ,
+                1.877 , 1.885 , 1.944 , 2.06  , 2.225 , 2.628 , 3.054 , 3.747 ,
+                1.729 , 1.738 , 1.79  , 1.893 , 2.036 , 2.388 , 2.763 , 3.137 ,
+                1.6122, 1.622 , 1.67  , 1.76  , 1.886 , 2.198 , 2.535 , 2.872 ,
+                1.517 , 1.527 , 1.572 , 1.653 , 1.765 , 2.044 , 2.35  , 2.657 ,
+                1.44  , 1.45  , 1.49  , 1.564 , 1.665 , 1.917 , 2.196 , 2.4780,
+                1.3204, 1.33  , 1.364 , 1.425 , 1.51  , 1.72  , 1.956 , 2.199,
+                1.234 , 1.24  , 1.272 , 1.324 , 1.394 , 1.573 , 1.777 , 1.99,
+                1.168 , 1.176 , 1.202 , 1.246 , 1.306 , 1.46  , 1.64  , 1.827,
+                1.1166, 1.124 , 1.146 , 1.185 , 1.237 , 1.372 , 1.53  , 1.7,
+                1.075 , 1.082 , 1.102 , 1.135 , 1.181 , 1.3   , 1.441 , 1.592,
+                1.0006, 1.005 , 1.02  , 1.046 , 1.08  , 1.17  , 1.278 , 1.397,
+                 .95  ,  .9538,  .9656,  .9852, 1.012 , 1.082 , 1.168 , 1.265,
+                 .9131,  .9162,  .9256,  .9413,  .9626, 1.019 , 1.09  , 1.17,
+                 .8845,  .8871,  .8948,  .9076,  .9252,  .972 , 1.03  , 1.098,
+                 .8428,  .8446,  .850 ,  .859 ,  .8716,  .9053,  .9483,  .9984,
+                 .813 ,  .8142,  .8183,  .825 ,  .8344,  .8598,  .8927,  .9316,
+                 .7898,  .791 ,  .794 ,  .7993,  .8066,  .8265,  .8526,  .8836,
+                 .7711,  .772 ,  .7745,  .7788,  .7846,  .8007,  .822 ,  .8474,
+                 .7555,  .7562,  .7584,  .7619,  .7667,  .78  ,  .7976,  .8189,
+                 .7422,  .743 ,  .7446,  .7475,  .7515,  .7627,  .7776,  .796 ,
+                 .72022, .7206,  .722 ,  .7241,  .7271,  .7354,  .7464,  .76  ,
+                 .7025,  .703 ,  .704 ,  .7055,  .7078,  .7142,  .7228,  .7334,
+                 .68776, .688,   .6888,  .6901,  .6919,  .697 ,  .704 ,  .7125,
+                 .6751,  .6753,  .676 ,  .677 ,  .6785,  .6827,  .6884,  .6955,
+                 .664 ,  .6642,  .6648,  .6657,  .6669,  .6704,  .6752,  .681,
+                 .6414,  .6415,  .6418,  .6425,  .6433,  .6457,  .649 ,  .653,
+                 .6235,  .6236,  .6239,  .6243,  .6249,  .6267,  .629 ,  .632,
+                 .60882, .6089,  .6091,  .6094,  .61  ,  .6112,  .613 ,  .6154,
+                 .5964,  .5964,  .5966,  .597 ,  .5972,  .5983,  .600 ,  .6017,
+                 .5763,  .5763,  .5764,  .5766,  .5768,  .5775,  .5785,  .58,
+                 .5415,  .5415,  .5416,  .5416,  .5418,  .542 ,  .5424,  .543,
+                 .518 ,  .518 ,  .5182,  .5184,  .5184,  .5185,  .5186,  .5187]
 
-    #    #First test on tr
-    #    if (tr > 75.0):
-    #        omeg12 = 0.623 - 0.136e-2*tr + 0.346e-5*tr*tr - 0.343e-8*tr*tr*tr
-    #    else:
-    #        #Find tr idx in trTab
-    #        if (tr <= 0.2):
-    #            ii = 1
-    #        else:
-    #            ii = 36
-    #        for i in range(1,37):
-    #            if (tr > trTab[i-1]) and (tr <= trTab[i]):
-    #                ii = i
-    #                break
-    #        #Find dst idx in dstTab 
-    #        if (abs(dst) >= 1.0e-5):
-    #            if (dst <= 0.25):
-    #                kk = 1
-    #            else:
-    #                kk = 6
-    #            for i in range(1,7):
-    #                if (dstTab[i-1] < dst) and (dstTab[i] >= dst):
-    #                    kk = i
-    #                    break
-    #            #Find surrounding values and interpolate
-    #            #First on dst
-    #            vert = np.zeros(3) 
-    #            for i in range(3):
-    #                arg = np.zeros(3) 
-    #                val = np.zeros(3) 
-    #                for k in range(3):
-    #                  arg[k] = dstTab[kk-1+k]
-    #                  val[k] = omegaTab[8*(ii-1+i) + (kk-1+k)]
-    #                vert[i] = self.qinterp(dst, arg, val)
-    #            #Second on tr
-    #            arg = np.zeros(3) 
-    #            for i in range(3):
-    #               arg[i] = trTab[ii-1+i]
-    #            omeg12 = self.qinterp(tr, arg, vert)
-    #        else:
-    #            arg = np.zeros(3) 
-    #            val = np.zeros(3) 
-    #            for i in range(3):
-    #               arg[i] = trTab[ii-1+i]
-    #               val[i] = omegaTab[8*(ii-1+i)]
-    #            omeg12 =self. qinterp(tr, arg, val)
+        #First test on tr
+        if (tr > 75.0):
+            omeg12 = 0.623 - 0.136e-2*tr + 0.346e-5*tr*tr - 0.343e-8*tr*tr*tr
+        else:
+            #Find tr idx in trTab
+            if (tr <= 0.2):
+                ii = 1
+            else:
+                ii = 36
+            for i in range(1,37):
+                if (tr > trTab[i-1]) and (tr <= trTab[i]):
+                    ii = i
+                    break
+            #Find dst idx in dstTab 
+            if (abs(dst) >= 1.0e-5):
+                if (dst <= 0.25):
+                    kk = 1
+                else:
+                    kk = 6
+                for i in range(1,7):
+                    if (dstTab[i-1] < dst) and (dstTab[i] >= dst):
+                        kk = i
+                        break
+                #Find surrounding values and interpolate
+                #First on dst
+                vert = np.zeros(3) 
+                for i in range(3):
+                    arg = np.zeros(3) 
+                    val = np.zeros(3) 
+                    for k in range(3):
+                      arg[k] = dstTab[kk-1+k]
+                      val[k] = omegaTab[8*(ii-1+i) + (kk-1+k)]
+                    vert[i] = self.qinterp(dst, arg, val)
+                #Second on tr
+                arg = np.zeros(3) 
+                for i in range(3):
+                   arg[i] = trTab[ii-1+i]
+                omeg12 = self.qinterp(tr, arg, vert)
+            else:
+                arg = np.zeros(3) 
+                val = np.zeros(3) 
+                for i in range(3):
+                   arg[i] = trTab[ii-1+i]
+                   val[i] = omegaTab[8*(ii-1+i)]
+                omeg12 =self. qinterp(tr, arg, val)
 
-    #    return omeg12
+        return omeg12
 
 
-    #def om22_CHEMKIN(self, tr, dst):
+    def om22_CHEMKIN(self, tr, dst):
 
-    #    # This is an overhaul of CANTERA version 2.3
-    #    #range of dst
-    #    dstTab = [0.0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
+        # This is an overhaul of CANTERA version 2.3
+        #range of dst
+        dstTab = [0.0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
 
-    #    #range of tr
-    #    trTab = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-    #            1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0,
-    #            5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0,
-    #            18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 75.0, 100.0]
+        #range of tr
+        trTab = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+                1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0,
+                5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0,
+                18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 75.0, 100.0]
 
-    #    #tab of omega22 corresp. to (tr, dst)
-    #    #CANTERA
-    #    omegaTab = [4.1005, 4.266,  4.833,  5.742,  6.729,  8.624,  10.34,  11.89,
-    #            3.2626, 3.305,  3.516,  3.914,  4.433,  5.57,   6.637,  7.618,
-    #            2.8399, 2.836,  2.936,  3.168,  3.511,  4.329,  5.126,  5.874,
-    #            2.531,  2.522,  2.586,  2.749,  3.004,  3.64,   4.282,  4.895,
-    #            2.2837, 2.277,  2.329,  2.46,   2.665,  3.187,  3.727,  4.249,
-    #            2.0838, 2.081,  2.13,   2.243,  2.417,  2.862,  3.329,  3.786,
-    #            1.922,  1.924,  1.97,   2.072,  2.225,  2.614,  3.028,  3.435,
-    #            1.7902, 1.795,  1.84,   1.934,  2.07,   2.417,  2.788,  3.156,
-    #            1.6823, 1.689,  1.733,  1.82,   1.944,  2.258,  2.596,  2.933,
-    #            1.5929, 1.601,  1.644,  1.725,  1.838,  2.124,  2.435,  2.746,
-    #            1.4551, 1.465,  1.504,  1.574,  1.67,   1.913,  2.181,  2.451,
-    #            1.3551, 1.365,  1.4,    1.461,  1.544,  1.754,  1.989,  2.228,
-    #            1.28,   1.289,  1.321,  1.374,  1.447,  1.63,   1.838,  2.053,
-    #            1.2219, 1.231,  1.259,  1.306,  1.37,   1.532,  1.718,  1.912,
-    #            1.1757, 1.184,  1.209,  1.251,  1.307,  1.451,  1.618,  1.795,
-    #            1.0933, 1.1,    1.119,  1.15,   1.193,  1.304,  1.435,  1.578,
-    #            1.0388, 1.044,  1.059,  1.083,  1.117,  1.204,  1.31,   1.428,
-    #            0.99963, 1.004, 1.016,  1.035,  1.062,  1.133,  1.22,   1.319,
-    #            0.96988, 0.9732, 0.983,  0.9991, 1.021,  1.079,  1.153,  1.236,
-    #            0.92676, 0.9291, 0.936,  0.9473, 0.9628, 1.005,  1.058,  1.121,
-    #            0.89616, 0.8979, 0.903,  0.9114, 0.923,  0.9545, 0.9955, 1.044,
-    #            0.87272, 0.8741, 0.878,  0.8845, 0.8935, 0.9181, 0.9505, 0.9893,
-    #            0.85379, 0.8549, 0.858,  0.8632, 0.8703, 0.8901, 0.9164, 0.9482,
-    #            0.83795, 0.8388, 0.8414, 0.8456, 0.8515, 0.8678, 0.8895, 0.916,
-    #            0.82435, 0.8251, 0.8273, 0.8308, 0.8356, 0.8493, 0.8676, 0.8901,
-    #            0.80184, 0.8024, 0.8039, 0.8065, 0.8101, 0.8201, 0.8337, 0.8504,
-    #            0.78363, 0.784,  0.7852, 0.7872, 0.7899, 0.7976, 0.8081, 0.8212,
-    #            0.76834, 0.7687, 0.7696, 0.7712, 0.7733, 0.7794, 0.7878, 0.7983,
-    #            0.75518, 0.7554, 0.7562, 0.7575, 0.7592, 0.7642, 0.7711, 0.7797,
-    #            0.74364, 0.7438, 0.7445, 0.7455, 0.747,  0.7512, 0.7569, 0.7642,
-    #            0.71982, 0.72,   0.7204, 0.7211, 0.7221, 0.725,  0.7289, 0.7339,
-    #            0.70097, 0.7011, 0.7014, 0.7019, 0.7026, 0.7047, 0.7076, 0.7112,
-    #            0.68545, 0.6855, 0.6858, 0.6861, 0.6867, 0.6883, 0.6905, 0.6932,
-    #            0.67232, 0.6724, 0.6726, 0.6728, 0.6733, 0.6743, 0.6762, 0.6784,
-    #            0.65099, 0.651,  0.6512, 0.6513, 0.6516, 0.6524, 0.6534, 0.6546,
-    #            0.61397, 0.6141, 0.6143, 0.6145, 0.6147, 0.6148, 0.6148, 0.6147,
-    #            0.5887, 0.5889, 0.5894, 0.59,   0.5903, 0.5901, 0.5895, 0.5885]
+        #tab of omega22 corresp. to (tr, dst)
+        #CANTERA
+        omegaTab = [4.1005, 4.266,  4.833,  5.742,  6.729,  8.624,  10.34,  11.89,
+                3.2626, 3.305,  3.516,  3.914,  4.433,  5.57,   6.637,  7.618,
+                2.8399, 2.836,  2.936,  3.168,  3.511,  4.329,  5.126,  5.874,
+                2.531,  2.522,  2.586,  2.749,  3.004,  3.64,   4.282,  4.895,
+                2.2837, 2.277,  2.329,  2.46,   2.665,  3.187,  3.727,  4.249,
+                2.0838, 2.081,  2.13,   2.243,  2.417,  2.862,  3.329,  3.786,
+                1.922,  1.924,  1.97,   2.072,  2.225,  2.614,  3.028,  3.435,
+                1.7902, 1.795,  1.84,   1.934,  2.07,   2.417,  2.788,  3.156,
+                1.6823, 1.689,  1.733,  1.82,   1.944,  2.258,  2.596,  2.933,
+                1.5929, 1.601,  1.644,  1.725,  1.838,  2.124,  2.435,  2.746,
+                1.4551, 1.465,  1.504,  1.574,  1.67,   1.913,  2.181,  2.451,
+                1.3551, 1.365,  1.4,    1.461,  1.544,  1.754,  1.989,  2.228,
+                1.28,   1.289,  1.321,  1.374,  1.447,  1.63,   1.838,  2.053,
+                1.2219, 1.231,  1.259,  1.306,  1.37,   1.532,  1.718,  1.912,
+                1.1757, 1.184,  1.209,  1.251,  1.307,  1.451,  1.618,  1.795,
+                1.0933, 1.1,    1.119,  1.15,   1.193,  1.304,  1.435,  1.578,
+                1.0388, 1.044,  1.059,  1.083,  1.117,  1.204,  1.31,   1.428,
+                0.99963, 1.004, 1.016,  1.035,  1.062,  1.133,  1.22,   1.319,
+                0.96988, 0.9732, 0.983,  0.9991, 1.021,  1.079,  1.153,  1.236,
+                0.92676, 0.9291, 0.936,  0.9473, 0.9628, 1.005,  1.058,  1.121,
+                0.89616, 0.8979, 0.903,  0.9114, 0.923,  0.9545, 0.9955, 1.044,
+                0.87272, 0.8741, 0.878,  0.8845, 0.8935, 0.9181, 0.9505, 0.9893,
+                0.85379, 0.8549, 0.858,  0.8632, 0.8703, 0.8901, 0.9164, 0.9482,
+                0.83795, 0.8388, 0.8414, 0.8456, 0.8515, 0.8678, 0.8895, 0.916,
+                0.82435, 0.8251, 0.8273, 0.8308, 0.8356, 0.8493, 0.8676, 0.8901,
+                0.80184, 0.8024, 0.8039, 0.8065, 0.8101, 0.8201, 0.8337, 0.8504,
+                0.78363, 0.784,  0.7852, 0.7872, 0.7899, 0.7976, 0.8081, 0.8212,
+                0.76834, 0.7687, 0.7696, 0.7712, 0.7733, 0.7794, 0.7878, 0.7983,
+                0.75518, 0.7554, 0.7562, 0.7575, 0.7592, 0.7642, 0.7711, 0.7797,
+                0.74364, 0.7438, 0.7445, 0.7455, 0.747,  0.7512, 0.7569, 0.7642,
+                0.71982, 0.72,   0.7204, 0.7211, 0.7221, 0.725,  0.7289, 0.7339,
+                0.70097, 0.7011, 0.7014, 0.7019, 0.7026, 0.7047, 0.7076, 0.7112,
+                0.68545, 0.6855, 0.6858, 0.6861, 0.6867, 0.6883, 0.6905, 0.6932,
+                0.67232, 0.6724, 0.6726, 0.6728, 0.6733, 0.6743, 0.6762, 0.6784,
+                0.65099, 0.651,  0.6512, 0.6513, 0.6516, 0.6524, 0.6534, 0.6546,
+                0.61397, 0.6141, 0.6143, 0.6145, 0.6147, 0.6148, 0.6148, 0.6147,
+                0.5887, 0.5889, 0.5894, 0.59,   0.5903, 0.5901, 0.5895, 0.5885]
 
-    #    #First test on tr
-    #    if (tr > 75.0):
-    #        omeg12 = 0.703 - 0.146e-2*tr + 0.357e-5*tr*tr - 0.343e-8*tr*tr*tr
-    #    else:
-    #        #Find tr idx in trTab
-    #        if (tr <= 0.2):
-    #            ii = 1
-    #        else:
-    #            ii = 36
-    #        for i in range(1,37):
-    #            if (tr > trTab[i-1]) and (tr <= trTab[i]):
-    #                ii = i
-    #                break
-    #        #Find dst idx in dstTab 
-    #        if (abs(dst) >= 1.0e-5):
-    #            if (dst <= 0.25):
-    #                kk = 1
-    #            else:
-    #                kk = 6
-    #            for i in range(1,7):
-    #                if (dstTab[i-1] < dst) and (dstTab[i] >= dst):
-    #                    kk = i
-    #                    break
-    #            #Find surrounding values and interpolate
-    #            #First on dst
-    #            vert = np.zeros(3) 
-    #            for i in range(3):
-    #                arg = np.zeros(3) 
-    #                val = np.zeros(3) 
-    #                for k in range(3):
-    #                  arg[k] = dstTab[kk-1+k]
-    #                  val[k] = omegaTab[8*(ii-1+i) + (kk-1+k)]
-    #                vert[i] = self.qinterp(dst, arg, val)
-    #            #Second on tr
-    #            arg = np.zeros(3) 
-    #            for i in range(3):
-    #               arg[i] = trTab[ii-1+i]
-    #            omeg12 = self.qinterp(tr, arg, vert)
-    #        else:
-    #            arg = np.zeros(3) 
-    #            val = np.zeros(3) 
-    #            for i in range(3):
-    #               arg[i] = trTab[ii-1+i]
-    #               val[i] = omegaTab[8*(ii-1+i)]
-    #            omeg12 =self. qinterp(tr, arg, val)
+        #First test on tr
+        if (tr > 75.0):
+            omeg12 = 0.703 - 0.146e-2*tr + 0.357e-5*tr*tr - 0.343e-8*tr*tr*tr
+        else:
+            #Find tr idx in trTab
+            if (tr <= 0.2):
+                ii = 1
+            else:
+                ii = 36
+            for i in range(1,37):
+                if (tr > trTab[i-1]) and (tr <= trTab[i]):
+                    ii = i
+                    break
+            #Find dst idx in dstTab 
+            if (abs(dst) >= 1.0e-5):
+                if (dst <= 0.25):
+                    kk = 1
+                else:
+                    kk = 6
+                for i in range(1,7):
+                    if (dstTab[i-1] < dst) and (dstTab[i] >= dst):
+                        kk = i
+                        break
+                #Find surrounding values and interpolate
+                #First on dst
+                vert = np.zeros(3) 
+                for i in range(3):
+                    arg = np.zeros(3) 
+                    val = np.zeros(3) 
+                    for k in range(3):
+                      arg[k] = dstTab[kk-1+k]
+                      val[k] = omegaTab[8*(ii-1+i) + (kk-1+k)]
+                    vert[i] = self.qinterp(dst, arg, val)
+                #Second on tr
+                arg = np.zeros(3) 
+                for i in range(3):
+                   arg[i] = trTab[ii-1+i]
+                omeg12 = self.qinterp(tr, arg, vert)
+            else:
+                arg = np.zeros(3) 
+                val = np.zeros(3) 
+                for i in range(3):
+                   arg[i] = trTab[ii-1+i]
+                   val[i] = omegaTab[8*(ii-1+i)]
+                omeg12 =self. qinterp(tr, arg, val)
 
-    #    return omeg12
+        return omeg12
 
 
     #def om22(self, tr, dst):
@@ -8178,17 +8197,17 @@ class FPickler(CMill):
     #    return om22_interp
 
 
-    #def qinterp(self, x0, x, y):
+    def qinterp(self, x0, x, y):
 
-    #    val1 = y[0] + (x0-x[0])*(y[1]-y[0]) / (x[1]-x[0])
-    #    val2 = y[1] + (x0-x[1])*(y[2]-y[1]) / (x[2]-x[1])
-    #    fac1 = (x0-x[0]) / (x[1]-x[0]) / 2.0
-    #    fac2 = (x[2]-x0) / (x[2]-x[1]) / 2.0
-    #    if (x0 >= x[1]):
-    #       val = (val1*fac2+val2) / (1.0+fac2)
-    #    else:
-    #       val = (val1+val2*fac1) / (1.0+fac1)
-    #    return val
+        val1 = y[0] + (x0-x[0])*(y[1]-y[0]) / (x[1]-x[0])
+        val2 = y[1] + (x0-x[1])*(y[2]-y[1]) / (x[2]-x[1])
+        fac1 = (x0-x[0]) / (x[1]-x[0]) / 2.0
+        fac2 = (x[2]-x0) / (x[2]-x[1]) / 2.0
+        if (x0 >= x[1]):
+           val = (val1*fac2+val2) / (1.0+fac2)
+        else:
+           val = (val1+val2*fac1) / (1.0+fac1)
+        return val
 
 
     #def quadInterp(self, x0, x, y):
@@ -8202,74 +8221,76 @@ class FPickler(CMill):
     #    return a*(x0 - x[0])*(x0 - x[1]) + (dy21/dx21)*(x0 - x[1]) + y[1]
 
 
-    #def _generateTransRoutineSimple(self, nametab, id, speciesTransport):
+    def _generateTransRoutineSimple(self, nametab, id, speciesTransport):
 
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[1]))
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[2]))
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[3]))
-    #    self._write('#endif')
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[1]))
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[2]))
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[3]))
+        #self._write('#endif')
 
-    #    self._write('void %s(double* %s ) {' % (nametab[0], nametab[4]))
+        self._write('subroutine %s(%s)' % (nametab[0], nametab[4]))
+        self._indent()
+        self._write()
+        self._write('double precision, intent(out) :: %s(%d)' % (nametab[4],len(speciesTransport)))
+        self._write()
+        for species in speciesTransport:
+            self._write('%s(%d) = %s' % (nametab[4], species.id+1, format(float(speciesTransport[species][id]),'.8e').replace("e","d")))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    self._indent()
+        return
 
-    #    for species in speciesTransport:
-    #        self._write('%s[%d] = %.8E;' % (nametab[4], species.id, float(speciesTransport[species][id])))
+    def _generateTransRoutineInteger(self, nametab, expression):
 
-    #    self._outdent()
+        #self._write('#if defined(BL_FORT_USE_UPPERCASE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[1]))
+        #self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[2]))
+        #self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
+        #self._write('#define %s %s' % (nametab[0], nametab[3]))
+        #self._write('#endif')
 
-    #    self._write('};')
+        self._write('subroutine %s(%s)' % (nametab[0], nametab[4]))
+        self._indent()
+        self._write()
+        self._write('integer, intent(out) :: %s' % nametab[4])
+        self._write()
+        self._write('%s = %d' % (nametab[4], expression))
+        self._outdent()
+        self._write()
+        self._write('end subroutine')
 
-    #    return
-
-    #def _generateTransRoutineInteger(self, nametab, expression):
-
-    #    self._write('#if defined(BL_FORT_USE_UPPERCASE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[1]))
-    #    self._write('#elif defined(BL_FORT_USE_LOWERCASE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[2]))
-    #    self._write('#elif defined(BL_FORT_USE_UNDERSCORE)')
-    #    self._write('#define %s %s' % (nametab[0], nametab[3]))
-    #    self._write('#endif')
-
-    #    self._write('void %s(int* %s ) {' % (nametab[0], nametab[4]))
-
-    #    self._indent()
-
-    #    self._write('*%s = %d;}' % (nametab[4], expression ))
-
-    #    self._outdent()
-
-    #    return
+        return
 
 
-    #def _getCVdRspecies(self, t, species):
+    def _getCVdRspecies(self, t, species):
 
-    #    models = species.thermo
-    #    m1 = models[0]
-    #    m2 = models[1]
+        models = species.thermo
+        m1 = models[0]
+        m2 = models[1]
 
-    #    if m1.lowT < m2.lowT:
-    #        lowRange = m1
-    #        highRange = m2
-    #    else:
-    #        lowRange = m2
-    #        highRange = m1
+        if m1.lowT < m2.lowT:
+            lowRange = m1
+            highRange = m2
+        else:
+            lowRange = m2
+            highRange = m1
 
-    #    low = lowRange.lowT
-    #    mid = lowRange.highT
-    #    high = highRange.highT
+        low = lowRange.lowT
+        mid = lowRange.highT
+        high = highRange.highT
 
-    #    if t < mid:
-    #        parameters = lowRange.parameters
-    #    else:
-    #        parameters = highRange.parameters
+        if t < mid:
+            parameters = lowRange.parameters
+        else:
+            parameters = highRange.parameters
 
-    #    return ((parameters[0] - 1.0) + parameters[1] * t + parameters[2] * t * t \
-    #            + parameters[3] * t * t * t + parameters[4] * t * t * t * t)
+        return ((parameters[0] - 1.0) + parameters[1] * t + parameters[2] * t * t \
+                + parameters[3] * t * t * t + parameters[4] * t * t * t * t)
 
 
     def _analyzeThermodynamics(self, mechanism):
@@ -8313,33 +8334,33 @@ class FPickler(CMill):
         return lowT, highT, midpoints
     
 
-    #def _analyzeTransport(self, mechanism):
+    def _analyzeTransport(self, mechanism):
 
-    #    transdata = {}
+        transdata = {}
 
-    #    for species in mechanism.species():
+        for species in mechanism.species():
 
-    #        models = species.trans
-    #        if len(models) > 2:
-    #            print 'species: ', species
-    #            import pyre
-    #            pyre.debug.Firewall.hit("unsupported configuration in species.trans")
-    #            return
-    #        
-    #        m1 = models[0]
+            models = species.trans
+            if len(models) > 2:
+                print 'species: ', species
+                import pyre
+                pyre.debug.Firewall.hit("unsupported configuration in species.trans")
+                return
+            
+            m1 = models[0]
 
-    #        lin = m1.parameters[0]
-    #        eps = m1.eps
-    #        sig = m1.sig
-    #        dip = m1.dip
-    #        pol = m1.pol
-    #        zrot = m1.zrot
+            lin = m1.parameters[0]
+            eps = m1.eps
+            sig = m1.sig
+            dip = m1.dip
+            pol = m1.pol
+            zrot = m1.zrot
 
-    #        #print "TRANSPORT DATA FOR SPEC", species.symbol, " is", lin, eps, sig, dip, pol, zrot 
+            #print "TRANSPORT DATA FOR SPEC", species.symbol, " is", lin, eps, sig, dip, pol, zrot 
 
-    #        transdata[species] = [lin, eps, sig, dip, pol, zrot]
+            transdata[species] = [lin, eps, sig, dip, pol, zrot]
 
-    #    return transdata
+        return transdata
 
 
     #def _Kc(self, mechanism, reaction):
