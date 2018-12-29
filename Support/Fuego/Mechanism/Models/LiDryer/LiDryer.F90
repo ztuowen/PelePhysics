@@ -1330,14 +1330,14 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
         F = redP / (1.d0 + redP)
         logPred = log10(redP)
 
-        if (troe_Tsss(i) > 1.d-100) then
-           tmp1 = abs((1.d0-troe_a(i))*exp(-T/troe_Tsss(i)))
+        if (abs(troe_Tsss(i)) > 1.d-100) then
+           tmp1 = (1.d0-troe_a(i))*exp(-T/troe_Tsss(i))
         else
            tmp1 = 0.d0
         end if
 
-        if (troe_Ts(i) > 1.d-100) then
-           tmp2 = abs(troe_a(i) * exp(-T/troe_Ts(i)))
+        if (abs(troe_Ts(i)) > 1.d-100) then
+           tmp2 = troe_a(i) * exp(-T/troe_Ts(i))
         else
            tmp2 = 0.d0
         end if
