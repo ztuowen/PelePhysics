@@ -5212,7 +5212,7 @@ class FPickler(CMill):
             self._write("troe_c = -0.4d0 - 0.67d0 * logFcent")
             self._write("troe_n = 0.75d0 - 1.27d0 * logFcent")
             self._write("troe = (troe_c + logPred) / (troe_n - 0.14d0*(troe_c + logPred))")
-            self._write("F_troe = (logFcent / (1.d0 + troe*troe)) ** 10.d0")
+            self._write("F_troe = 10.d0 ** (logFcent / (1.d0 + troe*troe))")
             self._write("Corr(i) = F * F_troe")
             self._outdent()
             self._write('end do')
@@ -7004,7 +7004,7 @@ class FPickler(CMill):
         for i, eff in enumerate(efficiencies):
             symbol, efficiency = eff
             factor = "(TB(%d) %% vector(%d) - 1)" % (reaction.id, i+1)
-            conc = "sc(%d+1)" % mechanism.species(symbol).id
+            conc = "sc(%d)" % (mechanism.species(symbol).id+1)
             alpha.append("%s*%s" % (factor, conc))
 
         return " + ".join(alpha).replace('+ -','- ')

@@ -1322,8 +1322,8 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     end do
 
     ! troe
-    alpha_troe(1) = mixture + (TB(1) % vector(1) - 1)*sc(0+1) + (TB(1) % vector(2) - 1)*sc(2+1) + (TB(1) % vector(3) - 1)*sc(1+1)
-    alpha_troe(2) = mixture + (TB(2) % vector(1) - 1)*sc(0+1) + (TB(2) % vector(2) - 1)*sc(2+1)
+    alpha_troe(1) = mixture + (TB(1) % vector(1) - 1)*sc(1) + (TB(1) % vector(2) - 1)*sc(3) + (TB(1) % vector(3) - 1)*sc(2)
+    alpha_troe(2) = mixture + (TB(2) % vector(1) - 1)*sc(1) + (TB(2) % vector(2) - 1)*sc(3)
 
     do i=1, 2
         redP = alpha_troe(i-0) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)
@@ -1352,7 +1352,7 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
         troe_c = -0.4d0 - 0.67d0 * logFcent
         troe_n = 0.75d0 - 1.27d0 * logFcent
         troe = (troe_c + logPred) / (troe_n - 0.14d0*(troe_c + logPred))
-        F_troe = (logFcent / (1.d0 + troe*troe)) ** 10.d0
+        F_troe = 10.d0 ** (logFcent / (1.d0 + troe*troe))
         Corr(i) = F * F_troe
     end do
 
