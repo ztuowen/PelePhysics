@@ -5315,35 +5315,28 @@ class FPickler(CMill):
                 self._write('end do')
 
             self._outdent()
-            #self._write("}")
 
-        #if n3body > 0:
-        #    self._write()
-        #    self._write(self.line(" simple three-body correction"))
-        #    self._write("{")
-        #    self._indent()
-        #    self._write("double alpha;")
-        #    alpha_save = ""
-        #    for i in range(i3body[0],i3body[1]):
-        #        reaction = mechanism.reaction(id=i)
-        #        if reaction.thirdBody:
-        #            alpha = self._enhancement(mechanism, reaction)
-        #            if alpha != alpha_save:
-        #                alpha_save = alpha
-        #                self._write("alpha = %s;" % alpha)
-        #            self._write("Corr[%d] = alpha;" % i)
-        #    self._outdent()
-        #    self._write("}")
+        if n3body > 0:
+            self._write()
+            self._write("! simple three-body correction")
+            alpha_save = ""
+            for i in range(i3body[0],i3body[1]):
+                reaction = mechanism.reaction(id=i)
+                if reaction.thirdBody:
+                    alpha = self._enhancement(mechanism, reaction)
+                    if alpha != alpha_save:
+                        alpha_save = alpha
+                        #self._write("alpha_tb = %s" % alpha)
+                    self._write("Corr(%d) = %s" % (i+1,alpha))
 
-        #self._write()
-        #self._write("for (int i=0; i<%d; i++)" % nclassd)
-        #self._write("{")
-        #self._indent()
-        #self._write("qf[i] *= Corr[i] * k_f_save[i];")
-        #self._write("qr[i] *= Corr[i] * k_f_save[i] / Kc_save[i];")
-        #self._outdent()
-        #self._write("}")
-        #
+        self._write()
+        self._write("do i=1, %d" % nclassd)
+        self._indent()
+        self._write("qf(i) = qf(i) * (Corr(i) * k_f_save(i))")
+        self._write("qr(i) = qr(i) * (Corr(i) * k_f_save(i) / Kc_save(i))")
+        self._outdent()
+        self._write("end do")
+
         #if nspecial > 0:
 
         #    print "\n\n ***** WARNING: %d unclassified reactions\n" % nspecial

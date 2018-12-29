@@ -1356,6 +1356,17 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
         Corr(i) = F * F_troe
     end do
 
+    ! simple three-body correction
+    Corr(3) = mixture + (TB(3) % vector(1) - 1)*sc(1) + (TB(3) % vector(2) - 1)*sc(3)
+    Corr(4) = mixture + (TB(4) % vector(1) - 1)*sc(1) + (TB(4) % vector(2) - 1)*sc(3)
+    Corr(5) = mixture + (TB(5) % vector(1) - 1)*sc(1) + (TB(5) % vector(2) - 1)*sc(3)
+    Corr(6) = mixture + (TB(6) % vector(1) - 1)*sc(1) + (TB(6) % vector(2) - 1)*sc(3)
+
+    do i=1, 21
+        qf(i) = qf(i) * (Corr(i) * k_f_save(i))
+        qr(i) = qr(i) * (Corr(i) * k_f_save(i) / Kc_save(i))
+    end do
+
 end subroutine
 
 ! compute the g/(RT) at the given temperature
