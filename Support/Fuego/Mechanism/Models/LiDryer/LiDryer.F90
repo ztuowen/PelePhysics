@@ -1027,7 +1027,6 @@ subroutine productionRate(wdot, sc, T)
 
     tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /)
     invT = 1.d0 / tc(2)
-    T_save = -1.d0
 
     if (T /= T_save) then
         T_save = T
