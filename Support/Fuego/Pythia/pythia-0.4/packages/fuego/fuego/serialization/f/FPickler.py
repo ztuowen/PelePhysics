@@ -103,46 +103,46 @@ class FPickler(CMill):
 
         nReactions = len(mechanism.reaction())
         self._write()
-        self._write('double precision :: fwd_A(%d), fwd_beta(%d), fwd_Ea(%d)' 
+        self._write('double precision, save :: fwd_A(%d), fwd_beta(%d), fwd_Ea(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: low_A(%d), low_beta(%d), low_Ea(%d)' 
+        self._write('double precision, save :: low_A(%d), low_beta(%d), low_Ea(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: rev_A(%d), rev_beta(%d), rev_Ea(%d)' 
+        self._write('double precision, save :: rev_A(%d), rev_beta(%d), rev_Ea(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: troe_a(%d),troe_Ts(%d), troe_Tss(%d), troe_Tsss(%d)' 
+        self._write('double precision, save :: troe_a(%d),troe_Ts(%d), troe_Tss(%d), troe_Tsss(%d)' 
                     % (nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: sri_a(%d), sri_b(%d), sri_c(%d), sri_d(%d), sri_e(%d)'
+        self._write('double precision, save :: sri_a(%d), sri_b(%d), sri_c(%d), sri_d(%d), sri_e(%d)'
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: activation_units(%d), prefactor_units(%d), phase_units(%d)'
+        self._write('double precision, save :: activation_units(%d), prefactor_units(%d), phase_units(%d)'
                     % (nReactions,nReactions,nReactions))
-        self._write('integer :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d)' 
+        self._write('integer, save :: is_PD(%d), troe_len(%d), sri_len(%d), nTB(%d)' 
                     % (nReactions,nReactions,nReactions,nReactions))
         self._write('type(nonsquare_matrix_double) :: TB(%d)' % (nReactions))
         self._write('type(nonsquare_matrix_int) :: TBid(%d)' % (nReactions))
 
         self._write()
-        self._write('double precision :: fwd_A_DEF(%d), fwd_beta_DEF(%d), fwd_Ea_DEF(%d)' 
+        self._write('double precision, save :: fwd_A_DEF(%d), fwd_beta_DEF(%d), fwd_Ea_DEF(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: low_A_DEF(%d), low_beta_DEF(%d), low_Ea_DEF(%d)' 
+        self._write('double precision, save :: low_A_DEF(%d), low_beta_DEF(%d), low_Ea_DEF(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: rev_A_DEF(%d), rev_beta_DEF(%d), rev_Ea_DEF(%d)' 
+        self._write('double precision, save :: rev_A_DEF(%d), rev_beta_DEF(%d), rev_Ea_DEF(%d)' 
                     % (nReactions,nReactions,nReactions))
-        self._write('double precision :: troe_a_DEF(%d),troe_Ts_DEF(%d), troe_Tss_DEF(%d), troe_Tsss_DEF(%d)' 
+        self._write('double precision, save :: troe_a_DEF(%d),troe_Ts_DEF(%d), troe_Tss_DEF(%d), troe_Tsss_DEF(%d)' 
                     % (nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: sri_a_DEF(%d), sri_b_DEF(%d), sri_c_DEF(%d), sri_d_DEF(%d), sri_e_DEF(%d)'
+        self._write('double precision, save :: sri_a_DEF(%d), sri_b_DEF(%d), sri_c_DEF(%d), sri_d_DEF(%d), sri_e_DEF(%d)'
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
-        self._write('double precision :: activation_units_DEF(%d), prefactor_units_DEF(%d), phase_units_DEF(%d)'
+        self._write('double precision, save :: activation_units_DEF(%d), prefactor_units_DEF(%d), phase_units_DEF(%d)'
                     % (nReactions,nReactions,nReactions))
-        self._write('integer :: is_PD_DEF(%d), troe_len_DEF(%d), sri_len_DEF(%d), nTB_DEF(%d)' 
+        self._write('integer, save :: is_PD_DEF(%d), troe_len_DEF(%d), sri_len_DEF(%d), nTB_DEF(%d)' 
                     % (nReactions,nReactions,nReactions,nReactions))
         self._write('type(nonsquare_matrix_double) :: TB_DEF(%d)' % (nReactions))
         self._write('type(nonsquare_matrix_int) :: TBid_DEF(%d)' % (nReactions))
 
         self._write()
         self._write('! productionRate() static variables')
-        self._write('double precision :: T_save = -1')
-        self._write('double precision :: k_f_save(%d)' % nReactions)
-        self._write('double precision :: Kc_save(%d)' % nReactions)
+        self._write('double precision, save :: T_save = -1')
+        self._write('double precision, save :: k_f_save(%d)' % nReactions)
+        self._write('double precision, save :: Kc_save(%d)' % nReactions)
 
         # build reverse reaction map
         #rmap = {}

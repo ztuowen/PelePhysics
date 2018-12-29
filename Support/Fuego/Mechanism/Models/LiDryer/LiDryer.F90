@@ -63,30 +63,30 @@ type :: nonsquare_matrix_int
    integer, allocatable :: vector(:)
 end type nonsquare_matrix_int
 
-double precision :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
-double precision :: low_A(21), low_beta(21), low_Ea(21)
-double precision :: rev_A(21), rev_beta(21), rev_Ea(21)
-double precision :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
-double precision :: sri_a(21), sri_b(21), sri_c(21), sri_d(21), sri_e(21)
-double precision :: activation_units(21), prefactor_units(21), phase_units(21)
-integer :: is_PD(21), troe_len(21), sri_len(21), nTB(21)
+double precision, save :: fwd_A(21), fwd_beta(21), fwd_Ea(21)
+double precision, save :: low_A(21), low_beta(21), low_Ea(21)
+double precision, save :: rev_A(21), rev_beta(21), rev_Ea(21)
+double precision, save :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
+double precision, save :: sri_a(21), sri_b(21), sri_c(21), sri_d(21), sri_e(21)
+double precision, save :: activation_units(21), prefactor_units(21), phase_units(21)
+integer, save :: is_PD(21), troe_len(21), sri_len(21), nTB(21)
 type(nonsquare_matrix_double) :: TB(21)
 type(nonsquare_matrix_int) :: TBid(21)
 
-double precision :: fwd_A_DEF(21), fwd_beta_DEF(21), fwd_Ea_DEF(21)
-double precision :: low_A_DEF(21), low_beta_DEF(21), low_Ea_DEF(21)
-double precision :: rev_A_DEF(21), rev_beta_DEF(21), rev_Ea_DEF(21)
-double precision :: troe_a_DEF(21),troe_Ts_DEF(21), troe_Tss_DEF(21), troe_Tsss_DEF(21)
-double precision :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), sri_e_DEF(21)
-double precision :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
-integer :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21)
+double precision, save :: fwd_A_DEF(21), fwd_beta_DEF(21), fwd_Ea_DEF(21)
+double precision, save :: low_A_DEF(21), low_beta_DEF(21), low_Ea_DEF(21)
+double precision, save :: rev_A_DEF(21), rev_beta_DEF(21), rev_Ea_DEF(21)
+double precision, save :: troe_a_DEF(21),troe_Ts_DEF(21), troe_Tss_DEF(21), troe_Tsss_DEF(21)
+double precision, save :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), sri_e_DEF(21)
+double precision, save :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
+integer, save :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21)
 type(nonsquare_matrix_double) :: TB_DEF(21)
 type(nonsquare_matrix_int) :: TBid_DEF(21)
 
 ! productionRate() static variables
-double precision :: T_save = -1
-double precision :: k_f_save(21)
-double precision :: Kc_save(21)
+double precision, save :: T_save = -1
+double precision, save :: k_f_save(21)
+double precision, save :: Kc_save(21)
 
 contains
 
