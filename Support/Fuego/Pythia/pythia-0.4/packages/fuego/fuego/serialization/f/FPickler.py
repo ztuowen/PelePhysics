@@ -4959,7 +4959,6 @@ class FPickler(CMill):
         self._write()
         self._write('tc = (/ log(T), T, T*T, T*T*T, T*T*T*T /)')
         self._write('invT = 1.d0 / tc(2)')
-        self._write('T_save = -1.d0')
         
         self._write()
         self._write('if (T /= T_save) then')
