@@ -2244,8 +2244,8 @@ subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
             exit
         else if (t1+dt == t1) then
             exit
-        t1 = t1 + dt
         end if
+        t1 = t1 + dt
     end do
 
     t = t1
