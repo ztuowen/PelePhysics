@@ -632,6 +632,8 @@ subroutine ckytx(y, iwrk, rwrk, x)
     double precision :: tmp(9)
     integer :: i
 
+    YOW = 0.d0
+
     do i=1, 9
         tmp(i) = y(i) * imw(i)
     end do
@@ -2323,15 +2325,15 @@ subroutine egtransetEPS(EPS)
 
     double precision, intent(out) :: EPS(9)
 
-    EPS(4) = 1.45000000d+02
-    EPS(5) = 8.00000000d+01
-    EPS(6) = 8.00000000d+01
     EPS(7) = 1.07400000d+02
     EPS(8) = 1.07400000d+02
     EPS(1) = 3.80000000d+01
     EPS(2) = 1.07400000d+02
     EPS(3) = 5.72400000d+02
+    EPS(4) = 1.45000000d+02
     EPS(9) = 9.75300000d+01
+    EPS(5) = 8.00000000d+01
+    EPS(6) = 8.00000000d+01
 
 end subroutine
 
@@ -2340,15 +2342,15 @@ subroutine egtransetSIG(SIG)
 
     double precision, intent(out) :: SIG(9)
 
-    SIG(4) = 2.05000000d+00
-    SIG(5) = 2.75000000d+00
-    SIG(6) = 2.75000000d+00
     SIG(7) = 3.45800000d+00
     SIG(8) = 3.45800000d+00
     SIG(1) = 2.92000000d+00
     SIG(2) = 3.45800000d+00
     SIG(3) = 2.60500000d+00
+    SIG(4) = 2.05000000d+00
     SIG(9) = 3.62100000d+00
+    SIG(5) = 2.75000000d+00
+    SIG(6) = 2.75000000d+00
 
 end subroutine
 
@@ -2357,15 +2359,15 @@ subroutine egtransetDIP(DIP)
 
     double precision, intent(out) :: DIP(9)
 
-    DIP(4) = 0.00000000d+00
-    DIP(5) = 0.00000000d+00
-    DIP(6) = 0.00000000d+00
     DIP(7) = 0.00000000d+00
     DIP(8) = 0.00000000d+00
     DIP(1) = 0.00000000d+00
     DIP(2) = 0.00000000d+00
     DIP(3) = 1.84400000d+00
+    DIP(4) = 0.00000000d+00
     DIP(9) = 0.00000000d+00
+    DIP(5) = 0.00000000d+00
+    DIP(6) = 0.00000000d+00
 
 end subroutine
 
@@ -2374,15 +2376,15 @@ subroutine egtransetPOL(POL)
 
     double precision, intent(out) :: POL(9)
 
-    POL(4) = 0.00000000d+00
-    POL(5) = 0.00000000d+00
-    POL(6) = 0.00000000d+00
     POL(7) = 0.00000000d+00
     POL(8) = 0.00000000d+00
     POL(1) = 7.90000000d-01
     POL(2) = 1.60000000d+00
     POL(3) = 0.00000000d+00
+    POL(4) = 0.00000000d+00
     POL(9) = 1.76000000d+00
+    POL(5) = 0.00000000d+00
+    POL(6) = 0.00000000d+00
 
 end subroutine
 
@@ -2391,15 +2393,15 @@ subroutine egtransetZROT(ZROT)
 
     double precision, intent(out) :: ZROT(9)
 
-    ZROT(4) = 0.00000000d+00
-    ZROT(5) = 0.00000000d+00
-    ZROT(6) = 0.00000000d+00
     ZROT(7) = 1.00000000d+00
     ZROT(8) = 3.80000000d+00
     ZROT(1) = 2.80000000d+02
     ZROT(2) = 3.80000000d+00
     ZROT(3) = 4.00000000d+00
+    ZROT(4) = 0.00000000d+00
     ZROT(9) = 4.00000000d+00
+    ZROT(5) = 0.00000000d+00
+    ZROT(6) = 0.00000000d+00
 
 end subroutine
 
@@ -2408,15 +2410,15 @@ subroutine egtransetNLIN(NLIN)
 
     integer, intent(out) :: NLIN(9)
 
-    NLIN(4) = 0
-    NLIN(5) = 0
-    NLIN(6) = 1
     NLIN(7) = 2
     NLIN(8) = 2
     NLIN(1) = 1
     NLIN(2) = 1
     NLIN(3) = 2
+    NLIN(4) = 0
     NLIN(9) = 1
+    NLIN(5) = 0
+    NLIN(6) = 1
 
 end subroutine
 
