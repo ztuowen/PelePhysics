@@ -3589,6 +3589,8 @@ class FPickler(CMill):
         self._write('double precision :: tmp(%d)' % (nSpec))
         self._write('integer :: i')
         self._write()
+        self._write('YOW = 0.d0')
+        self._write()
         self._write('do i=1, %d' % (nSpec))
         self._indent()
         self._write('tmp(i) = y(i) * imw(i)')
