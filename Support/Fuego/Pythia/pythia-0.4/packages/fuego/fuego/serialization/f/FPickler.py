@@ -5294,7 +5294,7 @@ class FPickler(CMill):
                         self._write("alpha_lindemann = %s" %(alpha))
 
             if nlindemann == 1:
-                self._write("double redP = alpha_lindemann / k_f_save(%d) * phase_units(%d) * low_A(%d) * exp(low_beta(%d) * tc(1) - activation_units(%d) * low_Ea(%d) * invT)" 
+                self._write("redP = alpha_lindemann / k_f_save(%d) * phase_units(%d) * low_A(%d) * exp(low_beta(%d) * tc(1) - activation_units(%d) * low_Ea(%d) * invT)" 
                             % (ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0],ilindemann[0]))
                 self._write("Corr(%d) = redP / (1.d0 + redP)" % ilindemann[0])
             else:
@@ -5309,7 +5309,7 @@ class FPickler(CMill):
                 self._write("do i=%d, %d" % (ilindemann[0]+1, ilindemann[1]))
                 self._write()
                 self._indent()
-                self._write("double redP = alpha_lindemann(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) * invT)"
+                self._write("redP = alpha_lindemann(i-%d) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) * invT)"
                             % ilindemann[0])
                 self._write("Corr(i) = redP / (1.d0 + redP)")
                 self._outdent()
