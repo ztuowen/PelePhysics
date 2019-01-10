@@ -136,6 +136,8 @@ contains
 
 subroutine SetAllDefaults()
 
+    implicit none
+
     integer :: i, j
 
     do i=1, 325
@@ -193,6 +195,8 @@ end subroutine
 ! Finalizes parameter database
 subroutine ckfinalize()
 
+  implicit none
+
   integer :: i
 
   do i=1, 325
@@ -213,6 +217,8 @@ end subroutine
 
 ! Initializes parameter database
 subroutine ckinit()
+
+    implicit none
 
     ! (0):  2 O + M <=> O2 + M
     fwd_A(30)     = 1.2d+17
@@ -4327,6 +4333,8 @@ end subroutine
 ! A few mechanism parameters
 subroutine ckindx(iwrk, rwrk, mm, kk, ii, nfit)
 
+    implicit none
+
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
     integer, intent(out) :: mm
@@ -4343,6 +4351,8 @@ end subroutine
 
 ! Returns the char strings of element names
 subroutine cksyme(kname, plenkname)
+
+    implicit none
 
     integer, intent(out) :: kname(plenkname*5)
     integer, intent(in) :: plenkname
@@ -4378,6 +4388,8 @@ end subroutine
 
 ! Returns the char strings of species names
 subroutine cksyms(kname, plenkname)
+
+    implicit none
 
     integer, intent(out) :: kname(plenkname*53)
     integer, intent(in) :: plenkname
@@ -4678,6 +4690,8 @@ end subroutine
 ! Returns R, Rc, Patm
 subroutine ckrp(ickwrk, rckwrk, ru, ruc, pa)
 
+    implicit none
+
     integer, intent(in) :: ickwrk
     double precision, intent(in) :: rckwrk
     double precision, intent(out) :: ru
@@ -4692,6 +4706,8 @@ end subroutine
 
 ! Compute P = rhoRT/W(y)
 subroutine ckpy(rho, T, y, iwrk, rwrk, P)
+
+    implicit none
 
     double precision, intent(in) :: rho
     double precision, intent(in) :: T
@@ -4766,6 +4782,8 @@ end subroutine
 ! Compute rho = P*W(y)/RT
 subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
 
+    implicit none
+
     double precision, intent(in) :: P
     double precision, intent(in) :: T
     double precision, intent(in) :: y(53)
@@ -4792,6 +4810,8 @@ end subroutine
 ! get molecular weight for all species
 subroutine ckwt(iwrk, rwrk, wt)
 
+    implicit none
+
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
     double precision, intent(out) :: wt(53)
@@ -4803,22 +4823,20 @@ end subroutine
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
 subroutine ckytx(y, iwrk, rwrk, x)
 
+    implicit none
+
     double precision, intent(in) :: y(53)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
     double precision, intent(out) :: x(53)
 
     double precision :: YOW, YOWINV
-    double precision :: tmp(53)
     integer :: i
 
     YOW = 0.d0
 
     do i=1, 53
-        tmp(i) = y(i) * imw(i)
-    end do
-    do i=1, 53
-        YOW = YOW + tmp(i)
+        YOW = YOW + y(i) * imw(i)
     end do
 
     YOWINV = 1.d0 / YOW
@@ -4831,6 +4849,8 @@ end subroutine
 
 ! convert y(npoints,species) (mass fracs) to x(npoints,species) (mole fracs)
 subroutine vckytx(np, y, iwrk, rwrk, x)
+
+    implicit none
 
     integer, intent(in) :: np
     double precision, intent(in) :: y(np,53)
@@ -4867,6 +4887,8 @@ end subroutine
 ! convert y[species] (mass fracs) to c[species] (molar conc)
 subroutine ckytcr(rho, T, y, iwrk, rwrk, c)
 
+    implicit none
+
     double precision, intent(in) :: rho
     double precision, intent(in) :: T
     double precision, intent(in) :: y(53)
@@ -4884,6 +4906,8 @@ end subroutine
 
 ! convert x[species] (mole fracs) to y[species] (mass fracs)
 subroutine ckxty(x, iwrk, rwrk, y)
+
+    implicit none
 
     double precision, intent(in) :: x(53)
     integer, intent(in) :: iwrk
@@ -5011,6 +5035,8 @@ end subroutine
 ! in mass units (Eq. 29)
 subroutine ckcvms(T, iwrk, rwrk, cvms)
 
+    implicit none
+
     double precision, intent(in) :: T
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
@@ -5084,6 +5110,8 @@ end subroutine
 ! in mass units (Eq. 26)
 subroutine ckcpms(T, iwrk, rwrk, cpms)
 
+    implicit none
+
     double precision, intent(in) :: T
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
@@ -5156,6 +5184,8 @@ end subroutine
 ! Returns internal energy in mass units (Eq 30.)
 subroutine ckums(T, iwrk, rwrk, ums)
 
+    implicit none
+
     double precision, intent(in) :: T
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
@@ -5180,6 +5210,8 @@ end subroutine
 ! Returns enthalpy in mass units (Eq 27.)
 subroutine ckhms(T, iwrk, rwrk, hms)
 
+    implicit none
+
     double precision, intent(in) :: T
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
@@ -5201,9 +5233,11 @@ subroutine ckhms(T, iwrk, rwrk, hms)
 
 end subroutine
 
-
 ! Returns enthalpy in mass units (Eq 27.)
 subroutine vckhms(np, T, iwrk, rwrk, hms)
+
+    implicit none
+
     integer, intent(in) :: np
     double precision, intent(in) :: T(np)
     integer, intent(in) :: iwrk
@@ -5288,6 +5322,8 @@ end subroutine
 ! Returns the mean specific heat at CP (Eq. 34)
 subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
 
+    implicit none
+
     double precision, intent(in) :: T
     double precision, intent(in) :: y(53)
     integer, intent(in) :: iwrk
@@ -5320,6 +5356,8 @@ end subroutine
 
 ! Returns the mean specific heat at CV (Eq. 36)
 subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
+
+    implicit none
 
     double precision, intent(in) :: T
     double precision, intent(in) :: y(53)
@@ -5398,6 +5436,8 @@ end subroutine
 
 ! get mean internal energy in mass units
 subroutine ckubms(T, y, iwrk, rwrk, ubms)
+
+    implicit none
 
     double precision, intent(in) :: T
     double precision, intent(in) :: y(53)
@@ -5479,6 +5519,8 @@ end subroutine
 ! compute the production rate for each species
 subroutine ckwc(T, C, iwrk, rwrk, wdot)
 
+    implicit none
+
     double precision, intent(in) :: T
     double precision, intent(inout) :: C(53)
     integer, intent(in) :: iwrk
@@ -5505,6 +5547,8 @@ end subroutine
 
 ! compute the production rate for each species
 subroutine productionRate(wdot, sc, T)
+
+    implicit none
 
     double precision, intent(inout) :: wdot(53)
     double precision, intent(in) :: sc(53)
@@ -7446,6 +7490,8 @@ end subroutine
 
 subroutine comp_k_f(tc, invT, k_f)
 
+    implicit none
+
     double precision, intent(in) :: tc(5)
     double precision, intent(in) :: invT
     double precision, intent(out) :: k_f(325)
@@ -7459,6 +7505,8 @@ subroutine comp_k_f(tc, invT, k_f)
 end subroutine
 
 subroutine comp_Kc(tc, invT, Kc)
+
+    implicit none
 
     double precision, intent(in) :: tc(5)
     double precision, intent(in) :: invT
@@ -7881,6 +7929,8 @@ subroutine comp_Kc(tc, invT, Kc)
 end subroutine
 
 subroutine comp_qfqr(qf, qr, sc, tc, invT)
+
+    implicit none
 
     double precision, intent(out) :: qf(325)
     double precision, intent(out) :: qr(325)
@@ -8979,6 +9029,8 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine gibbs(species, tc)
 
+implicit none
+
 double precision, intent(out) :: species(53)
 double precision, intent(in) :: tc(5)
 
@@ -9969,6 +10021,8 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cv_R(species, tc)
 
+implicit none
+
 double precision, intent(out) :: species(53)
 double precision, intent(in) :: tc(5)
 
@@ -10745,6 +10799,8 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cp_R(species, tc)
 
+implicit none
+
 double precision, intent(out) :: species(53)
 double precision, intent(in) :: tc(5)
 
@@ -11519,6 +11575,8 @@ end subroutine
 ! compute the e/(RT) at the given temperature
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine speciesInternalEnergy(species, tc)
+
+implicit none
 
 double precision, intent(out) :: species(53)
 double precision, intent(in) :: tc(5)
@@ -12403,6 +12461,8 @@ end subroutine
 ! tc contains precomputed powers of T, tc(1) = log(T)
 subroutine speciesEnthalpy(species, tc)
 
+implicit none
+
 double precision, intent(out) :: species(53)
 double precision, intent(in) :: tc(5)
 
@@ -13285,6 +13345,8 @@ end subroutine
 ! save molecular weights into array
 subroutine molecularWeight(wt)
 
+implicit none
+
 double precision, intent(out) :: wt(53)
 
 wt(1) = 2.015940d0 ! H2
@@ -13345,6 +13407,8 @@ end subroutine
 
 ! get temperature given internal energy in mass units and mass fracs
 subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
+
+implicit none
 
 double precision, intent(in) :: e
 double precision, intent(in) :: y(53)
@@ -13413,6 +13477,8 @@ end subroutine
 
 subroutine egtransetLENIMC(LENIMC)
 
+implicit none
+
 integer, intent(out) :: LENIMC
 
 LENIMC = 214
@@ -13420,6 +13486,8 @@ LENIMC = 214
 end subroutine
 
 subroutine egtransetLENRMC(LENRMC)
+
+implicit none
 
 integer, intent(out) :: LENRMC
 
@@ -13429,6 +13497,8 @@ end subroutine
 
 subroutine egtransetNO(NO)
 
+implicit none
+
 integer, intent(out) :: NO
 
 NO = 4
@@ -13436,6 +13506,8 @@ NO = 4
 end subroutine
 
 subroutine egtransetKK(KK)
+
+implicit none
 
 integer, intent(out) :: KK
 
@@ -13445,6 +13517,8 @@ end subroutine
 
 subroutine egtransetNLITE(NLITE)
 
+implicit none
+
 integer, intent(out) :: NLITE
 
 NLITE = 2
@@ -13452,6 +13526,8 @@ NLITE = 2
 end subroutine
 
 subroutine egtransetPATM(PATM)
+
+implicit none
 
 double precision, intent(out) :: PATM
 
@@ -13461,6 +13537,8 @@ end subroutine
 
 ! the molecular weights in g/mol
 subroutine egtransetWT(WT)
+
+implicit none
 
 double precision, intent(out) :: WT(53)
 
@@ -13523,6 +13601,8 @@ end subroutine
 ! the lennard-jones potential well depth eps/kb in K
 subroutine egtransetEPS(EPS)
 
+implicit none
+
 double precision, intent(out) :: EPS(53)
 
 EPS(25) = 2.80800000d+02
@@ -13535,20 +13615,21 @@ EPS(28) = 1.50000000d+02
 EPS(3) = 8.00000000d+01
 EPS(42) = 5.69000000d+02
 EPS(4) = 1.07400000d+02
-EPS(43) = 1.50000000d+02
 EPS(41) = 5.69000000d+02
 EPS(44) = 2.32400000d+02
 EPS(39) = 1.16700000d+02
-EPS(40) = 7.50000000d+01
 EPS(31) = 7.14000000d+01
 EPS(32) = 8.00000000d+01
 EPS(2) = 1.45000000d+02
+EPS(52) = 4.36000000d+02
 EPS(1) = 3.80000000d+01
 EPS(48) = 9.75300000d+01
 EPS(5) = 8.00000000d+01
+EPS(53) = 4.36000000d+02
 EPS(6) = 5.72400000d+02
 EPS(45) = 2.32400000d+02
 EPS(7) = 1.07400000d+02
+EPS(50) = 2.66800000d+02
 EPS(8) = 1.07400000d+02
 EPS(33) = 8.00000000d+01
 EPS(9) = 7.14000000d+01
@@ -13561,21 +13642,20 @@ EPS(13) = 1.44000000d+02
 EPS(14) = 1.41400000d+02
 EPS(34) = 4.81000000d+02
 EPS(15) = 9.81000000d+01
+EPS(43) = 1.50000000d+02
 EPS(16) = 2.44000000d+02
 EPS(51) = 2.66800000d+02
 EPS(17) = 4.98000000d+02
+EPS(40) = 7.50000000d+01
 EPS(18) = 4.98000000d+02
 EPS(47) = 2.32400000d+02
 EPS(19) = 4.17000000d+02
-EPS(52) = 4.36000000d+02
 EPS(20) = 4.17000000d+02
 EPS(36) = 9.75300000d+01
 EPS(21) = 4.81800000d+02
-EPS(53) = 4.36000000d+02
 EPS(22) = 2.09000000d+02
 EPS(35) = 7.14000000d+01
 EPS(23) = 2.09000000d+02
-EPS(50) = 2.66800000d+02
 EPS(24) = 2.09000000d+02
 EPS(30) = 4.36000000d+02
 
@@ -13583,6 +13663,8 @@ end subroutine
 
 ! the lennard-jones collision diameter in Angstroms
 subroutine egtransetSIG(SIG)
+
+implicit none
 
 double precision, intent(out) :: SIG(53)
 
@@ -13596,20 +13678,21 @@ SIG(28) = 2.50000000d+00
 SIG(3) = 2.75000000d+00
 SIG(42) = 3.63000000d+00
 SIG(4) = 3.45800000d+00
-SIG(43) = 2.50000000d+00
 SIG(41) = 3.63000000d+00
 SIG(44) = 3.82800000d+00
 SIG(39) = 3.49200000d+00
-SIG(40) = 3.85600000d+00
 SIG(31) = 3.29800000d+00
 SIG(32) = 2.65000000d+00
 SIG(2) = 2.05000000d+00
+SIG(52) = 3.97000000d+00
 SIG(1) = 2.92000000d+00
 SIG(48) = 3.62100000d+00
 SIG(5) = 2.75000000d+00
+SIG(53) = 3.97000000d+00
 SIG(6) = 2.60500000d+00
 SIG(45) = 3.82800000d+00
 SIG(7) = 3.45800000d+00
+SIG(50) = 4.98200000d+00
 SIG(8) = 3.45800000d+00
 SIG(33) = 2.65000000d+00
 SIG(9) = 3.29800000d+00
@@ -13622,21 +13705,20 @@ SIG(13) = 3.80000000d+00
 SIG(14) = 3.74600000d+00
 SIG(34) = 2.92000000d+00
 SIG(15) = 3.65000000d+00
+SIG(43) = 2.50000000d+00
 SIG(16) = 3.76300000d+00
 SIG(51) = 4.98200000d+00
 SIG(17) = 3.59000000d+00
+SIG(40) = 3.85600000d+00
 SIG(18) = 3.59000000d+00
 SIG(47) = 3.82800000d+00
 SIG(19) = 3.69000000d+00
-SIG(52) = 3.97000000d+00
 SIG(20) = 3.69000000d+00
 SIG(36) = 3.62100000d+00
 SIG(21) = 3.62600000d+00
-SIG(53) = 3.97000000d+00
 SIG(22) = 4.10000000d+00
 SIG(35) = 3.79800000d+00
 SIG(23) = 4.10000000d+00
-SIG(50) = 4.98200000d+00
 SIG(24) = 4.10000000d+00
 SIG(30) = 3.97000000d+00
 
@@ -13644,6 +13726,8 @@ end subroutine
 
 ! the dipole moment in Debye
 subroutine egtransetDIP(DIP)
+
+implicit none
 
 double precision, intent(out) :: DIP(53)
 
@@ -13657,20 +13741,21 @@ DIP(28) = 0.00000000d+00
 DIP(3) = 0.00000000d+00
 DIP(42) = 0.00000000d+00
 DIP(4) = 0.00000000d+00
-DIP(43) = 0.00000000d+00
 DIP(41) = 0.00000000d+00
 DIP(44) = 0.00000000d+00
 DIP(39) = 0.00000000d+00
-DIP(40) = 0.00000000d+00
 DIP(31) = 0.00000000d+00
 DIP(32) = 0.00000000d+00
 DIP(2) = 0.00000000d+00
+DIP(52) = 0.00000000d+00
 DIP(1) = 0.00000000d+00
 DIP(48) = 0.00000000d+00
 DIP(5) = 0.00000000d+00
+DIP(53) = 0.00000000d+00
 DIP(6) = 1.84400000d+00
 DIP(45) = 0.00000000d+00
 DIP(7) = 0.00000000d+00
+DIP(50) = 0.00000000d+00
 DIP(8) = 0.00000000d+00
 DIP(33) = 0.00000000d+00
 DIP(9) = 0.00000000d+00
@@ -13683,21 +13768,20 @@ DIP(13) = 0.00000000d+00
 DIP(14) = 0.00000000d+00
 DIP(34) = 1.47000000d+00
 DIP(15) = 0.00000000d+00
+DIP(43) = 0.00000000d+00
 DIP(16) = 0.00000000d+00
 DIP(51) = 0.00000000d+00
 DIP(17) = 0.00000000d+00
+DIP(40) = 0.00000000d+00
 DIP(18) = 0.00000000d+00
 DIP(47) = 0.00000000d+00
 DIP(19) = 1.70000000d+00
-DIP(52) = 0.00000000d+00
 DIP(20) = 1.70000000d+00
 DIP(36) = 0.00000000d+00
 DIP(21) = 0.00000000d+00
-DIP(53) = 0.00000000d+00
 DIP(22) = 0.00000000d+00
 DIP(35) = 0.00000000d+00
 DIP(23) = 0.00000000d+00
-DIP(50) = 0.00000000d+00
 DIP(24) = 0.00000000d+00
 DIP(30) = 0.00000000d+00
 
@@ -13705,6 +13789,8 @@ end subroutine
 
 ! the polarizability in cubic Angstroms
 subroutine egtransetPOL(POL)
+
+implicit none
 
 double precision, intent(out) :: POL(53)
 
@@ -13718,20 +13804,21 @@ POL(28) = 0.00000000d+00
 POL(3) = 0.00000000d+00
 POL(42) = 0.00000000d+00
 POL(4) = 1.60000000d+00
-POL(43) = 0.00000000d+00
 POL(41) = 0.00000000d+00
 POL(44) = 0.00000000d+00
 POL(39) = 0.00000000d+00
-POL(40) = 0.00000000d+00
 POL(31) = 0.00000000d+00
 POL(32) = 0.00000000d+00
 POL(2) = 0.00000000d+00
+POL(52) = 0.00000000d+00
 POL(1) = 7.90000000d-01
 POL(48) = 1.76000000d+00
 POL(5) = 0.00000000d+00
+POL(53) = 0.00000000d+00
 POL(6) = 0.00000000d+00
 POL(45) = 0.00000000d+00
 POL(7) = 0.00000000d+00
+POL(50) = 0.00000000d+00
 POL(8) = 0.00000000d+00
 POL(33) = 2.26000000d+00
 POL(9) = 0.00000000d+00
@@ -13744,21 +13831,20 @@ POL(13) = 0.00000000d+00
 POL(14) = 2.60000000d+00
 POL(34) = 0.00000000d+00
 POL(15) = 1.95000000d+00
+POL(43) = 0.00000000d+00
 POL(16) = 2.65000000d+00
 POL(51) = 0.00000000d+00
 POL(17) = 0.00000000d+00
+POL(40) = 0.00000000d+00
 POL(18) = 0.00000000d+00
 POL(47) = 0.00000000d+00
 POL(19) = 0.00000000d+00
-POL(52) = 0.00000000d+00
 POL(20) = 0.00000000d+00
 POL(36) = 1.76000000d+00
 POL(21) = 0.00000000d+00
-POL(53) = 0.00000000d+00
 POL(22) = 0.00000000d+00
 POL(35) = 0.00000000d+00
 POL(23) = 0.00000000d+00
-POL(50) = 0.00000000d+00
 POL(24) = 0.00000000d+00
 POL(30) = 0.00000000d+00
 
@@ -13766,6 +13852,8 @@ end subroutine
 
 ! the rotational relaxation collision number at 298 K
 subroutine egtransetZROT(ZROT)
+
+implicit none
 
 double precision, intent(out) :: ZROT(53)
 
@@ -13779,20 +13867,21 @@ ZROT(28) = 1.00000000d+00
 ZROT(3) = 0.00000000d+00
 ZROT(42) = 1.00000000d+00
 ZROT(4) = 3.80000000d+00
-ZROT(43) = 1.00000000d+00
 ZROT(41) = 1.00000000d+00
 ZROT(44) = 1.00000000d+00
 ZROT(39) = 1.00000000d+00
-ZROT(40) = 1.00000000d+00
 ZROT(31) = 0.00000000d+00
 ZROT(32) = 4.00000000d+00
 ZROT(2) = 0.00000000d+00
+ZROT(52) = 2.00000000d+00
 ZROT(1) = 2.80000000d+02
 ZROT(48) = 4.00000000d+00
 ZROT(5) = 0.00000000d+00
+ZROT(53) = 2.00000000d+00
 ZROT(6) = 4.00000000d+00
 ZROT(45) = 1.00000000d+00
 ZROT(7) = 1.00000000d+00
+ZROT(50) = 1.00000000d+00
 ZROT(8) = 3.80000000d+00
 ZROT(33) = 4.00000000d+00
 ZROT(9) = 0.00000000d+00
@@ -13805,21 +13894,20 @@ ZROT(13) = 0.00000000d+00
 ZROT(14) = 1.30000000d+01
 ZROT(34) = 1.00000000d+01
 ZROT(15) = 1.80000000d+00
+ZROT(43) = 1.00000000d+00
 ZROT(16) = 2.10000000d+00
 ZROT(51) = 1.00000000d+00
 ZROT(17) = 0.00000000d+00
+ZROT(40) = 1.00000000d+00
 ZROT(18) = 2.00000000d+00
 ZROT(47) = 1.00000000d+00
 ZROT(19) = 2.00000000d+00
-ZROT(52) = 2.00000000d+00
 ZROT(20) = 2.00000000d+00
 ZROT(36) = 4.00000000d+00
 ZROT(21) = 1.00000000d+00
-ZROT(53) = 2.00000000d+00
 ZROT(22) = 2.50000000d+00
 ZROT(35) = 1.00000000d+00
 ZROT(23) = 2.50000000d+00
-ZROT(50) = 1.00000000d+00
 ZROT(24) = 1.00000000d+00
 ZROT(30) = 2.00000000d+00
 
@@ -13827,6 +13915,8 @@ end subroutine
 
 ! 0: monoatomic, 1: linear, 2: nonlinear
 subroutine egtransetNLIN(NLIN)
+
+implicit none
 
 integer, intent(out) :: NLIN(53)
 
@@ -13840,20 +13930,21 @@ NLIN(28) = 2
 NLIN(3) = 0
 NLIN(42) = 1
 NLIN(4) = 1
-NLIN(43) = 2
 NLIN(41) = 1
 NLIN(44) = 2
 NLIN(39) = 2
-NLIN(40) = 1
 NLIN(31) = 0
 NLIN(32) = 1
 NLIN(2) = 0
+NLIN(52) = 2
 NLIN(1) = 1
 NLIN(48) = 1
 NLIN(5) = 1
+NLIN(53) = 2
 NLIN(6) = 2
 NLIN(45) = 2
 NLIN(7) = 2
+NLIN(50) = 2
 NLIN(8) = 2
 NLIN(33) = 2
 NLIN(9) = 0
@@ -13866,21 +13957,20 @@ NLIN(13) = 1
 NLIN(14) = 2
 NLIN(34) = 2
 NLIN(15) = 1
+NLIN(43) = 2
 NLIN(16) = 1
 NLIN(51) = 2
 NLIN(17) = 2
+NLIN(40) = 1
 NLIN(18) = 2
 NLIN(47) = 1
 NLIN(19) = 2
-NLIN(52) = 2
 NLIN(20) = 2
 NLIN(36) = 1
 NLIN(21) = 2
-NLIN(53) = 2
 NLIN(22) = 1
 NLIN(35) = 2
 NLIN(23) = 1
-NLIN(50) = 2
 NLIN(24) = 2
 NLIN(30) = 2
 
@@ -13889,6 +13979,8 @@ end subroutine
 
 ! Poly fits for the viscosities, dim NO*KK
 subroutine egtransetCOFETA(COFETA)
+
+implicit none
 
 double precision, intent(out) :: COFETA(212)
 
@@ -14111,6 +14203,8 @@ end subroutine
 ! Poly fits for the conductivities, dim NO*KK
 subroutine egtransetCOFLAM(COFLAM)
 
+implicit none
+
 double precision, intent(out) :: COFLAM(212)
 
 COFLAM(1) = 9.24084392d+00
@@ -14330,6 +14424,8 @@ end subroutine
 
 ! Poly fits for the diffusion coefficients, dim NO*KK*KK
 subroutine egtransetCOFD(COFD)
+
+implicit none
 
 double precision, intent(out) :: COFD(11236)
 
@@ -25575,6 +25671,8 @@ end subroutine
 ! List of specs with small weight, dim NLITE
 subroutine egtransetKTDIF(KTDIF)
 
+implicit none
+
 integer, intent(out) :: KTDIF(2)
 
 KTDIF(1) = 1
@@ -25585,6 +25683,8 @@ end subroutine
 
 ! Poly fits for thermal diff ratios, dim NO*NLITE*KK
 subroutine egtransetCOFTD(COFTD)
+
+implicit none
 
 double precision, intent(out) :: COFTD(424)
 
