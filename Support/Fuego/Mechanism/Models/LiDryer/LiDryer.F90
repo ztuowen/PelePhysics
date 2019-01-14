@@ -8,8 +8,10 @@ module fuego_module
   public :: ckcvms
   public :: ckxty
   public :: ckytcr
+  public :: ckytx2
   public :: ckytx
   public :: ckhms
+  public :: ckhms2
   public :: vckytx
   public :: vckhms
   public :: ckcvbs
@@ -44,16 +46,16 @@ module fuego_module
   public :: egtransetLENIMC
 
 ! Inverse molecular weights
-double precision, parameter :: imw(9) = (/ &
-    1.d0 / 2.015940d0,  & ! H2
-    1.d0 / 31.998800d0,  & ! O2
-    1.d0 / 18.015340d0,  & ! H2O
-    1.d0 / 1.007970d0,  & ! H
-    1.d0 / 15.999400d0,  & ! O
-    1.d0 / 17.007370d0,  & ! OH
-    1.d0 / 33.006770d0,  & ! HO2
-    1.d0 / 34.014740d0,  & ! H2O2
-    1.d0 / 28.013400d0 /) ! N2
+!double precision, parameter :: imw(9) = (/ &
+!    1.d0 / 2.015940d0,  & ! H2
+!    1.d0 / 31.998800d0,  & ! O2
+!    1.d0 / 18.015340d0,  & ! H2O
+!    1.d0 / 1.007970d0,  & ! H
+!    1.d0 / 15.999400d0,  & ! O
+!    1.d0 / 17.007370d0,  & ! OH
+!    1.d0 / 33.006770d0,  & ! HO2
+!    1.d0 / 34.014740d0,  & ! H2O2
+!    1.d0 / 28.013400d0 /) ! N2
 
 type :: nonsquare_matrix_double
    double precision, allocatable :: vector(:)
@@ -581,6 +583,16 @@ subroutine ckpy(rho, T, y, iwrk, rwrk, P)
     double precision, intent(out) :: P
 
     double precision :: YOW ! for computing mean MW
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     YOW = 0.d0
 
@@ -613,6 +625,16 @@ subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
 
     double precision :: YOW, tmp(9)
     integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     YOW = 0.d0
 
@@ -641,9 +663,7 @@ subroutine ckwt(iwrk, rwrk, wt)
 end subroutine
 
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
-subroutine ckytx(y, iwrk, rwrk, x)
-
-    implicit none
+subroutine ckytx2(y, iwrk, rwrk, x)
 
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
@@ -651,18 +671,67 @@ subroutine ckytx(y, iwrk, rwrk, x)
     double precision, intent(out) :: x(9)
 
     double precision :: YOW, YOWINV
+    double precision :: tmp(9)
     integer :: i
-
-    YOW = 0.d0
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     do i=1, 9
-        YOW = YOW + y(i) * imw(i)
+        tmp(i) = y(i) * imw(i)
+    end do
+    do i=1, 9
+        YOW = YOW + tmp(i)
     end do
 
     YOWINV = 1.d0 / YOW
 
     do i=1, 9
         x(i) = y(i) * imw(i) * YOWINV
+    end do
+
+end subroutine
+
+! convert y[species] (mass fracs) to x[species] (mole fracs)
+subroutine ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
+
+    !$acc routine(ckytx) seq nohost
+
+    implicit none
+
+    integer, intent(in) :: lo(3), hi(3)
+    integer, intent(in) :: i, j, k, qfs, qvar
+    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:9) :: x
+
+    double precision :: YOW
+    integer :: n
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
+
+    YOW = 0.d0
+
+    do n=1, 9
+        YOW = YOW + q(i,j,k,qfs+n-1) * imw(n)
+    end do
+
+    do n=1, 9
+        x(i,j,k,n) = q(i,j,k,qfs+n-1) * imw(n) * 1.d0 / YOW
     end do
 
 end subroutine
@@ -680,6 +749,16 @@ subroutine vckytx(np, y, iwrk, rwrk, x)
 
     double precision :: YOW(np)
     integer :: i, n
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     do i=1, np
         YOW(i) = 0.d0
@@ -717,6 +796,16 @@ subroutine ckytcr(rho, T, y, iwrk, rwrk, c)
     double precision, intent(out) :: c(9)
 
     integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     do i=1, 9
         c(i) = rho * y(i) * imw(i)
@@ -838,6 +927,16 @@ subroutine ckums(T, iwrk, rwrk, ums)
     double precision :: tT, tc(5)
     double precision :: RT
     integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     tT = T ! temporary temperature
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
@@ -851,8 +950,7 @@ subroutine ckums(T, iwrk, rwrk, ums)
 
 end subroutine
 
-! Returns enthalpy in mass units (Eq 27.)
-subroutine ckhms(T, iwrk, rwrk, hms)
+subroutine ckhms2(T, iwrk, rwrk, hms)
 
     implicit none
 
@@ -864,15 +962,64 @@ subroutine ckhms(T, iwrk, rwrk, hms)
     double precision :: tT, RT
     double precision :: tc(5), h(9)
     integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     tT = T ! temporary temperature
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
     RT = 8.31451000d+07 * tT ! R*T
 
-    call speciesEnthalpy(hms, tc)
+    call speciesEnthalpy2(hms, tc)
 
     do i=1, 9
         hms(i) = hms(i) * (RT * imw(i))
+    end do
+
+end subroutine
+
+! Returns enthalpy in mass units (Eq 27.)
+subroutine ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
+
+    !$acc routine(ckhms) seq nohost
+    !$acc routine(speciesEnthalpy) seq nohost
+
+    implicit none
+
+    integer, intent(in) :: lo(3), hi(3)
+    integer, intent(in) :: i, j, k, qvar, qtemp, qfs, nspec
+    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: hii
+
+    double precision :: tT, RT
+    double precision :: tc(5), h(9)
+    integer :: n
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
+
+    tT = q(i,j,k,qtemp) ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+    RT = 8.31451000d+07 * tT ! R*T
+
+    call speciesEnthalpy(hii, lo, hi, i, j, k, tc, nspec)
+
+    do n=1, 9
+        hii(i,j,k,n) = hii(i,j,k,n) * (RT * imw(n))
     end do
 
 end subroutine
@@ -890,6 +1037,16 @@ subroutine vckhms(np, T, iwrk, rwrk, hms)
 
     double precision :: tc(5), h(9)
     integer :: i, n
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     do i=1, np
         tc(1) = 0.d0
@@ -898,7 +1055,7 @@ subroutine vckhms(np, T, iwrk, rwrk, hms)
         tc(4) = T(i)*T(i)*T(i)
         tc(5) = T(i)*T(i)*T(i)*T(i)
 
-        call speciesEnthalpy(h, tc)
+        call speciesEnthalpy2(h, tc)
 
         hms(i, 1) = h(1)
         hms(i, 2) = h(2)
@@ -935,6 +1092,16 @@ subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
     double precision :: tT, tc(5)
     double precision :: res
     integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     res = 0.d0
 
@@ -968,6 +1135,16 @@ subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
     double precision :: cvor(9)
     double precision :: tT, tc(5)
     double precision :: res
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     res = 0.d0
     tT = T ! temporary temperature
@@ -1004,6 +1181,16 @@ subroutine ckubms(T, y, iwrk, rwrk, ubms)
     double precision :: ums(9) ! temporary energy array
     double precision :: res
     double precision :: RT, tT, tc(5)
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     res = 0.d0
 
@@ -2066,9 +2253,7 @@ end subroutine
 
 ! compute the h/(RT) at the given temperature (Eq 20)
 ! tc contains precomputed powers of T, tc(1) = log(T)
-subroutine speciesEnthalpy(species, tc)
-
-    implicit none
+subroutine speciesEnthalpy2(species, tc)
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
@@ -2220,6 +2405,176 @@ subroutine speciesEnthalpy(species, tc)
             -1.80069609d+04 * invT
         !species 9: N2
         species(9) = &
+            +2.92664000d+00 &
+            +7.43988500d-04 * tc(2) &
+            -1.89492033d-07 * tc(3) &
+            +2.52426000d-11 * tc(4) &
+            -1.35067020d-15 * tc(5) &
+            -9.22797700d+02 * invT
+    end if
+
+end subroutine
+
+! compute the h/(RT) at the given temperature (Eq 20)
+! tc contains precomputed powers of T, tc(1) = log(T)
+subroutine speciesEnthalpy(hii, lo, hi, i, j, k, tc, nspec)
+
+    !$acc routine(speciesEnthalpy) seq nohost
+
+    implicit none
+
+    integer, intent(in) :: lo(3), hi(3)
+    double precision, intent(in) :: tc(5)
+    integer, intent(in) :: i, j, k, nspec
+    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: hii
+
+    double precision :: T
+    double precision :: invT
+
+    T = tc(2)
+    invT = 1.d0 / T
+
+    ! species with midpoint at T=1000 kelvin
+    if (T < 1000.000000d0) then
+        ! species 1: H2
+        hii(i, j, k, 1) = &
+            +3.29812431d+00 &
+            +4.12472087d-04 * tc(2) &
+            -2.71433843d-07 * tc(3) &
+            -2.36885858d-11 * tc(4) &
+            +8.26974448d-14 * tc(5) &
+            -1.01252087d+03 * invT
+        ! species 2: O2
+        hii(i, j, k, 2) = &
+            +3.21293640d+00 &
+            +5.63743175d-04 * tc(2) &
+            -1.91871682d-07 * tc(3) &
+            +3.28469308d-10 * tc(4) &
+            -1.75371078d-13 * tc(5) &
+            -1.00524902d+03 * invT
+        ! species 3: H2O
+        hii(i, j, k, 3) = &
+            +3.38684249d+00 &
+            +1.73749123d-03 * tc(2) &
+            -2.11823211d-06 * tc(3) &
+            +1.74214532d-09 * tc(4) &
+            -5.01317694d-13 * tc(5) &
+            -3.02081133d+04 * invT
+        ! species 4: H
+        hii(i, j, k, 4) = &
+            +2.50000000d+00 &
+            +0.00000000d+00 * tc(2) &
+            +0.00000000d+00 * tc(3) &
+            +0.00000000d+00 * tc(4) &
+            +0.00000000d+00 * tc(5) &
+            +2.54716270d+04 * invT
+        ! species 5: O
+        hii(i, j, k, 5) = &
+            +2.94642878d+00 &
+            -8.19083245d-04 * tc(2) &
+            +8.07010567d-07 * tc(3) &
+            -4.00710797d-10 * tc(4) &
+            +7.78139272d-14 * tc(5) &
+            +2.91476445d+04 * invT
+        ! species 6: OH
+        hii(i, j, k, 6) = &
+            +4.12530561d+00 &
+            -1.61272470d-03 * tc(2) &
+            +2.17588230d-06 * tc(3) &
+            -1.44963411d-09 * tc(4) &
+            +4.12474758d-13 * tc(5) &
+            +3.34630913d+03 * invT
+        ! species 7: HO2
+        hii(i, j, k, 7) = &
+            +4.30179801d+00 &
+            -2.37456025d-03 * tc(2) &
+            +7.05276303d-06 * tc(3) &
+            -6.06909735d-09 * tc(4) &
+            +1.85845025d-12 * tc(5) &
+            +2.94808040d+02 * invT
+        ! species 8: H2O2
+        hii(i, j, k, 8) = &
+            +3.38875365d+00 &
+            +3.28461290d-03 * tc(2) &
+            -4.95004193d-08 * tc(3) &
+            -1.15645138d-09 * tc(4) &
+            +4.94302950d-13 * tc(5) &
+            -1.76631465d+04 * invT
+        ! species 9: N2
+        hii(i, j, k, 9) = &
+            +3.29867700d+00 &
+            +7.04120000d-04 * tc(2) &
+            -1.32107400d-06 * tc(3) &
+            +1.41037875d-09 * tc(4) &
+            -4.88971000d-13 * tc(5) &
+            -1.02090000d+03 * invT
+    else
+        !species 1: H2
+        hii(i, j, k, 1) = &
+            +2.99142337d+00 &
+            +3.50032206d-04 * tc(2) &
+            -1.87794290d-08 * tc(3) &
+            -2.30789455d-12 * tc(4) &
+            +3.16550358d-16 * tc(5) &
+            -8.35033997d+02 * invT
+        !species 2: O2
+        hii(i, j, k, 2) = &
+            +3.69757819d+00 &
+            +3.06759845d-04 * tc(2) &
+            -4.19613997d-08 * tc(3) &
+            +4.43820370d-12 * tc(4) &
+            -2.27287062d-16 * tc(5) &
+            -1.23393018d+03 * invT
+        !species 3: H2O
+        hii(i, j, k, 3) = &
+            +2.67214561d+00 &
+            +1.52814644d-03 * tc(2) &
+            -2.91008670d-07 * tc(3) &
+            +3.00249098d-11 * tc(4) &
+            -1.27832357d-15 * tc(5) &
+            -2.98992090d+04 * invT
+        !species 4: H
+        hii(i, j, k, 4) = &
+            +2.50000000d+00 &
+            +0.00000000d+00 * tc(2) &
+            +0.00000000d+00 * tc(3) &
+            +0.00000000d+00 * tc(4) &
+            +0.00000000d+00 * tc(5) &
+            +2.54716270d+04 * invT
+        !species 5: O
+        hii(i, j, k, 5) = &
+            +2.54205966d+00 &
+            -1.37753096d-05 * tc(2) &
+            -1.03426778d-09 * tc(3) &
+            +1.13776685d-12 * tc(4) &
+            -8.73610300d-17 * tc(5) &
+            +2.92308027d+04 * invT
+        !species 6: OH
+        hii(i, j, k, 6) = &
+            +2.86472886d+00 &
+            +5.28252240d-04 * tc(2) &
+            -8.63609193d-08 * tc(3) &
+            +7.63046685d-12 * tc(4) &
+            -2.66391752d-16 * tc(5) &
+            +3.68362875d+03 * invT
+        !species 7: HO2
+        hii(i, j, k, 7) = &
+            +4.01721090d+00 &
+            +1.11991006d-03 * tc(2) &
+            -2.11219383d-07 * tc(3) &
+            +2.85615925d-11 * tc(4) &
+            -2.15817070d-15 * tc(5) &
+            +1.11856713d+02 * invT
+        !species 8: H2O2
+        hii(i, j, k, 8) = &
+            +4.57316685d+00 &
+            +2.16806820d-03 * tc(2) &
+            -4.91562940d-07 * tc(3) &
+            +5.87225893d-11 * tc(4) &
+            -2.86330712d-15 * tc(5) &
+            -1.80069609d+04 * invT
+        !species 9: N2
+        hii(i, j, k, 9) = &
             +2.92664000d+00 &
             +7.43988500d-04 * tc(2) &
             -1.89492033d-07 * tc(3) &
