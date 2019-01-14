@@ -38,7 +38,7 @@ contains
 
   subroutine transport(which, coeff)
 
-    !$acc routine seq
+    !acc routine seq
 
     implicit none
 

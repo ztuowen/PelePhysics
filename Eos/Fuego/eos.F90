@@ -9,7 +9,7 @@ module eos_module
   use amrex_constants_module
   use eos_type_module
   use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
-  use fuego_module, only : vckytx, vckhms, ckytx, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
+  use fuego_module, only : ckytx2, ckytx, ckhms2, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
   implicit none
   character (len=64) :: eos_name = "fuego"
@@ -109,7 +109,7 @@ contains
 
     call ckcvms(state % T, iwrk, rwrk, state % cvi)  ! erg/gi.K
     call ckcpms(state % T, iwrk, rwrk, state % cpi)  ! erg/gi.K
-    call ckhms (state % T, iwrk, rwrk, state % hi)    ! erg/gi
+    call ckhms2 (state % T, iwrk, rwrk, state % hi)    ! erg/gi
 
     state % cv = sum(state % massfrac(:) * state % cvi(:)) ! erg/g.K
     state % cp = sum(state % massfrac(:) * state % cpi(:)) ! erg/g.K
@@ -149,7 +149,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckytx(state % massfrac,iwrk,rwrk,state % molefrac)
+    call ckytx2(state % massfrac,iwrk,rwrk,state % molefrac)
 
   end subroutine eos_ytx
 
@@ -161,30 +161,59 @@ contains
     double precision, intent(out), dimension(1:Nsp) :: X
     integer, intent(in) :: Nsp
 
-    call ckytx(Y(:),iwrk,rwrk,X(:))
+    call ckytx2(Y(:),iwrk,rwrk,X(:))
 
   end subroutine eos_ytx2
 
-  subroutine eos_ytx_vec(Y, ylo, yhi, X, xlo, xhi, lo, hi, Nsp)
+!  subroutine eos_ytx_vec(Y, ylo, yhi, X, xlo, xhi, lo, hi, Nsp)
+!
+!    implicit none
+!
+!    integer, intent(in) :: ylo(3), yhi(3)
+!    integer, intent(in) :: xlo(3), xhi(3)    
+!    integer, intent(in) :: lo(3), hi(3)
+!    integer, intent(in) :: Nsp
+!    double precision, intent(in), dimension(ylo(1)-1:yhi(1)+1, ylo(2)-1:yhi(2)+1, ylo(3)-1:yhi(3)+1, 1:Nsp) :: Y
+!    double precision, intent(out), dimension(xlo(1)-1:xhi(1)+1, xlo(2)-1:xhi(2)+1, xlo(3)-1:xhi(3)+1, 1:Nsp) :: X
+!
+!    integer :: j, k
+!    integer :: npts
+!
+!    npts = (hi(1)+1)-(lo(1)-1)+1
+!    do k = lo(3)-1, hi(3)+1
+!       do j = lo(2)-1, hi(2)+1
+!         call vckytx( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
+!       enddo
+!    enddo
+!
+!  end subroutine eos_ytx_vec
+
+  subroutine eos_ytx_vec(q, x, lo, hi, nspec, qfs, qvar)
+
+    !$acc routine(eos_ytx_vec) gang nohost
 
     implicit none
 
-    integer, intent(in) :: ylo(3), yhi(3)
-    integer, intent(in) :: xlo(3), xhi(3)    
     integer, intent(in) :: lo(3), hi(3)
-    integer, intent(in) :: Nsp
-    double precision, intent(in), dimension(ylo(1)-1:yhi(1)+1, ylo(2)-1:yhi(2)+1, ylo(3)-1:yhi(3)+1, 1:Nsp) :: Y
-    double precision, intent(out), dimension(xlo(1)-1:xhi(1)+1, xlo(2)-1:xhi(2)+1, xlo(3)-1:xhi(3)+1, 1:Nsp) :: X
+    integer, intent(in) :: nspec
+    integer, intent(in) :: qvar
+    integer, intent(in) :: qfs
+    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: x
 
-    integer :: j, k
-    integer :: npts
+    integer :: i, j, k
 
-    npts = (hi(1)+1)-(lo(1)-1)+1
+    !$acc routine(ckytx) seq nohost
+
+    !$acc loop gang vector private(i,j,k) collapse(3)
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
-         call vckytx( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
+          do i = lo(1)-1, hi(1)+1
+             call ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
+          enddo
        enddo
     enddo
+    !$acc end loop
 
   end subroutine eos_ytx_vec
 
@@ -204,7 +233,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckhms(state % T, iwrk, rwrk, state % hi)
+    call ckhms2(state % T, iwrk, rwrk, state % hi)
 
   end subroutine eos_hi
 
@@ -216,33 +245,60 @@ contains
     double precision, intent(out), dimension(1:Nsp) :: hi
     integer, intent(in) :: Nsp
 
-    call ckhms(T,iwrk,rwrk,hi(:))
+    call ckhms2(T,iwrk,rwrk,hi(:))
 
   end subroutine eos_hi2
 
-  subroutine eos_hi_vec(mass, masslo, masshi, T, Tlo, Thi, hi, hilo, hihi, low, high, Nsp)
+!  subroutine eos_hi_vec(mass, masslo, masshi, T, Tlo, Thi, hi, hilo, hihi, low, high, Nsp)
+!
+!    implicit none
+!
+!    integer, intent(in) :: masslo(3), masshi(3)
+!    integer, intent(in) :: Tlo(3), Thi(3)
+!    integer, intent(in) :: hilo(3), hihi(3)    
+!    integer, intent(in) :: low(3), high(3)    
+!    integer, intent(in) :: Nsp
+!
+!    double precision, intent(in), dimension(masslo(1)-1:masshi(1)+1, masslo(2)-1:masshi(2)+1, masslo(3)-1:masshi(3)+1, 1:Nsp) :: mass
+!    double precision, intent(in), dimension(Tlo(1)-1:Thi(1)+1, Tlo(2)-1:Thi(2)+1, Tlo(3)-1:Thi(3)+1 ) :: T
+!    double precision, intent(out), dimension(hilo(1)-1:hihi(1)+1, hilo(2)-1:hihi(2)+1, hilo(3)-1:hihi(3)+1, 1:Nsp) :: hi
+!    
+!    integer :: j, k
+!    integer :: npts
+!
+!    npts = (high(1)+1)-(low(1)-1)+1
+!    do k = low(3)-1, high(3)+1
+!       do j = low(2)-1, high(2)+1
+!          call vckhms( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+!       enddo
+!    enddo
+!
+!  end subroutine eos_hi_vec
+
+  subroutine eos_hi_vec(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
+
+    !$acc routine(eos_hi_vec) gang nohost
 
     implicit none
 
-    integer, intent(in) :: masslo(3), masshi(3)
-    integer, intent(in) :: Tlo(3), Thi(3)
-    integer, intent(in) :: hilo(3), hihi(3)    
-    integer, intent(in) :: low(3), high(3)    
-    integer, intent(in) :: Nsp
-
-    double precision, intent(in), dimension(masslo(1)-1:masshi(1)+1, masslo(2)-1:masshi(2)+1, masslo(3)-1:masshi(3)+1, 1:Nsp) :: mass
-    double precision, intent(in), dimension(Tlo(1)-1:Thi(1)+1, Tlo(2)-1:Thi(2)+1, Tlo(3)-1:Thi(3)+1 ) :: T
-    double precision, intent(out), dimension(hilo(1)-1:hihi(1)+1, hilo(2)-1:hihi(2)+1, hilo(3)-1:hihi(3)+1, 1:Nsp) :: hi
+    integer, intent(in) :: lo(3), hi(3)
+    integer, intent(in) :: nspec, qtemp, qvar, qfs
+    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: hii
     
-    integer :: j, k
-    integer :: npts
+    integer :: i, j, k
 
-    npts = (high(1)+1)-(low(1)-1)+1
-    do k = low(3)-1, high(3)+1
-       do j = low(2)-1, high(2)+1
-          call vckhms( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+    !$acc routine(ckhms) seq nohost
+
+    !$acc loop gang vector private(i,j,k) collapse(3)
+    do k = lo(3)-1, hi(3)+1
+       do j = lo(2)-1, hi(2)+1
+          do i = lo(1)-1, hi(1)+1
+             call ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
+          enddo
        enddo
     enddo
+    !$acc end loop
 
   end subroutine eos_hi_vec
 
