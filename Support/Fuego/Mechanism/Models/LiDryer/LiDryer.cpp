@@ -283,126 +283,124 @@
 
 extern "C"
 {
-void egtransetEPS(double*  EPS);
-void egtransetSIG(double* SIG);
-void atomicWeight(double* restrict awt);
-void molecularWeight(double* restrict wt);
-void gibbs(double* restrict species, double* restrict tc);
-void helmholtz(double* restrict species,double* restrict tc);
-AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double* restrict tc);
-AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double* restrict species,double* restrict tc);
-void speciesEntropy(double* restrict species,double* restrict tc);
-AMREX_GPU_HOST_DEVICE void cp_R(double* restrict species,double* restrict tc);
-AMREX_GPU_HOST_DEVICE void cv_R(double* restrict species,double* restrict tc);
-void equilibriumConstants(double* restrict kc,double* restrict g_RT, double T);
-void productionRate(double* restrict wdot,double* restrict sc, double T);
-void comp_k_f(double* restrict tc, double invT,double* restrict k_f);
-void comp_Kc(double* restrict tc, double invT,double* restrict Kc);
-void comp_qfqr(double* restrict q_f,double* restrict q_r,double* restrict sc,double* restrict tc, double invT);
-void progressRate(double* restrict qdot,double* restrict speciesConc, double T);
-void progressRateFR(double* restrict q_f,double* restrict q_r,double* restrict speciesConc, double T);
-void CKINIT();
-void CKFINALIZE();
-void CKINDX(int * iwrk, double* restrict rwrk, int * mm, int * kk, int * ii, int * nfit );
-void CKXNUM(char * line, int * nexp, int * lout, int * nval, double* restrict rval, int * kerr, int lenline);
-void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double* restrict rval, int * kerr, int lenline, int lenkray);
-void CKSYME(int * kname, int * lenkname);
-void CKSYMS(int * kname, int * lenkname);
-void CKRP(int * ickwrk, double* restrict rckwrk,double* restrict ru,double* restrict ruc,double* restrict pa);
-void CKPX(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict P);
-AMREX_GPU_HOST_DEVICE void CKPY(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P);
-void CKPC(double* restrict rho,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict P);
-void CKRHOX(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict rho);
-void CKRHOY(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict rho);
-void CKRHOC(double* restrict P,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict rho);
-void CKWT(int * iwrk, double* restrict rwrk,double* restrict wt);
-void CKAWT(int * iwrk, double* restrict rwrk,double* restrict awt);
-void CKMMWY(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict wtm);
-void CKMMWX(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict wtm);
-void CKMMWC(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict wtm);
-void CKYTX(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x);
-void CKYTCP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c);
-void CKYTCR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c);
-void CKXTY(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict y);
-void CKXTCP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c);
-void CKXTCR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c);
-void CKCTX(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict x);
-void CKCTY(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict y);
-void CKCPOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpor);
-void CKHORT(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hort);
-void CKSOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sor);
-void CKCVML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml);
-void CKCPML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml);
-void CKUML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml);
-void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml);
-void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gml);
-void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict aml);
-void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sml);
-AMREX_GPU_HOST void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
-AMREX_GPU_DEVICE void CKCVMS_D(double* restrict T, int *iwrk, double* restrict rwrk, double* restrict cvms); 
-AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
-AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
-AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
-void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gms);
-void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ams);
-void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sms);
-void CKCPBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl);
-void CKCPBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs);
-void CKCVBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl);
-AMREX_GPU_HOST_DEVICE void CKCVBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs);
-void CKHBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict hbml);
-void CKHBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict hbms);
-void CKUBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict ubml);
-AMREX_GPU_HOST_DEVICE void CKUBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict ubms);
-void CKSBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict sbml);
-void CKSBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict sbms);
-void CKGBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict gbml);
-void CKGBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict gbms);
-void CKABML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict abml);
-void CKABMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict abms);
-void CKWC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict wdot);
-void CKWYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot);
-void CKWXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot);
-void CKWYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot);
-void CKWXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot);
-void CKQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict qdot);
-void CKKFKR(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict q_f, double * restrict q_r);
-void CKQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot);
-void CKQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot);
-void CKQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot);
-void CKQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot);
-void CKNU(int * kdim, int * iwrk, double* restrict rwrk, int * nuki);
-void CKNCF(int * mdim, int * iwrk, double* restrict rwrk, int * ncf);
-void CKABE(int * iwrk, double* restrict rwrk,double* restrict a,double* restrict b,double* restrict e );
-void CKEQC(double* restrict T,double* restrict C , int * iwrk,double* restrict rwrk,double* restrict eqcon );
-void CKEQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon);
-void CKEQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon);
-void CKEQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon);
-void CKEQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon);
-void DWDOT(double* restrict J,double* restrict sc,double* restrict T, int * consP);
-void aJacobian(double* restrict J,double* restrict sc, double T, int consP);
-void dcvpRdT(double* restrict species,double* restrict tc);
-AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double* restrict e,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int *ierr);
-void GET_T_GIVEN_HY(double* restrict h,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int *ierr);
-void GET_REACTION_MAP(int * restrict rmap);
+  AMREX_GPU_HOST_DEVICE void egtransetEPS(double*  EPS);
+  AMREX_GPU_HOST_DEVICE void egtransetSIG(double* SIG);
+  AMREX_GPU_HOST_DEVICE void atomicWeight(double* restrict awt);
+  AMREX_GPU_HOST_DEVICE void molecularWeight(double* restrict wt);
+  AMREX_GPU_HOST_DEVICE void gibbs(double* restrict species, double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void helmholtz(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void speciesEntropy(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void cp_R(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void cv_R(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void equilibriumConstants(double* restrict kc,double* restrict g_RT, double T);
+  AMREX_GPU_HOST_DEVICE void productionRate(double* restrict wdot,double* restrict sc, double T);
+  AMREX_GPU_HOST_DEVICE void comp_k_f(double* restrict tc, double invT,double* restrict k_f);
+  AMREX_GPU_HOST_DEVICE void comp_Kc(double* restrict tc, double invT,double* restrict Kc);
+  AMREX_GPU_HOST_DEVICE void comp_qfqr(double* restrict q_f,double* restrict q_r,double* restrict sc,double* restrict tc, double invT);
+  AMREX_GPU_HOST_DEVICE void progressRate(double* restrict qdot,double* restrict speciesConc, double T);
+  AMREX_GPU_HOST_DEVICE void progressRateFR(double* restrict q_f,double* restrict q_r,double* restrict speciesConc, double T);
+  AMREX_GPU_HOST_DEVICE void CKINIT();
+  AMREX_GPU_HOST_DEVICE void CKFINALIZE();
+  AMREX_GPU_HOST_DEVICE void CKINDX(int * iwrk, double* restrict rwrk, int * mm, int * kk, int * ii, int * nfit );
+  AMREX_GPU_HOST_DEVICE void CKXNUM(char * line, int * nexp, int * lout, int * nval, double* restrict rval, int * kerr, int lenline);
+  AMREX_GPU_HOST_DEVICE void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double* restrict rval, int * kerr, int lenline, int lenkray);
+  AMREX_GPU_HOST_DEVICE void CKSYME(int * kname, int * lenkname);
+  AMREX_GPU_HOST_DEVICE void CKSYMS(int * kname, int * lenkname);
+  AMREX_GPU_HOST_DEVICE void CKRP(int * ickwrk, double* restrict rckwrk,double* restrict ru,double* restrict ruc,double* restrict pa);
+  AMREX_GPU_HOST_DEVICE void CKPX(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict P);
+  AMREX_GPU_HOST_DEVICE void CKPY(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P);
+  AMREX_GPU_HOST_DEVICE void CKPC(double* restrict rho,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict P);
+  AMREX_GPU_HOST_DEVICE void CKRHOX(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict rho);
+  AMREX_GPU_HOST_DEVICE void CKRHOY(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict rho);
+  AMREX_GPU_HOST_DEVICE void CKRHOC(double* restrict P,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict rho);
+  AMREX_GPU_HOST_DEVICE void CKWT(int * iwrk, double* restrict rwrk,double* restrict wt);
+  AMREX_GPU_HOST_DEVICE void CKAWT(int * iwrk, double* restrict rwrk,double* restrict awt);
+  AMREX_GPU_HOST_DEVICE void CKMMWY(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict wtm);
+  AMREX_GPU_HOST_DEVICE void CKMMWX(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict wtm);
+  AMREX_GPU_HOST_DEVICE void CKMMWC(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict wtm);
+  AMREX_GPU_HOST_DEVICE void CKYTX(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x);
+  AMREX_GPU_HOST_DEVICE void CKYTCP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c);
+  AMREX_GPU_HOST_DEVICE void CKYTCR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c);
+  AMREX_GPU_HOST_DEVICE void CKXTY(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict y);
+  AMREX_GPU_HOST_DEVICE void CKXTCP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c);
+  AMREX_GPU_HOST_DEVICE void CKXTCR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c);
+  AMREX_GPU_HOST_DEVICE void CKCTX(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict x);
+  AMREX_GPU_HOST_DEVICE void CKCTY(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict y);
+  AMREX_GPU_HOST_DEVICE void CKCPOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpor);
+  AMREX_GPU_HOST_DEVICE void CKHORT(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hort);
+  AMREX_GPU_HOST_DEVICE void CKSOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sor);
+  AMREX_GPU_HOST_DEVICE void CKCVML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml);
+  AMREX_GPU_HOST_DEVICE void CKCPML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml);
+  AMREX_GPU_HOST_DEVICE void CKUML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml);
+  AMREX_GPU_HOST_DEVICE void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml);
+  AMREX_GPU_HOST_DEVICE void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gml);
+  AMREX_GPU_HOST_DEVICE void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict aml);
+  AMREX_GPU_HOST_DEVICE void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sml);
+  AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
+  AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms);
+  AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
+  AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
+  AMREX_GPU_HOST_DEVICE void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gms);
+  AMREX_GPU_HOST_DEVICE void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ams);
+  AMREX_GPU_HOST_DEVICE void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sms);
+  AMREX_GPU_HOST_DEVICE void CKCPBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl);
+  AMREX_GPU_HOST_DEVICE void CKCPBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs);
+  AMREX_GPU_HOST_DEVICE void CKCVBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl);
+  AMREX_GPU_HOST_DEVICE void CKCVBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs);
+  AMREX_GPU_HOST_DEVICE void CKHBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict hbml);
+  AMREX_GPU_HOST_DEVICE void CKHBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict hbms);
+  AMREX_GPU_HOST_DEVICE void CKUBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict ubml);
+  AMREX_GPU_HOST_DEVICE void CKUBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict ubms);
+  AMREX_GPU_HOST_DEVICE void CKSBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict sbml);
+  AMREX_GPU_HOST_DEVICE void CKSBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict sbms);
+  AMREX_GPU_HOST_DEVICE void CKGBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict gbml);
+  AMREX_GPU_HOST_DEVICE void CKGBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict gbms);
+  AMREX_GPU_HOST_DEVICE void CKABML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict abml);
+  AMREX_GPU_HOST_DEVICE void CKABMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict abms);
+  AMREX_GPU_HOST_DEVICE void CKWC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict wdot);
+  AMREX_GPU_HOST_DEVICE void CKWYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot);
+  AMREX_GPU_HOST_DEVICE void CKWXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot);
+  AMREX_GPU_HOST_DEVICE void CKWYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot);
+  AMREX_GPU_HOST_DEVICE void CKWXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot);
+  AMREX_GPU_HOST_DEVICE void CKQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict qdot);
+  AMREX_GPU_HOST_DEVICE void CKKFKR(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict q_f, double * restrict q_r);
+  AMREX_GPU_HOST_DEVICE void CKQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot);
+  AMREX_GPU_HOST_DEVICE void CKQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot);
+  AMREX_GPU_HOST_DEVICE void CKQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot);
+  AMREX_GPU_HOST_DEVICE void CKQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot);
+  AMREX_GPU_HOST_DEVICE void CKNU(int * kdim, int * iwrk, double* restrict rwrk, int * nuki);
+  AMREX_GPU_HOST_DEVICE void CKNCF(int * mdim, int * iwrk, double* restrict rwrk, int * ncf);
+  AMREX_GPU_HOST_DEVICE void CKABE(int * iwrk, double* restrict rwrk,double* restrict a,double* restrict b,double* restrict e );
+  AMREX_GPU_HOST_DEVICE void CKEQC(double* restrict T,double* restrict C , int * iwrk,double* restrict rwrk,double* restrict eqcon );
+  AMREX_GPU_HOST_DEVICE void CKEQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon);
+  AMREX_GPU_HOST_DEVICE void CKEQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon);
+  AMREX_GPU_HOST_DEVICE void CKEQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon);
+  AMREX_GPU_HOST_DEVICE void CKEQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon);
+  AMREX_GPU_HOST_DEVICE void DWDOT(double* restrict J,double* restrict sc,double* restrict T, int * consP);
+  AMREX_GPU_HOST_DEVICE void aJacobian(double* restrict J,double* restrict sc, double T, int consP);
+  AMREX_GPU_HOST_DEVICE void dcvpRdT(double* restrict species,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double* restrict e,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int *ierr);
+  AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double* restrict h,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int *ierr);
+  AMREX_GPU_HOST_DEVICE void GET_REACTION_MAP(int * restrict rmap);
 /*vector version */
-void vproductionRate(int npt, double* restrict wdot,double* restrict c,double* restrict T);
-void VCKHMS(int * restrict np, double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
-void VCKPY(int * restrict np, double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P);
-void VCKWYR(int * restrict np, double* restrict rho,double* restrict T,
-            double* restrict y, int * restrict iwrk,double* restrict rwrk,
-            double* restrict wdot);
-void VCKYTX(int * restrict np, double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x);
-void vcomp_k_f(int npt, double* restrict k_f_s,double* restrict tc,double* restrict invT);
-void vcomp_gibbs(int npt, double* restrict g_RT,double* restrict tc);
-void vcomp_Kc(int npt, double* restrict Kc_s,double* restrict g_RT,double* restrict invT);
-void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi,double* restrict acentric_i);
-void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* restrict sc,
-                double* restrict k_f_s,double* restrict Kc_s,
-                double* restrict tc,double* restrict invT,double* restrict T);
-AMREX_GPU_HOST_DEVICE
-void get_imw(double* neww);
- 
+  AMREX_GPU_HOST_DEVICE void vproductionRate(int npt, double* restrict wdot,double* restrict c,double* restrict T);
+  AMREX_GPU_HOST_DEVICE void VCKHMS(int * restrict np, double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums);
+  AMREX_GPU_HOST_DEVICE void VCKPY(int * restrict np, double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P);
+  AMREX_GPU_HOST_DEVICE void VCKWYR(int * restrict np, double* restrict rho,double* restrict T,
+              double* restrict y, int * restrict iwrk,double* restrict rwrk,
+              double* restrict wdot);
+  AMREX_GPU_HOST_DEVICE void VCKYTX(int * restrict np, double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x);
+  AMREX_GPU_HOST_DEVICE void vcomp_k_f(int npt, double* restrict k_f_s,double* restrict tc,double* restrict invT);
+  AMREX_GPU_HOST_DEVICE void vcomp_gibbs(int npt, double* restrict g_RT,double* restrict tc);
+  AMREX_GPU_HOST_DEVICE void vcomp_Kc(int npt, double* restrict Kc_s,double* restrict g_RT,double* restrict invT);
+  AMREX_GPU_HOST_DEVICE void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi,double* restrict acentric_i);
+  AMREX_GPU_HOST_DEVICE void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* restrict sc,
+                  double* restrict k_f_s,double* restrict Kc_s,
+                  double* restrict tc,double* restrict invT,double* restrict T);
+  AMREX_GPU_HOST_DEVICE void get_imw(double* neww);
+
 /* Inverse molecular weights */
 #ifdef AMREX_USE_CUDA
 __managed__ double imw[9] = {
@@ -620,7 +618,7 @@ void SetAllDefaults()
 }
 
 /* Finalizes parameter database */
-void CKFINALIZE()
+AMREX_GPU_HOST_DEVICE void CKFINALIZE()
 {
   for (int i=0; i<21; ++i) {
     free(TB[i]); TB[i] = 0; 
@@ -634,7 +632,7 @@ void CKFINALIZE()
 }
 
 /* Initializes parameter database */
-void CKINIT()
+AMREX_GPU_HOST_DEVICE void CKINIT()
 {
     // (0):  H + O2 <=> O + OH
     fwd_A[6]     = 3547000000000000;
@@ -891,7 +889,7 @@ void CKINIT()
 
 
 /*A few mechanism parameters */
-void CKINDX(int * iwrk, double* restrict rwrk, int * mm, int * kk, int * ii, int * nfit)
+AMREX_GPU_HOST_DEVICE void CKINDX(int * iwrk, double* restrict rwrk, int * mm, int * kk, int * ii, int * nfit)
 {
     *mm = 3;
     *kk = 9;
@@ -902,7 +900,7 @@ void CKINDX(int * iwrk, double* restrict rwrk, int * mm, int * kk, int * ii, int
 
 
 /* ckxnum... for parsing strings  */
-void CKXNUM(char * line, int * nexp, int * lout, int * nval, double* restrict rval, int * kerr, int lenline )
+AMREX_GPU_HOST_DEVICE void CKXNUM(char * line, int * nexp, int * lout, int * nval, double* restrict rval, int * kerr, int lenline )
 {
     int n,i; /*Loop Counters */
     char cstr[1000];
@@ -935,14 +933,14 @@ void CKXNUM(char * line, int * nexp, int * lout, int * nval, double* restrict rv
 
 
 /* cksnum... for parsing strings  */
-void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double* restrict rval, int * kerr, int lenline, int lenkray)
+AMREX_GPU_HOST_DEVICE void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double* restrict rval, int * kerr, int lenline, int lenkray)
 {
     /*Not done yet ... */
 }
 
 
 /* Returns the char strings of element names */
-void CKSYME(int * kname, int * plenkname )
+AMREX_GPU_HOST_DEVICE void CKSYME(int * kname, int * plenkname )
 {
     int i; /*Loop Counter */
     int lenkname = *plenkname;
@@ -967,7 +965,7 @@ void CKSYME(int * kname, int * plenkname )
 
 
 /* Returns the char strings of species names */
-void CKSYMS(int * kname, int * plenkname )
+AMREX_GPU_HOST_DEVICE void CKSYMS(int * kname, int * plenkname )
 {
     int i; /*Loop Counter */
     int lenkname = *plenkname;
@@ -1027,7 +1025,7 @@ void CKSYMS(int * kname, int * plenkname )
 
 
 /* Returns R, Rc, Patm */
-void CKRP(int * ickwrk, double* restrict rckwrk,double* restrict ru,double* restrict ruc,double* restrict pa)
+AMREX_GPU_HOST_DEVICE void CKRP(int * ickwrk, double* restrict rckwrk,double* restrict ru,double* restrict ruc,double* restrict pa)
 {
      *ru  = 8.31451e+07; 
      *ruc = 1.98721558317399615845; 
@@ -1036,7 +1034,7 @@ void CKRP(int * ickwrk, double* restrict rckwrk,double* restrict ru,double* rest
 
 
 /*Compute P = rhoRT/W(x) */
-void CKPX(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict P)
+AMREX_GPU_HOST_DEVICE void CKPX(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict P)
 {
     double XW = 0;/* To hold mean molecular wt */
     XW += x[0]*2.015940; /*H2 */
@@ -1074,7 +1072,7 @@ AMREX_GPU_HOST_DEVICE void CKPY(double* restrict rho,double* restrict T,double* 
 
 
 /*Compute P = rhoRT/W(y) */
-void VCKPY(int * restrict np, double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P)
+AMREX_GPU_HOST_DEVICE void VCKPY(int * restrict np, double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict P)
 {
     double YOW[*np];
     for (int i=0; i<(*np); i++) {
@@ -1096,7 +1094,7 @@ void VCKPY(int * restrict np, double* restrict rho,double* restrict T,double* re
 
 
 /*Compute P = rhoRT/W(c) */
-void CKPC(double* restrict rho,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict P)
+AMREX_GPU_HOST_DEVICE void CKPC(double* restrict rho,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict P)
 {
     int id; /*loop counter */
     /*See Eq 5 in CK Manual */
@@ -1122,7 +1120,7 @@ void CKPC(double* restrict rho,double* restrict T,double* restrict c, int * iwrk
 
 
 /*Compute rho = PW(x)/RT */
-void CKRHOX(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict rho)
+AMREX_GPU_HOST_DEVICE void CKRHOX(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict rho)
 {
     double XW = 0;/* To hold mean molecular wt */
     XW += x[0]*2.015940; /*H2 */
@@ -1141,7 +1139,7 @@ void CKRHOX(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 
 /*Compute rho = P*W(y)/RT */
-void CKRHOY(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict rho)
+AMREX_GPU_HOST_DEVICE void CKRHOY(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict rho)
 {
     double YOW = 0;
     double tmp[9];
@@ -1161,7 +1159,7 @@ void CKRHOY(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 
 /*Compute rho = P*W(c)/(R*T) */
-void CKRHOC(double* restrict P,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict rho)
+AMREX_GPU_HOST_DEVICE void CKRHOC(double* restrict P,double* restrict T,double* restrict c, int * iwrk,double* restrict rwrk, double * restrict rho)
 {
     int id; /*loop counter */
     /*See Eq 5 in CK Manual */
@@ -1187,14 +1185,14 @@ void CKRHOC(double* restrict P,double* restrict T,double* restrict c, int * iwrk
 
 
 /*get molecular weight for all species */
-void CKWT(int * iwrk, double* restrict rwrk,double* restrict wt)
+AMREX_GPU_HOST_DEVICE void CKWT(int * iwrk, double* restrict rwrk,double* restrict wt)
 {
     molecularWeight(wt);
 }
 
 
 /*get atomic weight for all elements */
-void CKAWT(int * iwrk, double* restrict rwrk,double* restrict awt)
+AMREX_GPU_HOST_DEVICE void CKAWT(int * iwrk, double* restrict rwrk,double* restrict awt)
 {
     atomicWeight(awt);
 }
@@ -1202,7 +1200,7 @@ void CKAWT(int * iwrk, double* restrict rwrk,double* restrict awt)
 
 /*given y[species]: mass fractions */
 /*returns mean molecular weight (gm/mole) */
-void CKMMWY(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict wtm)
+AMREX_GPU_HOST_DEVICE void CKMMWY(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict wtm)
 {
     double YOW = 0;
     double tmp[9];
@@ -1223,7 +1221,7 @@ void CKMMWY(double* restrict y, int * iwrk,double* restrict rwrk,double* restric
 
 /*given x[species]: mole fractions */
 /*returns mean molecular weight (gm/mole) */
-void CKMMWX(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict wtm)
+AMREX_GPU_HOST_DEVICE void CKMMWX(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict wtm)
 {
     double XW = 0;/* see Eq 4 in CK Manual */
     XW += x[0]*2.015940; /*H2 */
@@ -1243,7 +1241,7 @@ void CKMMWX(double* restrict x, int * iwrk,double* restrict rwrk,double* restric
 
 /*given c[species]: molar concentration */
 /*returns mean molecular weight (gm/mole) */
-void CKMMWC(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict wtm)
+AMREX_GPU_HOST_DEVICE void CKMMWC(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict wtm)
 {
     int id; /*loop counter */
     /*See Eq 5 in CK Manual */
@@ -1270,7 +1268,7 @@ void CKMMWC(double* restrict c, int * iwrk,double* restrict rwrk,double* restric
 
 
 /*convert y[species] (mass fracs) to x[species] (mole fracs) */
-void CKYTX(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x)
+AMREX_GPU_HOST_DEVICE void CKYTX(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x)
 {
     double YOW = 0;
     double tmp[9];
@@ -1295,7 +1293,7 @@ void CKYTX(double* restrict y, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*convert y[npoints*species] (mass fracs) to x[npoints*species] (mole fracs) */
-void VCKYTX(int * restrict np, double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x)
+AMREX_GPU_HOST_DEVICE void VCKYTX(int * restrict np, double* restrict y, int * iwrk,double* restrict rwrk,double* restrict x)
 {
     double YOW[*np];
     for (int i=0; i<(*np); i++) {
@@ -1322,7 +1320,7 @@ void VCKYTX(int * restrict np, double* restrict y, int * iwrk,double* restrict r
 
 
 /*convert y[species] (mass fracs) to c[species] (molar conc) */
-void CKYTCP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c)
+AMREX_GPU_HOST_DEVICE void CKYTCP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c)
 {
     double YOW = 0;
     double PWORT;
@@ -1350,7 +1348,7 @@ void CKYTCP(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 
 /*convert y[species] (mass fracs) to c[species] (molar conc) */
-void CKYTCR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c)
+AMREX_GPU_HOST_DEVICE void CKYTCR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict c)
 {
     for (int i = 0; i < 9; i++)
     {
@@ -1360,7 +1358,7 @@ void CKYTCR(double* restrict rho,double* restrict T,double* restrict y, int * iw
 
 
 /*convert x[species] (mole fracs) to y[species] (mass fracs) */
-void CKXTY(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict y)
+AMREX_GPU_HOST_DEVICE void CKXTY(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict y)
 {
     double XW = 0; /*See Eq 4, 9 in CK Manual */
     /*Compute mean molecular wt first */
@@ -1390,7 +1388,7 @@ void CKXTY(double* restrict x, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*convert x[species] (mole fracs) to c[species] (molar conc) */
-void CKXTCP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c)
+AMREX_GPU_HOST_DEVICE void CKXTCP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c)
 {
     int id; /*loop counter */
     double PORT = (*P)/(8.31451e+07 * (*T)); /*P/RT */
@@ -1405,7 +1403,7 @@ void CKXTCP(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 
 /*convert x[species] (mole fracs) to c[species] (molar conc) */
-void CKXTCR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c)
+AMREX_GPU_HOST_DEVICE void CKXTCR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict c)
 {
     int id; /*loop counter */
     double XW = 0; /*See Eq 4, 11 in CK Manual */
@@ -1432,7 +1430,7 @@ void CKXTCR(double* restrict rho,double* restrict T,double* restrict x, int * iw
 
 
 /*convert c[species] (molar conc) to x[species] (mole fracs) */
-void CKCTX(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict x)
+AMREX_GPU_HOST_DEVICE void CKCTX(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict x)
 {
     int id; /*loop counter */
     double sumC = 0; 
@@ -1453,7 +1451,7 @@ void CKCTX(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*convert c[species] (molar conc) to y[species] (mass fracs) */
-void CKCTY(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict y)
+AMREX_GPU_HOST_DEVICE void CKCTY(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict y)
 {
     double CW = 0; /*See Eq 12 in CK Manual */
     /*compute denominator in eq 12 first */
@@ -1484,7 +1482,7 @@ void CKCTY(double* restrict c, int * iwrk,double* restrict rwrk,double* restrict
 
 /*get Cp/R as a function of T  */
 /*for all species (Eq 19) */
-void CKCPOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpor)
+AMREX_GPU_HOST_DEVICE void CKCPOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpor)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1494,7 +1492,7 @@ void CKCPOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restric
 
 /*get H/RT as a function of T  */
 /*for all species (Eq 20) */
-void CKHORT(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hort)
+AMREX_GPU_HOST_DEVICE void CKHORT(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hort)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1504,7 +1502,7 @@ void CKHORT(double* restrict T, int * iwrk,double* restrict rwrk,double* restric
 
 /*get S/R as a function of T  */
 /*for all species (Eq 21) */
-void CKSOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sor)
+AMREX_GPU_HOST_DEVICE void CKSOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sor)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1514,7 +1512,7 @@ void CKSOR(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*get specific heat at constant volume as a function  */
 /*of T for all species (molar units) */
-void CKCVML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml)
+AMREX_GPU_HOST_DEVICE void CKCVML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1530,7 +1528,7 @@ void CKCVML(double* restrict T, int * iwrk,double* restrict rwrk,double* restric
 
 /*get specific heat at constant pressure as a  */
 /*function of T for all species (molar units) */
-void CKCPML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpml)
+AMREX_GPU_HOST_DEVICE void CKCPML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1546,7 +1544,7 @@ void CKCPML(double* restrict T, int * iwrk,double* restrict rwrk,double* restric
 
 /*get internal energy as a function  */
 /*of T for all species (molar units) */
-void CKUML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml)
+AMREX_GPU_HOST_DEVICE void CKUML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict uml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1563,7 +1561,7 @@ void CKUML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*get enthalpy as a function  */
 /*of T for all species (molar units) */
-void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hml)
+AMREX_GPU_HOST_DEVICE void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1580,7 +1578,7 @@ void CKHML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*get standard-state Gibbs energy as a function  */
 /*of T for all species (molar units) */
-void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gml)
+AMREX_GPU_HOST_DEVICE void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1597,7 +1595,7 @@ void CKGML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*get standard-state Helmholtz free energy as a  */
 /*function of T for all species (molar units) */
-void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict aml)
+AMREX_GPU_HOST_DEVICE void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict aml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1613,7 +1611,7 @@ void CKAML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*Returns the standard-state entropies in molar units */
-void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sml)
+AMREX_GPU_HOST_DEVICE void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sml)
 {
     int id; /*loop counter */
     double tT = *T; /*temporary temperature */
@@ -1629,7 +1627,7 @@ void CKSML(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 /*Returns the specific heats at constant volume */
 /*in mass units (Eq. 29) */
-AMREX_GPU_HOST void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
 {
 //    return;
     double tT = *T; /*temporary temperature */
@@ -1647,26 +1645,10 @@ AMREX_GPU_HOST void CKCVMS(double* restrict T, int * iwrk,double* restrict rwrk,
     cvms[7] *= 2.444384405113783e+06; /*H2O2 */
     cvms[8] *= 2.968047434442088e+06; /*N2 */
 }
-AMREX_GPU_DEVICE void CKCVMS_D(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cvms)
-{
-    double tT = *T; /*temporary temperature */
-    double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
-    cv_R(cvms, tc);
-    /*multiply by R/molecularweight */
-    cvms[0] *= 4.124383662212169e+07; /*H2 */
-    cvms[1] *= 2.598381814318037e+06; /*O2 */
-    cvms[2] *= 4.615239012974499e+06; /*H2O */
-    cvms[3] *= 8.248767324424338e+07; /*H */
-    cvms[4] *= 5.196763628636074e+06; /*O */
-    cvms[5] *= 4.888768810227566e+06; /*OH */
-    cvms[6] *= 2.519031701678171e+06; /*HO2 */
-    cvms[7] *= 2.444384405113783e+06; /*H2O2 */
-    cvms[8] *= 2.968047434442088e+06; /*N2 */
-}
 
 /*Returns the specific heats at constant pressure */
 /*in mass units (Eq. 26) */
-AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpms)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict cpms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1686,7 +1668,7 @@ AMREX_GPU_HOST_DEVICE void CKCPMS(double* restrict T, int * iwrk,double* restric
 
 
 /*Returns internal energy in mass units (Eq 30.) */
-AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ums)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1701,7 +1683,7 @@ AMREX_GPU_HOST_DEVICE void CKUMS(double* restrict T, int * iwrk,double* restrict
 
 
 /*Returns enthalpy in mass units (Eq 27.) */
-AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hms)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1715,7 +1697,7 @@ AMREX_GPU_HOST_DEVICE void CKHMS(double* restrict T, int * iwrk,double* restrict
 
 
 /*Returns enthalpy in mass units (Eq 27.) */
-void VCKHMS(int * restrict np, double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hms)
+AMREX_GPU_HOST_DEVICE void VCKHMS(int * restrict np, double* restrict T, int * iwrk,double* restrict rwrk,double* restrict hms)
 {
     double tc[5], h[9];
 
@@ -1748,7 +1730,7 @@ void VCKHMS(int * restrict np, double* restrict T, int * iwrk,double* restrict r
 
 
 /*Returns gibbs in mass units (Eq 31.) */
-void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gms)
+AMREX_GPU_HOST_DEVICE void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict gms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1762,7 +1744,7 @@ void CKGMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*Returns helmholtz in mass units (Eq 32.) */
-void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ams)
+AMREX_GPU_HOST_DEVICE void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict ams)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1776,7 +1758,7 @@ void CKAMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*Returns the entropies in mass units (Eq 28.) */
-void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sms)
+AMREX_GPU_HOST_DEVICE void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict sms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1795,7 +1777,7 @@ void CKSMS(double* restrict T, int * iwrk,double* restrict rwrk,double* restrict
 
 
 /*Returns the mean specific heat at CP (Eq. 33) */
-void CKCPBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl)
+AMREX_GPU_HOST_DEVICE void CKCPBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cpbl)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -1814,7 +1796,7 @@ void CKCPBL(double* restrict T,double* restrict x, int * iwrk,double* restrict r
 
 
 /*Returns the mean specific heat at CP (Eq. 34) */
-void CKCPBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs)
+AMREX_GPU_HOST_DEVICE void CKCPBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cpbs)
 {
     double result = 0; 
     double tT = *T; /*temporary temperature */
@@ -1836,7 +1818,7 @@ void CKCPBS(double* restrict T,double* restrict y, int * iwrk,double* restrict r
 
 
 /*Returns the mean specific heat at CV (Eq. 35) */
-void CKCVBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cvbl)
+AMREX_GPU_HOST_DEVICE void CKCVBL(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict cvbl)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -1855,7 +1837,7 @@ void CKCVBL(double* restrict T,double* restrict x, int * iwrk,double* restrict r
 
 
 /*Returns the mean specific heat at CV (Eq. 36) */
-AMREX_GPU_HOST_DEVICE void CKCVBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cvbs)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKCVBS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict cvbs)
 {
     double result = 0; 
     double tT = *T; /*temporary temperature */
@@ -1878,7 +1860,7 @@ AMREX_GPU_HOST_DEVICE void CKCVBS(double* restrict T,double* restrict y, int * i
 
 
 /*Returns the mean enthalpy of the mixture in molar units */
-void CKHBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict hbml)
+AMREX_GPU_HOST_DEVICE void CKHBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict hbml)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -1898,7 +1880,7 @@ void CKHBML(double* restrict T,double* restrict x, int * iwrk,double* restrict r
 
 
 /*Returns mean enthalpy of mixture in mass units */
-void CKHBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict hbms)
+AMREX_GPU_HOST_DEVICE void CKHBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict hbms)
 {
     double result = 0;
     double tT = *T; /*temporary temperature */
@@ -1919,7 +1901,7 @@ void CKHBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict r
 
 
 /*get mean internal energy in molar units */
-void CKUBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict ubml)
+AMREX_GPU_HOST_DEVICE void CKUBML(double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk,double* restrict ubml)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -1939,7 +1921,7 @@ void CKUBML(double* restrict T,double* restrict x, int * iwrk,double* restrict r
 
 
 /*get mean internal energy in mass units */
-AMREX_GPU_HOST_DEVICE void CKUBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict ubms)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void CKUBMS(double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict ubms)
 {
     double result = 0;
     double tT = *T; /*temporary temperature */
@@ -1963,7 +1945,7 @@ AMREX_GPU_HOST_DEVICE void CKUBMS(double* restrict T,double* restrict y, int * i
 
 
 /*get mixture entropy in molar units */
-void CKSBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict sbml)
+AMREX_GPU_HOST_DEVICE void CKSBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict sbml)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -1984,7 +1966,7 @@ void CKSBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 
 /*get mixture entropy in mass units */
-void CKSBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict sbms)
+AMREX_GPU_HOST_DEVICE void CKSBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict sbms)
 {
     double result = 0; 
     /*Log of normalized pressure in cgs units dynes/cm^2 by Patm */
@@ -2031,7 +2013,7 @@ void CKSBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 
 /*Returns mean gibbs free energy in molar units */
-void CKGBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict gbml)
+AMREX_GPU_HOST_DEVICE void CKGBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict gbml)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -2054,7 +2036,7 @@ void CKGBML(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 
 /*Returns mixture gibbs free energy in mass units */
-void CKGBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict gbms)
+AMREX_GPU_HOST_DEVICE void CKGBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict gbms)
 {
     double result = 0; 
     /*Log of normalized pressure in cgs units dynes/cm^2 by Patm */
@@ -2102,7 +2084,7 @@ void CKGBMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 
 /*Returns mean helmholtz free energy in molar units */
-void CKABML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict abml)
+AMREX_GPU_HOST_DEVICE void CKABML(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict abml)
 {
     int id; /*loop counter */
     double result = 0; 
@@ -2125,7 +2107,7 @@ void CKABML(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 
 /*Returns mixture helmholtz free energy in mass units */
-void CKABMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict abms)
+AMREX_GPU_HOST_DEVICE void CKABMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict abms)
 {
     double result = 0; 
     /*Log of normalized pressure in cgs units dynes/cm^2 by Patm */
@@ -2173,7 +2155,7 @@ void CKABMS(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 
 /*compute the production rate for each species */
-void CKWC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict wdot)
+AMREX_GPU_HOST_DEVICE void CKWC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict wdot)
 {
     int id; /*loop counter */
 
@@ -2195,7 +2177,7 @@ void CKWC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwr
 
 /*Returns the molar production rate of species */
 /*Given P, T, and mass fractions */
-void CKWYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot)
+AMREX_GPU_HOST_DEVICE void CKWYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2238,7 +2220,7 @@ void CKWYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,
 
 /*Returns the molar production rate of species */
 /*Given P, T, and mole fractions */
-void CKWXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot)
+AMREX_GPU_HOST_DEVICE void CKWXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2261,7 +2243,7 @@ void CKWXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
-void CKWYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot)
+AMREX_GPU_HOST_DEVICE void CKWYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict wdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2288,7 +2270,7 @@ void CKWYR(double* restrict rho,double* restrict T,double* restrict y, int * iwr
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
-void VCKWYR(int * restrict np, double* restrict rho,double* restrict T,
+AMREX_GPU_HOST_DEVICE void VCKWYR(int * restrict np, double* restrict rho,double* restrict T,
 	    double* restrict y, int * restrict iwrk,double* restrict rwrk,
 	    double* restrict wdot)
 {
@@ -2312,7 +2294,7 @@ void VCKWYR(int * restrict np, double* restrict rho,double* restrict T,
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mole fractions */
-void CKWXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot)
+AMREX_GPU_HOST_DEVICE void CKWXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict wdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2347,7 +2329,7 @@ void CKWXR(double* restrict rho,double* restrict T,double* restrict x, int * iwr
 
 
 /*Returns the rate of progress for each reaction */
-void CKQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict qdot)
+AMREX_GPU_HOST_DEVICE void CKQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict qdot)
 {
     int id; /*loop counter */
 
@@ -2372,7 +2354,7 @@ void CKQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwr
 
 /*Returns the progress rates of each reactions */
 /*Given P, T, and mole fractions */
-void CKKFKR(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict q_f, double * restrict q_r)
+AMREX_GPU_HOST_DEVICE void CKKFKR(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict q_f, double * restrict q_r)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2396,7 +2378,7 @@ void CKKFKR(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 /*Returns the progress rates of each reactions */
 /*Given P, T, and mass fractions */
-void CKQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot)
+AMREX_GPU_HOST_DEVICE void CKQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2439,7 +2421,7 @@ void CKQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,
 
 /*Returns the progress rates of each reactions */
 /*Given P, T, and mole fractions */
-void CKQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot)
+AMREX_GPU_HOST_DEVICE void CKQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2462,7 +2444,7 @@ void CKQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,
 
 /*Returns the progress rates of each reactions */
 /*Given rho, T, and mass fractions */
-void CKQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot)
+AMREX_GPU_HOST_DEVICE void CKQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict qdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2489,7 +2471,7 @@ void CKQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwr
 
 /*Returns the progress rates of each reactions */
 /*Given rho, T, and mole fractions */
-void CKQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot)
+AMREX_GPU_HOST_DEVICE void CKQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict qdot)
 {
     int id; /*loop counter */
     double c[9]; /*temporary storage */
@@ -2525,7 +2507,7 @@ void CKQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwr
 
 /*Returns the stoichiometric coefficients */
 /*of the reaction mechanism. (Eq 50) */
-void CKNU(int * kdim, int * iwrk, double* restrict rwrk, int * nuki)
+AMREX_GPU_HOST_DEVICE void CKNU(int * kdim, int * iwrk, double* restrict rwrk, int * nuki)
 {
     int id; /*loop counter */
     int kd = (*kdim); 
@@ -2658,7 +2640,7 @@ void CKNU(int * kdim, int * iwrk, double* restrict rwrk, int * nuki)
 
 /*Returns the elemental composition  */
 /*of the speciesi (mdim is num of elements) */
-void CKNCF(int * mdim, int * iwrk, double* restrict rwrk, int * ncf)
+AMREX_GPU_HOST_DEVICE void CKNCF(int * mdim, int * iwrk, double* restrict rwrk, int * ncf)
 {
     int id; /*loop counter */
     int kd = (*mdim); 
@@ -2703,7 +2685,7 @@ void CKNCF(int * mdim, int * iwrk, double* restrict rwrk, int * ncf)
 
 /*Returns the arrehenius coefficients  */
 /*for all reactions */
-void CKABE(int * iwrk, double* restrict rwrk,double* restrict a,double* restrict b,double* restrict e)
+AMREX_GPU_HOST_DEVICE void CKABE(int * iwrk, double* restrict rwrk,double* restrict a,double* restrict b,double* restrict e)
 {
     for (int i=0; i<21; ++i) {
         a[i] = fwd_A[i];
@@ -2716,7 +2698,7 @@ void CKABE(int * iwrk, double* restrict rwrk,double* restrict a,double* restrict
 
 
 /*Returns the equil constants for each reaction */
-void CKEQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict eqcon)
+AMREX_GPU_HOST_DEVICE void CKEQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rwrk,double* restrict eqcon)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -2795,7 +2777,7 @@ void CKEQC(double* restrict T,double* restrict C, int * iwrk,double* restrict rw
 
 /*Returns the equil constants for each reaction */
 /*Given P, T, and mass fractions */
-void CKEQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon)
+AMREX_GPU_HOST_DEVICE void CKEQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -2874,7 +2856,7 @@ void CKEQYP(double* restrict P,double* restrict T,double* restrict y, int * iwrk
 
 /*Returns the equil constants for each reaction */
 /*Given P, T, and mole fractions */
-void CKEQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon)
+AMREX_GPU_HOST_DEVICE void CKEQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -2953,7 +2935,7 @@ void CKEQXP(double* restrict P,double* restrict T,double* restrict x, int * iwrk
 
 /*Returns the equil constants for each reaction */
 /*Given rho, T, and mass fractions */
-void CKEQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon)
+AMREX_GPU_HOST_DEVICE void CKEQYR(double* restrict rho,double* restrict T,double* restrict y, int * iwrk,double* restrict rwrk, double * restrict eqcon)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -3032,7 +3014,7 @@ void CKEQYR(double* restrict rho,double* restrict T,double* restrict y, int * iw
 
 /*Returns the equil constants for each reaction */
 /*Given rho, T, and mole fractions */
-void CKEQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon)
+AMREX_GPU_HOST_DEVICE void CKEQXR(double* restrict rho,double* restrict T,double* restrict x, int * iwrk,double* restrict rwrk, double * restrict eqcon)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { log(tT), tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -3125,7 +3107,7 @@ static double Kc_save[21];
 
 
 /*compute the production rate for each species */
-void productionRate(double* restrict wdot,double* restrict sc, double T)
+AMREX_GPU_HOST_DEVICE void productionRate(double* restrict wdot,double* restrict sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
@@ -3267,7 +3249,7 @@ void productionRate(double* restrict wdot,double* restrict sc, double T)
     return;
 }
 
-void comp_k_f(double* restrict tc, double invT,double* restrict k_f)
+AMREX_GPU_HOST_DEVICE void comp_k_f(double* restrict tc, double invT,double* restrict k_f)
 {
 #ifdef __INTEL_COMPILER
     #pragma simd
@@ -3279,7 +3261,7 @@ void comp_k_f(double* restrict tc, double invT,double* restrict k_f)
     return;
 }
 
-void comp_Kc(double* restrict tc, double invT,double* restrict Kc)
+AMREX_GPU_HOST_DEVICE void comp_Kc(double* restrict tc, double invT,double* restrict Kc)
 {
     /*compute the Gibbs free energy */
     double g_RT[9];
@@ -3328,7 +3310,7 @@ void comp_Kc(double* restrict tc, double invT,double* restrict Kc)
     return;
 }
 
-void comp_qfqr(double* restrict qf,double* restrict qr,double* restrict sc,double* restrict tc, double invT)
+AMREX_GPU_HOST_DEVICE void comp_qfqr(double* restrict qf,double* restrict qr,double* restrict sc,double* restrict tc, double invT)
 {
 
     /*reaction 1: H + O2 (+M) <=> HO2 (+M) */
@@ -3475,7 +3457,7 @@ void comp_qfqr(double* restrict qf,double* restrict qr,double* restrict sc,doubl
 
 
 /*compute the production rate for each species */
-void vproductionRate(int npt, double* restrict wdot,double* restrict sc,double* restrict T)
+AMREX_GPU_HOST_DEVICE void vproductionRate(int npt, double* restrict wdot,double* restrict sc,double* restrict T)
 {
     double k_f_s[21*npt], Kc_s[21*npt], mixture[npt], g_RT[9*npt];
     double tc[5*npt], invT[npt];
@@ -3512,7 +3494,7 @@ void vproductionRate(int npt, double* restrict wdot,double* restrict sc,double* 
     vcomp_wdot(npt, wdot, mixture, sc, k_f_s, Kc_s, tc, invT, T);
 }
 
-void vcomp_k_f(int npt, double* restrict k_f_s,double* restrict tc,double* restrict invT)
+AMREX_GPU_HOST_DEVICE void vcomp_k_f(int npt, double* restrict k_f_s,double* restrict tc,double* restrict invT)
 {
 #ifdef __INTEL_COMPILER
     #pragma simd
@@ -3542,7 +3524,7 @@ void vcomp_k_f(int npt, double* restrict k_f_s,double* restrict tc,double* restr
     }
 }
 
-void vcomp_gibbs(int npt, double* restrict g_RT,double* restrict tc)
+AMREX_GPU_HOST_DEVICE void vcomp_gibbs(int npt, double* restrict g_RT,double* restrict tc)
 {
     /*compute the Gibbs free energy */
     for (int i=0; i<npt; i++) {
@@ -3567,7 +3549,7 @@ void vcomp_gibbs(int npt, double* restrict g_RT,double* restrict tc)
     }
 }
 
-void vcomp_Kc(int npt, double* restrict Kc_s,double* restrict g_RT,double* restrict invT)
+AMREX_GPU_HOST_DEVICE void vcomp_Kc(int npt, double* restrict Kc_s,double* restrict g_RT,double* restrict invT)
 {
 #ifdef __INTEL_COMPILER
     #pragma simd
@@ -3601,7 +3583,7 @@ void vcomp_Kc(int npt, double* restrict Kc_s,double* restrict g_RT,double* restr
     }
 }
 
-void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* restrict sc,
+AMREX_GPU_HOST_DEVICE void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* restrict sc,
 		double* restrict k_f_s,double* restrict Kc_s,
 		double* restrict tc,double* restrict invT,double* restrict T)
 {
@@ -3938,7 +3920,7 @@ void vcomp_wdot(int npt, double* restrict wdot,double* restrict mixture,double* 
 }
 
 /*compute the reaction Jacobian */
-void DWDOT(double* restrict J,double* restrict sc,double* restrict Tp, int * consP)
+AMREX_GPU_HOST_DEVICE void DWDOT(double* restrict J,double* restrict sc,double* restrict Tp, int * consP)
 {
     double c[9];
 
@@ -3962,7 +3944,7 @@ void DWDOT(double* restrict J,double* restrict sc,double* restrict Tp, int * con
 }
 
 /*compute the reaction Jacobian */
-void aJacobian(double* restrict J,double* restrict sc, double T, int consP)
+AMREX_GPU_HOST_DEVICE void aJacobian(double* restrict J,double* restrict sc, double T, int consP)
 {
     for (int i=0; i<100; i++) {
         J[i] = 0.0;
@@ -5227,7 +5209,7 @@ void aJacobian(double* restrict J,double* restrict sc, double T, int consP)
 
 /*compute d(Cp/R)/dT and d(Cv/R)/dT at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void dcvpRdT(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE void dcvpRdT(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -5350,7 +5332,7 @@ void dcvpRdT(double* restrict species,double* restrict tc)
 
 
 /*compute the progress rate for each reaction */
-void progressRate(double* restrict qdot,double* restrict sc, double T)
+AMREX_GPU_HOST_DEVICE void progressRate(double* restrict qdot,double* restrict sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
@@ -5374,7 +5356,7 @@ void progressRate(double* restrict qdot,double* restrict sc, double T)
 
 
 /*compute the progress rate for each reaction */
-void progressRateFR(double* restrict q_f,double* restrict q_r,double* restrict sc, double T)
+AMREX_GPU_HOST_DEVICE void progressRateFR(double* restrict q_f,double* restrict q_r,double* restrict sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
@@ -5393,7 +5375,7 @@ void progressRateFR(double* restrict q_f,double* restrict q_r,double* restrict s
 
 
 /*compute the equilibrium constants for each reaction */
-void equilibriumConstants(double* restrict kc,double* restrict g_RT, double T)
+AMREX_GPU_HOST_DEVICE void equilibriumConstants(double* restrict kc,double* restrict g_RT, double T)
 {
     /*reference concentration: P_atm / (RT) in inverse mol/m^3 */
     double refC = 101325 / 8.31451 / T;
@@ -5467,7 +5449,7 @@ void equilibriumConstants(double* restrict kc,double* restrict g_RT, double T)
 
 /*compute the g/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void gibbs(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE void gibbs(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -5646,7 +5628,7 @@ void gibbs(double* restrict species,double* restrict tc)
 
 /*compute the a/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void helmholtz(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE void helmholtz(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -5825,7 +5807,7 @@ void helmholtz(double* restrict species,double* restrict tc)
 
 /*compute Cv/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-AMREX_GPU_HOST_DEVICE void cv_R(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void cv_R(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -5967,7 +5949,7 @@ AMREX_GPU_HOST_DEVICE void cv_R(double* restrict species,double* restrict tc)
 
 /*compute Cp/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-AMREX_GPU_HOST_DEVICE void cp_R(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void cp_R(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -6109,7 +6091,7 @@ AMREX_GPU_HOST_DEVICE void cp_R(double* restrict species,double* restrict tc)
 
 /*compute the e/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -6269,7 +6251,7 @@ AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double* restrict species,double
 
 /*compute the h/(RT) at the given temperature (Eq 20) */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -6430,7 +6412,7 @@ AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double* restrict species,double* rest
 
 /*compute the S/R at the given temperature (Eq 21) */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void speciesEntropy(double* restrict species,double* restrict tc)
+AMREX_GPU_HOST_DEVICE void speciesEntropy(double* restrict species,double* restrict tc)
 {
 
     /*temperature */
@@ -6589,7 +6571,7 @@ void speciesEntropy(double* restrict species,double* restrict tc)
 
 
 /*save molecular weights into array */
-void molecularWeight(double* restrict wt)
+AMREX_GPU_HOST_DEVICE void molecularWeight(double* restrict wt)
 {
     wt[0] = 2.015940; /*H2 */
     wt[1] = 31.998800; /*O2 */
@@ -6606,7 +6588,7 @@ void molecularWeight(double* restrict wt)
 
 
 /*save atomic weights into array */
-void atomicWeight(double* restrict awt)
+AMREX_GPU_HOST_DEVICE void atomicWeight(double* restrict awt)
 {
     awt[0] = 1.007970; /*H */
     awt[1] = 15.999400; /*O */
@@ -6615,7 +6597,7 @@ void atomicWeight(double* restrict awt)
     return;
 }
 /* get temperature given internal energy in mass units and mass fracs */
-AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double* restrict e,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int * ierr)
+AMREX_GPU_HOST_DEVICE AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double* restrict e,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int * ierr)
 {
 #ifdef CONVERGENCE
     const int maxiter = 5000;
@@ -6664,7 +6646,7 @@ AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double* restrict e,double* restrict y,
     return;
 }
 /* get temperature given enthalpy in mass units and mass fracs */
-void GET_T_GIVEN_HY(double* restrict h,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int * ierr)
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double* restrict h,double* restrict y, int * iwrk,double* restrict rwrk,double* restrict t, int * ierr)
 {
 #ifdef CONVERGENCE
     const int maxiter = 5000;
@@ -6715,7 +6697,7 @@ void GET_T_GIVEN_HY(double* restrict h,double* restrict y, int * iwrk,double* re
 
 
 /*compute the critical parameters for each species */
-void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi,double* restrict acentric_i)
+AMREX_GPU_HOST_DEVICE void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi,double* restrict acentric_i)
 {
 
     double   EPS[9];
@@ -6798,7 +6780,7 @@ void GET_CRITPARAMS(double* restrict Tci,double* restrict ai,double* restrict bi
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetLENIMC egtransetlenimc_
 #endif
-void egtransetLENIMC(int* LENIMC ) {
+AMREX_GPU_HOST_DEVICE void egtransetLENIMC(int* LENIMC ) {
     *LENIMC = 38;}
 
 
@@ -6809,7 +6791,7 @@ void egtransetLENIMC(int* LENIMC ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetLENRMC egtransetlenrmc_
 #endif
-void egtransetLENRMC(int* LENRMC ) {
+AMREX_GPU_HOST_DEVICE void egtransetLENRMC(int* LENRMC ) {
     *LENRMC = 1854;}
 
 
@@ -6820,7 +6802,7 @@ void egtransetLENRMC(int* LENRMC ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetNO egtransetno_
 #endif
-void egtransetNO(int* NO ) {
+AMREX_GPU_HOST_DEVICE void egtransetNO(int* NO ) {
     *NO = 4;}
 
 
@@ -6831,7 +6813,7 @@ void egtransetNO(int* NO ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetKK egtransetkk_
 #endif
-void egtransetKK(int* KK ) {
+AMREX_GPU_HOST_DEVICE void egtransetKK(int* KK ) {
     *KK = 9;}
 
 
@@ -6842,7 +6824,7 @@ void egtransetKK(int* KK ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetNLITE egtransetnlite_
 #endif
-void egtransetNLITE(int* NLITE ) {
+AMREX_GPU_HOST_DEVICE void egtransetNLITE(int* NLITE ) {
     *NLITE = 2;}
 
 
@@ -6854,7 +6836,7 @@ void egtransetNLITE(int* NLITE ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetPATM egtransetpatm_
 #endif
-void egtransetPATM(double* PATM) {
+AMREX_GPU_HOST_DEVICE void egtransetPATM(double* PATM) {
     *PATM =   0.1013250000000000E+07;}
 
 
@@ -6866,7 +6848,7 @@ void egtransetPATM(double* PATM) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetWT egtransetwt_
 #endif
-void egtransetWT(double* WT ) {
+AMREX_GPU_HOST_DEVICE void egtransetWT(double* WT ) {
     WT[0] = 2.01594000E+00;
     WT[1] = 3.19988000E+01;
     WT[2] = 1.80153400E+01;
@@ -6887,7 +6869,7 @@ void egtransetWT(double* WT ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetEPS egtranseteps_
 #endif
-void egtransetEPS(double* EPS ) {
+AMREX_GPU_HOST_DEVICE void egtransetEPS(double* EPS ) {
     EPS[3] = 1.45000000E+02;
     EPS[4] = 8.00000000E+01;
     EPS[5] = 8.00000000E+01;
@@ -6908,7 +6890,7 @@ void egtransetEPS(double* EPS ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetSIG egtransetsig_
 #endif
-void egtransetSIG(double* SIG ) {
+AMREX_GPU_HOST_DEVICE void egtransetSIG(double* SIG ) {
     SIG[3] = 2.05000000E+00;
     SIG[4] = 2.75000000E+00;
     SIG[5] = 2.75000000E+00;
@@ -6929,7 +6911,7 @@ void egtransetSIG(double* SIG ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetDIP egtransetdip_
 #endif
-void egtransetDIP(double* DIP ) {
+AMREX_GPU_HOST_DEVICE void egtransetDIP(double* DIP ) {
     DIP[3] = 0.00000000E+00;
     DIP[4] = 0.00000000E+00;
     DIP[5] = 0.00000000E+00;
@@ -6950,7 +6932,7 @@ void egtransetDIP(double* DIP ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetPOL egtransetpol_
 #endif
-void egtransetPOL(double* POL ) {
+AMREX_GPU_HOST_DEVICE void egtransetPOL(double* POL ) {
     POL[3] = 0.00000000E+00;
     POL[4] = 0.00000000E+00;
     POL[5] = 0.00000000E+00;
@@ -6971,7 +6953,7 @@ void egtransetPOL(double* POL ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetZROT egtransetzrot_
 #endif
-void egtransetZROT(double* ZROT ) {
+AMREX_GPU_HOST_DEVICE void egtransetZROT(double* ZROT ) {
     ZROT[3] = 0.00000000E+00;
     ZROT[4] = 0.00000000E+00;
     ZROT[5] = 0.00000000E+00;
@@ -6992,7 +6974,7 @@ void egtransetZROT(double* ZROT ) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetNLIN egtransetnlin_
 #endif
-void egtransetNLIN(int* NLIN) {
+AMREX_GPU_HOST_DEVICE void egtransetNLIN(int* NLIN) {
     NLIN[3] = 0;
     NLIN[4] = 0;
     NLIN[5] = 1;
@@ -7013,7 +6995,7 @@ void egtransetNLIN(int* NLIN) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetCOFETA egtransetcofeta_
 #endif
-void egtransetCOFETA(double* COFETA) {
+AMREX_GPU_HOST_DEVICE void egtransetCOFETA(double* COFETA) {
     COFETA[0] = -1.37549435E+01;
     COFETA[1] = 9.65530587E-01;
     COFETA[2] = -4.45720114E-02;
@@ -7061,7 +7043,7 @@ void egtransetCOFETA(double* COFETA) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetCOFLAM egtransetcoflam_
 #endif
-void egtransetCOFLAM(double* COFLAM) {
+AMREX_GPU_HOST_DEVICE void egtransetCOFLAM(double* COFLAM) {
     COFLAM[0] = 1.11035551E+01;
     COFLAM[1] = -1.31884089E+00;
     COFLAM[2] = 2.44042735E-01;
@@ -7109,7 +7091,7 @@ void egtransetCOFLAM(double* COFLAM) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetCOFD egtransetcofd_
 #endif
-void egtransetCOFD(double* COFD) {
+AMREX_GPU_HOST_DEVICE void egtransetCOFD(double* COFD) {
     COFD[0] = -1.02395222E+01;
     COFD[1] = 2.15403244E+00;
     COFD[2] = -6.97480266E-02;
@@ -7445,7 +7427,7 @@ void egtransetCOFD(double* COFD) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetKTDIF egtransetktdif_
 #endif
-void egtransetKTDIF(int* KTDIF) {
+AMREX_GPU_HOST_DEVICE void egtransetKTDIF(int* KTDIF) {
     KTDIF[0] = 1;
     KTDIF[1] = 4;
 };
@@ -7459,7 +7441,7 @@ void egtransetKTDIF(int* KTDIF) {
 #elif defined(BL_FORT_USE_UNDERSCORE)
 #define egtransetCOFTD egtransetcoftd_
 #endif
-void egtransetCOFTD(double* COFTD) {
+AMREX_GPU_HOST_DEVICE void egtransetCOFTD(double* COFTD) {
     COFTD[0] = 0.00000000E+00;
     COFTD[1] = 0.00000000E+00;
     COFTD[2] = 0.00000000E+00;
