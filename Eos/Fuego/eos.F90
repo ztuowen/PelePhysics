@@ -179,9 +179,10 @@ contains
     integer :: npts
 
     npts = (hi(1)+1)-(lo(1)-1)+1
+
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
-         call VCKYTX( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
+           call VCKYTX( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
        enddo
     enddo
 
@@ -219,19 +220,17 @@ contains
 
   end subroutine eos_hi2
 
-  subroutine eos_hi_vec(mass, masslo, masshi, T, Tlo, Thi, hi, hilo, hihi, low, high, Nsp)
+  subroutine eos_hi_vec(T, Tlo, Thi, hi, hilo, hihi, low, high, Nsp)
 
     implicit none
 
-    integer, intent(in) :: masslo(3), masshi(3)
     integer, intent(in) :: Tlo(3), Thi(3)
     integer, intent(in) :: hilo(3), hihi(3)    
     integer, intent(in) :: low(3), high(3)    
     integer, intent(in) :: Nsp
 
-    double precision, intent(in), dimension(masslo(1)-1:masshi(1)+1, masslo(2)-1:masshi(2)+1, masslo(3)-1:masshi(3)+1, 1:Nsp) :: mass
-    double precision, intent(in), dimension(Tlo(1)-1:Thi(1)+1, Tlo(2)-1:Thi(2)+1, Tlo(3)-1:Thi(3)+1 ) :: T
-    double precision, intent(out), dimension(hilo(1)-1:hihi(1)+1, hilo(2)-1:hihi(2)+1, hilo(3)-1:hihi(3)+1, 1:Nsp) :: hi
+    double precision, intent(in),  dimension(Tlo(1):Thi(1), Tlo(2):Thi(2), Tlo(3):Thi(3), 1:Nsp) :: T
+    double precision, intent(out),  dimension(hilo(1):hihi(1), hilo(2):hihi(2), hilo(3):hihi(3), 1:Nsp) :: hi
     
     integer :: j, k
     integer :: npts
@@ -239,7 +238,7 @@ contains
     npts = (high(1)+1)-(low(1)-1)+1
     do k = low(3)-1, high(3)+1
        do j = low(2)-1, high(2)+1
-          call VCKHMS( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+          call VCKHMS( npts, T(low(1)-1:high(1)+1, j, k,1:m), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
        enddo
     enddo
 
