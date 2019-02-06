@@ -238,7 +238,7 @@ contains
     npts = (high(1)+1)-(low(1)-1)+1
     do k = low(3)-1, high(3)+1
        do j = low(2)-1, high(2)+1
-          call VCKHMS( npts, T(low(1)-1:high(1)+1, j, k,1:m), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+          call VCKHMS( npts, T(low(1)-1:high(1)+1, j, k,1:Nsp), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
        enddo
     enddo
 
