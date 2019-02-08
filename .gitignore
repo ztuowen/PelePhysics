@@ -1,0 +1,42 @@
+nohup.out
+*.[oa]
+*.ex
+*~
+tmp_build_dir/
+d/
+f/
+o/
+t/
+TAGS
+
+# latex
+*.aux
+*.log
+*.bbl
+*.toc
+*.dvi
+*-eps-converted-to.pdf
+
+# python
+*.pyc
+
+.DS_Store
+Docs/AMReXUsersGuide/Visualization/*.pdf
+Docs/sphinx/build
+
+.nfs*
+
+# vi
+*.sw[a-z]
+
+# catalyst/libsim
+Tutorials/Amr/Advection_AmrLevel/Exec/SingleVortex/*.png
+Tutorials/Amr/Advection_AmrCore/Exec/SingleVortex/*.png
+*.vth
+*.vti
+*.pvd
+*.visit
+*.pvsm
+
+*.pyc
+

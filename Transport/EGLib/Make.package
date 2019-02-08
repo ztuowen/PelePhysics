@@ -1,1 +1,2 @@
-F90EXE_sources += eglib_transport.F90
+CEXE_headers += eglib_F.H
+f90EXE_sources += eglib_transport.f90

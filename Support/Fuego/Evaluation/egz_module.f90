@@ -48,7 +48,7 @@ module egz_module
   !$omp threadprivate(rn,an,zn,dmi,G,bin,A,np)
 
   public :: iflag
-  public :: egz_init, egz_close, EGZINI, EGZPAR, EGZE1, EGZE3, EGZK1, EGZK3, EGZL1, EGZVR1
+  public :: egz_init, egz_close, egzini, EGZPAR, EGZE1, EGZE3, EGZK1, EGZK3, EGZL1, EGZVR1
   ! egz_init and egz_close should be called outside OMP PARALLEL,
   ! whereas others are inside
 
@@ -125,7 +125,7 @@ contains
 
 
   ! This subroutine can be called inside OMP PARALLEL
-  subroutine EGZINI(np_in)
+  subroutine egzini(np_in) bind(C, name='egzini')
     integer, intent(in) :: np_in
     logical, save :: first_call = .true.
     !$omp threadprivate(first_call)
@@ -172,7 +172,7 @@ contains
 
     first_call = .false.
 
-  end subroutine EGZINI
+  end subroutine egzini
 
 
   ! This subroutine can be called inside OMP PARALLEL
