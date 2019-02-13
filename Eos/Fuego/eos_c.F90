@@ -48,7 +48,7 @@ module eos_bind_module
     end subroutine get_T_given_ey_d
    
     AMREX_DEVICE subroutine ckcvms_d(T, i, r, cvms) &
-      bind(C, name="CKCVMS_D")
+      bind(C, name="CKCVMS")
       use iso_c_binding, only: c_double, c_int
       real(c_double), intent(in) :: T, r
       real(c_double), intent(inout) :: cvms(*)

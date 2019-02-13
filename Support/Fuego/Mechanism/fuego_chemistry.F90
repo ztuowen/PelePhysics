@@ -23,11 +23,11 @@ module chemistry_module
   integer, parameter :: L_aux_name = 16 ! Each aux name has at most 16 characters
   character*(L_aux_name), allocatable, save :: aux_names(:)
 
-#ifdef AMREX_USE_CUDA
-  real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
-#else
+!#ifdef AMREX_USE_CUDA
+!  real(amrex_real), allocatable, managed , save :: molecular_weight(:), inv_mwt(:)
+!#else
   real(amrex_real), allocatable, save :: molecular_weight(:), inv_mwt(:)
-#endif
+!#endif
 
   real(amrex_real), parameter :: Ru=8.31451d7, Ruc=1.98721558317399615845d0, Patm=1.01325d6
   real(amrex_real), save :: rwrk=1.d0

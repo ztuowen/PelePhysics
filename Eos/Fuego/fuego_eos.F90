@@ -339,6 +339,7 @@ contains
 
   end subroutine eos_rp
 
+
 #ifdef AMREX_USE_CUDA
   AMREX_DEVICE subroutine eos_re_d(state)
 
