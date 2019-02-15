@@ -17,6 +17,8 @@ module actual_network
   implicit none
 
   integer :: nspec, nelem, nreac, nfit, naux
+  !$acc declare &
+  !$acc create(nspec, naux)
   character (len=16), save, allocatable :: aux_names(:)
 
 contains

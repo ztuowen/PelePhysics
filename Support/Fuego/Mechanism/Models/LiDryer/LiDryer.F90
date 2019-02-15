@@ -4,8 +4,10 @@ module fuego_module
   private
   public :: ckcpms
   public :: ckums
+  public :: ckums1
   public :: ckrhoy
   public :: ckcvms
+  public :: ckcvms1
   public :: ckxty
   public :: ckytcr
   public :: ckytx2
@@ -883,6 +885,35 @@ subroutine ckcvms(T, iwrk, rwrk, cvms)
 
 end subroutine
 
+subroutine ckcvms1(T, cvms)
+
+    !$acc routine(ckcvms1) seq
+
+    implicit none
+
+    double precision, intent(in) :: T
+    double precision, intent(inout) :: cvms(9)
+
+    double precision :: tT, tc(5)
+
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+
+    call cv_R(cvms, tc)
+    ! multiply by R/molecularweight
+
+    cvms(1) = cvms(1) * 4.124383662212169d+07 !H2
+    cvms(2) = cvms(2) * 2.598381814318037d+06 !O2
+    cvms(3) = cvms(3) * 4.615239012974499d+06 !H2O
+    cvms(4) = cvms(4) * 8.248767324424338d+07 !H
+    cvms(5) = cvms(5) * 5.196763628636074d+06 !O
+    cvms(6) = cvms(6) * 4.888768810227566d+06 !OH
+    cvms(7) = cvms(7) * 2.519031701678171d+06 !HO2
+    cvms(8) = cvms(8) * 2.444384405113783d+06 !H2O2
+    cvms(9) = cvms(9) * 2.968047434442088d+06 !N2
+
+end subroutine
+
 ! Returns the specific heats at constant pressure
 ! in mass units (Eq. 26)
 subroutine ckcpms(T, iwrk, rwrk, cpms)
@@ -922,6 +953,41 @@ subroutine ckums(T, iwrk, rwrk, ums)
     double precision, intent(in) :: T
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
+    double precision, intent(inout) :: ums(9)
+
+    double precision :: tT, tc(5)
+    double precision :: RT
+    integer :: i
+    double precision, parameter :: imw(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
+
+    tT = T ! temporary temperature
+    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
+    RT = 8.31451000d+07 * tT ! R*T
+
+    call speciesInternalEnergy(ums, tc)
+
+    do i=1, 9
+        ums(i) = ums(i) * (RT * imw(i))
+    end do
+
+end subroutine ckums
+
+subroutine ckums1(T, ums)
+
+    !$acc routine(ckums1) seq
+
+    implicit none
+
+    double precision, intent(in) :: T
     double precision, intent(inout) :: ums(9)
 
     double precision :: tT, tc(5)
@@ -1796,6 +1862,8 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cv_R(species, tc)
 
+    !$acc routine(cv_r) seq
+
     implicit none
 
     double precision, intent(out) :: species(9)
@@ -2088,6 +2156,8 @@ end subroutine
 ! compute the e/(RT) at the given temperature
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine speciesInternalEnergy(species, tc)
+
+    !$acc routine(speciesinternalenergy) seq
 
     implicit none
 
