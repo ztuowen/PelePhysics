@@ -23,6 +23,9 @@ module chemistry_module
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
+  !$acc declare &
+  !$acc create(inv_mwt, ru)
+
 contains
 
   subroutine chemistry_init()

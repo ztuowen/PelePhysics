@@ -19,10 +19,10 @@ module eos_module
   real(amrex_real), save, public :: smallT = 1.d-50
 
   public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, &
-          eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb,&
-          eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps,&
+          eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, &
+          eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, &
           eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, &
-          eos_mui, eos_get_activity_h
+          eos_mui, eos_rp1, eos_get_activity_h
   private :: nspecies, Ru, inv_mwt
 
   interface
@@ -34,6 +34,36 @@ module eos_module
   end interface
 
 contains
+
+  subroutine eos_rp1(rho, p, massfrac, e, gam1, cs, nspec)
+
+    !$acc routine(eos_rp1) seq
+    !$acc routine(ckums1) seq
+    !$acc routine(ckcvms1) seq
+
+    USE chemistry_module, ONLY: Ru, inv_mwt
+    USE fuego_module, ONLY: ckcvms1, ckums1
+
+    implicit none
+
+    double precision, intent(in) :: rho, p, massfrac(nspec)
+    double precision, intent(out) :: e, gam1, cs
+    integer, intent(in) :: nspec
+
+    double precision :: wbar, T, cv
+    !double precision :: ei(nspec), cvi(nspec) !Does not work with OpenACC. Why?
+    double precision :: ei(9), cvi(9)
+
+    wbar = 1.d0 / sum(massfrac(:) * inv_mwt(:))
+    T = p * wbar / (rho * Ru)
+    call ckums1(T, ei(:))
+    e = sum(massfrac(:) * ei(:))
+    call ckcvms1(T, cvi(:))
+    cv = sum(massfrac(:) * cvi(:))
+    gam1 = ((wbar * cv) + Ru) / (wbar * cv)
+    cs = sqrt(gam1 * p / rho)
+
+  end subroutine eos_rp1
 
   subroutine eos_init(small_temp, small_dens)
 
