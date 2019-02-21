@@ -6,6 +6,8 @@
 
 extern "C"
 {
+  void transport_init();
+  
   void get_transport_coeffs
     (const int* lo, const int* hi,
      const BL_FORT_FAB_ARG_3D(massfraction),

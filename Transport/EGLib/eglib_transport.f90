@@ -21,7 +21,7 @@ module transport_module
 contains
 
   ! This subroutine should be called outside OMP PARALLEL
-  subroutine transport_init
+  subroutine transport_init() bind(C, name='transport_init')
 
     implicit none
 
