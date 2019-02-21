@@ -704,7 +704,7 @@ end subroutine
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
 subroutine ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
 
-    !$acc routine(ckytx) seq nohost
+    !$acc routine(ckytx) seq
 
     implicit none
 
@@ -1054,8 +1054,8 @@ end subroutine
 ! Returns enthalpy in mass units (Eq 27.)
 subroutine ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
 
-    !$acc routine(ckhms) seq nohost
-    !$acc routine(speciesEnthalpy) seq nohost
+    !$acc routine(ckhms) seq
+    !$acc routine(speciesEnthalpy) seq
 
     implicit none
 
@@ -2489,7 +2489,7 @@ end subroutine
 ! tc contains precomputed powers of T, tc(1) = log(T)
 subroutine speciesEnthalpy(hii, lo, hi, i, j, k, tc, nspec)
 
-    !$acc routine(speciesEnthalpy) seq nohost
+    !$acc routine(speciesEnthalpy) seq
 
     implicit none
 

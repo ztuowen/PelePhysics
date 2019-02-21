@@ -257,7 +257,8 @@ contains
 
   subroutine eos_ytx_vec(q, x, lo, hi, nspec, qfs, qvar)
 
-    !$acc routine(eos_ytx_vec) gang nohost
+    !$acc routine(eos_ytx_vec) gang
+    !$acc routine(ckytx) seq
 
     implicit none
 
@@ -270,9 +271,7 @@ contains
 
     integer :: i, j, k
 
-    !$acc routine(ckytx) seq nohost
-
-    !$acc loop gang vector private(i,j,k) collapse(3)
+    !$acc loop gang vector collapse(3)
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
           do i = lo(1)-1, hi(1)+1
@@ -344,7 +343,8 @@ contains
 
   subroutine eos_hi_vec(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
 
-    !$acc routine(eos_hi_vec) gang nohost
+    !$acc routine(eos_hi_vec) gang
+    !$acc routine(ckhms) seq
 
     implicit none
 
@@ -355,9 +355,7 @@ contains
     
     integer :: i, j, k
 
-    !$acc routine(ckhms) seq nohost
-
-    !$acc loop gang vector private(i,j,k) collapse(3)
+    !$acc loop gang vector collapse(3)
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
           do i = lo(1)-1, hi(1)+1
