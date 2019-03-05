@@ -1,0 +1,3 @@
+cEXE_sources += LuSk_CH4_ion.c
+
+VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
