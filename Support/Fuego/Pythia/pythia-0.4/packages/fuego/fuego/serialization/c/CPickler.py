@@ -771,6 +771,7 @@ class CPickler(CMill):
         self._ckeqxp(mechanism)
         self._ckeqyr(mechanism)
         self._ckeqxr(mechanism)
+        self._ckchrg(mechanism)
         
         # Fuego Functions
         self._productionRate(mechanism)
@@ -1192,6 +1193,7 @@ class CPickler(CMill):
             '#define CKEQXP CKEQXP',
             '#define CKEQYR CKEQYR',
             '#define CKEQXR CKEQXR',
+            '#define CKCHRG CKCHRG',
             '#define DWDOT DWDOT',
             #'#ifdef USE_PYJAC',
             #'#define DWDOT_PYJAC DWDOT_PYJAC',
@@ -1287,6 +1289,7 @@ class CPickler(CMill):
             '#define CKEQXP ckeqxp',
             '#define CKEQYR ckeqyr',
             '#define CKEQXR ckeqxr',
+            '#define CKECHRG ckchrg',
             '#define DWDOT dwdot',
             #'#ifdef USE_PYJAC',
             #'#define DWDOT_PYJAC dwdot_pyjac',
@@ -1382,6 +1385,7 @@ class CPickler(CMill):
             '#define CKEQXP ckeqxp_',
             '#define CKEQYR ckeqyr_',
             '#define CKEQXR ckeqxr_',
+            '#define CKCHRG ckchrg_',
             '#define DWDOT dwdot_',
             #'#ifdef USE_PYJAC',
             #'#define DWDOT_PYJAC dwdot_pyjac_',
@@ -1524,6 +1528,7 @@ class CPickler(CMill):
             'void CKEQXP'+sym+'(double *  P, double *  T, double *  x, double *  eqcon);',
             'void CKEQYR'+sym+'(double *  rho, double *  T, double *  y, double *  eqcon);',
             'void CKEQXR'+sym+'(double *  rho, double *  T, double *  x, double *  eqcon);',
+            'void CKCHRG'+sym+'(int * kcharge);',
             'void DWDOT(double *  J, double *  sc, double *  T, int * consP);',
             #'#ifdef USE_PYJAC',
             #'void DWDOT_PYJAC(double *  J, double *  sc, double *  Tp, double *  Press);',
@@ -5324,6 +5329,31 @@ class CPickler(CMill):
         self._write('}')
 
         return
+
+
+    def _ckchrg(self, mechanism):
+
+        self._write()
+        self._write()
+        self._write(self.line('Returns the electronic charges of the species'))
+        self._write('void CKCHRG'+sym+'(int * kcharge)')
+        self._write('{')
+        self._indent()
+
+        for species in self.species:
+            charge = 0
+            composition = mechanism.species(species.symbol).composition
+            for (name,coef) in composition:
+                if name == "E":
+                    charge -= coef
+            self._write('kcharge[%d] = %d; ' % (species.id,charge) + self.line(' %s' % species.symbol))
+
+        self._outdent()
+
+        self._write('}')
+
+        return
+
 
 
 # Fuego Extensions. All functions in this section has the fe prefix
