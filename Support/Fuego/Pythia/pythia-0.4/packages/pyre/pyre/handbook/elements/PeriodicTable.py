@@ -22,6 +22,9 @@ class PeriodicTable(object):
 
 
     def symbol(self, symbol):
+        if (symbol == 'E'):
+            from elements import Element
+            return Element(-1,symbol,'E',.0005485801)
         return self._symbolIndex.get(symbol)
 
 
