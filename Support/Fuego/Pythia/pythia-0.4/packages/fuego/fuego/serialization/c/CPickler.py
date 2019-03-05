@@ -427,6 +427,7 @@ class CPickler(CMill):
         self._ckeqxp(mechanism)
         self._ckeqyr(mechanism)
         self._ckeqxr(mechanism)
+        self._ckchrg(mechanism)
         
         # Fuego Functions
         self._productionRate(mechanism)
@@ -545,6 +546,7 @@ class CPickler(CMill):
             '#define CKEQXP CKEQXP',
             '#define CKEQYR CKEQYR',
             '#define CKEQXR CKEQXR',
+            '#define CKCHRG CKCHRG',
             '#define DWDOT DWDOT',
             '#define VCKHMS VCKHMS',
             '#define VCKPY VCKPY',
@@ -631,6 +633,7 @@ class CPickler(CMill):
             '#define CKEQXP ckeqxp',
             '#define CKEQYR ckeqyr',
             '#define CKEQXR ckeqxr',
+            '#define CKECHRG ckchrg',
             '#define DWDOT dwdot',
             '#define VCKHMS vckhms',
             '#define VCKPY vckpy',
@@ -717,6 +720,7 @@ class CPickler(CMill):
             '#define CKEQXP ckeqxp_',
             '#define CKEQYR ckeqyr_',
             '#define CKEQXR ckeqxr_',
+            '#define CKCHRG ckchrg_',
             '#define DWDOT dwdot_',
             '#define VCKHMS vckhms_',
             '#define VCKPY vckpy_',
@@ -848,6 +852,7 @@ class CPickler(CMill):
             'void CKEQXP'+sym+'(double * restrict P, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict eqcon);',
             'void CKEQYR'+sym+'(double * restrict rho, double * restrict T, double * restrict y, int * iwrk, double * restrict rwrk, double * restrict eqcon);',
             'void CKEQXR'+sym+'(double * restrict rho, double * restrict T, double * restrict x, int * iwrk, double * restrict rwrk, double * restrict eqcon);',
+            'void CKCHRG'+sym+'(int * restrict iwrk, double * restrict rwrk, int * restrict kcharge);',
             'void DWDOT(double * restrict J, double * restrict sc, double * restrict T, int * consP);',
             'void aJacobian(double * restrict J, double * restrict sc, double T, int consP);',
             'void dcvpRdT(double * restrict species, double * restrict tc);',
@@ -4241,6 +4246,31 @@ class CPickler(CMill):
         self._write('}')
 
         return
+
+
+    def _ckchrg(self, mechanism):
+
+        self._write()
+        self._write()
+        self._write(self.line('Returns the electronic charges of the species'))
+        self._write('void CKCHRG'+sym+'(int * restrict iwrk, double * restrict rwrk, int * restrict kcharge)')
+        self._write('{')
+        self._indent()
+
+        for species in self.species:
+            charge = 0
+            composition = mechanism.species(species.symbol).composition
+            for (name,coef) in composition:
+                if name == "E":
+                    charge -= coef
+            self._write('kcharge[%d] = %d; ' % (species.id,charge) + self.line(' %s' % species.symbol))
+
+        self._outdent()
+
+        self._write('}')
+
+        return
+
 
 
 # Fuego Extensions. All functions in this section has the fe prefix
