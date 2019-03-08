@@ -48130,9 +48130,9 @@ void egtransetCOFTD(double* COFTD) {
 !
 !     Reference: 
 !       Tianfeng Lu and Chung K. Law, 
-!       "A criterion based on computational singular perturbation
+!       A criterion based on computational singular perturbation
 !       for the identification of quasi steady state species: 
-!       A reduced mechanism for methane oxidation with NO chemistry," 
+!       A reduced mechanism for methane oxidation with NO chemistry,
 !       Combustion and Flame, Vol.154 No.4 pp.761774, 2008.
 !
 ELEMENTS
