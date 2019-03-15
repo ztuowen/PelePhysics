@@ -1,5 +1,6 @@
 module transport_module
 
+  use egz_module
   use eos_type_module
   use transport_type_module
   use actual_transport_module
@@ -65,8 +66,8 @@ contains
        lam,        lam_lo,lam_hi) &
        bind(C, name="get_transport_coeffs")
 
-    use network, only: nspec
-    use eos_module
+    !use network, only: nspec
+    !use eos_module
 
     implicit none
 
@@ -86,48 +87,122 @@ contains
     real (amrex_real), intent(inout) :: xi(xi_lo(1):xi_hi(1),xi_lo(2):xi_hi(2),xi_lo(3):xi_hi(3))
     real (amrex_real), intent(inout) :: lam(lam_lo(1):lam_hi(1),lam_lo(2):lam_hi(2),lam_lo(3):lam_hi(3))
 
-    ! local variables
+
+      double precision :: trv_eos_state_massfrac(nspec)
+      double precision :: trv_eos_state_molefrac(nspec)
+      double precision :: trv_eos_state_cpi(nspec)
+      double precision :: trv_ddiag(nspec)
+      double precision :: trv_eos_state_t
+      double precision :: trv_eos_state_rho
+      double precision :: trv_mu
+      double precision :: trv_xi
+      double precision :: trv_lam
+      integer :: trv_npts
+      double precision :: wt(nspec)
+      double precision :: eps(nspec)
+      double precision :: dip(nspec)
+      double precision :: pol(nspec)
+      double precision :: sig(nspec)
+      double precision :: zrot(nspec)
+      integer :: nlin(nspec)
+      integer, parameter :: no=4
+      double precision :: cfe(no,nspec)
+      double precision :: cfl(no,nspec)
+      double precision :: cfd(no,nspec,nspec)
+      integer, parameter :: nfit=7
+      double precision :: fita(nfit,nspec,nspec)
+      double precision :: fita0(nfit) = (/ &
+       .1106910525D+01, -.7065517161D-02, -.1671975393D-01, .1188708609D-01, &
+       .7569367323D-03, -.1313998345D-02,  .1720853282D-03 /)
+      double precision :: eps2(nspec,nspec)
+      double precision :: xtr(nspec)
+      double precision :: ytr(nspec)
+      double precision :: aux(nspec)
+      double precision :: cxi(nspec)
+      double precision :: cint(nspec)
+      double precision :: dlt(6)
+      double precision :: beta(nspec)
+      double precision :: eta(nspec)
+      double precision :: etalg(nspec)
+      double precision :: rn(nspec)
+      double precision :: an(nspec)
+      double precision :: zn(nspec)
+      double precision :: dmi(nspec)
+      double precision :: g(nspec,nspec)
+      double precision :: bin(nspec,nspec)
+      double precision :: a(nspec,nspec)
+
+    !! local variables
     integer      :: i, j, k, n, np
-    type (wtr_t) :: which_trans
-    type (trv_t) :: coeff
+    !type (wtr_t) :: which_trans
+    !type (trv_t) :: coeff
 
-    np = hi(1)-lo(1)+1
-    call build(coeff,np)
+    !np = hi(1)-lo(1)+1
+    !call build(coeff,np)
 
-    which_trans % wtr_get_xi    = .true.
-    which_trans % wtr_get_mu    = .true.
-    which_trans % wtr_get_lam   = .true.
-    which_trans % wtr_get_Ddiag = .true.
+    !which_trans % wtr_get_xi    = .true.
+    !which_trans % wtr_get_mu    = .true.
+    !which_trans % wtr_get_lam   = .true.
+    !which_trans % wtr_get_Ddiag = .true.
 
+    !do k = lo(3),hi(3)
+    !   do j = lo(2),hi(2)
+
+    !      do i=1,np
+    !         coeff%eos_state(i)%massfrac(1:nspec) = massfrac(lo(1)+i-1,j,k,1:nspec)
+    !      end do
+
+    !      do i=lo(1),hi(1)
+    !         coeff%eos_state(i-lo(1)+1)%T = temperature(i,j,k)
+    !         coeff%eos_state(i-lo(1)+1)%rho = density(i,j,k)
+    !      end do
+
+    !      call transport(which_trans, coeff)
+
+    !      do i=lo(1),hi(1)
+    !         mu(i,j,k)  = coeff %  mu(i-lo(1)+1)
+    !         xi(i,j,k)  = coeff %  xi(i-lo(1)+1)
+    !         lam(i,j,k) = coeff % lam(i-lo(1)+1)
+    !      end do
+    !      do n=1,nspec
+    !         do i=lo(1),hi(1)
+    !            D(i,j,k,n) = coeff % Ddiag(i-lo(1)+1,n)
+    !         end do
+    !      end do
+
+    !   end do
+    !end do
+
+    !call destroy(coeff)
+
+    call egz_init_2(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+
+    !$acc update device(nspec)
+    !$acc enter data copyin(hi,lo,massfrac,temperature,density,mu,xi,lam,D) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+    !$acc parallel loop gang vector collapse(3) private(k,j,i,n,trv_eos_state_t,trv_eos_state_rho,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,trv_mu,trv_xi,trv_lam,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) present(hi,lo,massfrac,temperature,density,mu,xi,lam,D,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
     do k = lo(3),hi(3)
        do j = lo(2),hi(2)
+          do i = lo(1),hi(1)
+             do n=1,nspec
+                trv_eos_state_massfrac(n) = massfrac(i,j,k,n)
+             end do
+             trv_eos_state_T = temperature(i,j,k)
+             trv_eos_state_rho = density(i,j,k)
 
-          do i=1,np
-             coeff%eos_state(i)%massfrac(1:nspec) = massfrac(lo(1)+i-1,j,k,1:nspec)
-          end do
+             call actual_transport_2(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspec, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, fita0, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
 
-          do i=lo(1),hi(1)
-             coeff%eos_state(i-lo(1)+1)%T = temperature(i,j,k)
-             coeff%eos_state(i-lo(1)+1)%rho = density(i,j,k)
-          end do
+             mu(i,j,k)  = trv_mu
+             xi(i,j,k)  = trv_xi
+             lam(i,j,k) = trv_lam
 
-          call transport(which_trans, coeff)
-
-          do i=lo(1),hi(1)
-             mu(i,j,k)  = coeff %  mu(i-lo(1)+1)
-             xi(i,j,k)  = coeff %  xi(i-lo(1)+1)
-             lam(i,j,k) = coeff % lam(i-lo(1)+1)
-          end do
-          do n=1,nspec
-             do i=lo(1),hi(1)
-                D(i,j,k,n) = coeff % Ddiag(i-lo(1)+1,n)
+             do n=1,nspec
+                D(i,j,k,n) = trv_Ddiag(n)
              end do
           end do
-
        end do
     end do
-
-    call destroy(coeff)
+    !$acc end parallel loop
+    !$acc exit data copyout(mu,xi,lam,d) delete(hi,lo,massfrac,temperature,density,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
   end subroutine get_transport_coeffs
 

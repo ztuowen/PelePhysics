@@ -8,13 +8,18 @@ module egz_module
 
   double precision, parameter :: Ru = 8.314d7
   double precision, parameter :: Patmos = 1.01325d6
+  integer, parameter :: no_2 = 4
+  integer, parameter :: nfit = 7
+  integer, parameter :: nspec_2 = 9
+  integer, parameter :: iflag_2 = 5
+  !$acc declare create(ru,patmos,iflag_2,no,nfit,nspec_2)
 
   logical, save :: use_bulk_visc = .true.
-
-  integer, parameter :: nfit=7
   integer, save :: iflag = -1
   integer, save :: np = -1
   integer, save :: ns, no
+  !$acc declare create(use_bulk_visc,iflag,np,ns,no)
+
   double precision, allocatable, save :: wt(:), iwt(:), eps(:), sig(:), dip(:), pol(:), zrot(:)
   integer, allocatable, save :: nlin(:) 
   double precision, allocatable, save :: cfe(:,:), cfl(:,:), cfd(:,:,:)
@@ -51,6 +56,7 @@ module egz_module
 
   public :: iflag
   public :: egz_init, egz_close, EGZINI, EGZPAR, EGZE1, EGZE3, EGZK1, EGZK3, EGZL1, EGZVR1
+  public :: egz_init_2, EGZPAR_2, EGZE1_2, EGZE3_2, EGZK3_2, EGZL1_2, EGZVR1_2
   ! egz_init and egz_close should be called outside OMP PARALLEL,
   ! whereas others are inside
 
@@ -275,6 +281,542 @@ contains
        ENDDO
     ENDDO
   end subroutine egzabc
+
+
+  subroutine EGZPAR_2(T, X, cpms, wt_2, eps_2, zrot_2, nlin_2, cfe_2, cfd_2, fita_2, xtr_2, ytr_2, aux_2, cxi_2, cint_2, dlt_2, eta_2, etalg_2, bin_2, A_2)
+    !$acc routine seq
+    double precision, intent(in) :: T, X(nspec_2)
+    double precision, intent(in) :: cpms(nspec_2)
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: eps_2(nspec_2)
+    double precision, intent(in) :: zrot_2(nspec_2)
+    integer, intent(in) :: nlin_2(nspec_2)
+    double precision, intent(in) :: cfe_2(no_2,nspec_2)
+    double precision, intent(in) :: cfd_2(no_2,nspec_2,nspec_2)
+    double precision, intent(in) :: fita_2(nfit,nspec_2,nspec_2)
+    double precision, intent(out) :: xtr_2(nspec_2)
+    double precision, intent(out) :: ytr_2(nspec_2)
+    double precision, intent(out) :: aux_2(nspec_2)
+    double precision, intent(out) :: cxi_2(nspec_2)
+    double precision, intent(out) :: cint_2(nspec_2)
+    double precision, intent(out) :: dlt_2(6)
+    double precision, intent(out) :: eta_2(nspec_2)
+    double precision, intent(out) :: etalg_2(nspec_2)
+    double precision, intent(out) :: bin_2(nspec_2,nspec_2)
+    double precision, intent(out) :: A_2(nspec_2,nspec_2)
+
+    integer :: n
+    double precision :: aaa, sumtr_2, wwtr_2
+    double precision, parameter :: sss = 1.d-16
+
+    call LZPAR_2(T, cpms, wt_2, eps_2, zrot_2, nlin_2, cfe_2, cfd_2, fita_2, cxi_2, cint_2, dlt_2, eta_2, etalg_2, bin_2, A_2)
+!-----------------------------------------------------------------------
+!     Add a small constant to the mole and mass fractions
+!-----------------------------------------------------------------------
+
+      sumtr_2 = 0.d0
+      do n=1,nspec_2
+         sumtr_2 = sumtr_2 + X(n)
+      enddo
+
+      aaa = sumtr_2 / dble(nspec_2)
+
+      wwtr_2 = 0.0d0
+      do n=1,nspec_2
+         xtr_2(n) = X(n) + sss*(aaa - X(n))
+         wwtr_2 = wwtr_2 + xtr_2(n) * wt_2(n)
+      end do
+!-----------------------------------------------------------------------
+!     AUX(i) = \sum_{j .ne. i} YTR(j)
+!-----------------------------------------------------------------------
+
+      aaa = 0.d0
+      do n=1,nspec_2
+         ytr_2(n) = xtr_2(n) * wt_2(n) / wwtr_2
+         aaa = aaa + ytr_2(n)
+      end do
+      do n=1,nspec_2
+         aux_2(n) = aaa - ytr_2(n)
+      end do
+
+  end subroutine EGZPAR_2
+
+  subroutine LZPAR_2(T, cpms, wt_2, eps_2, zrot_2, nlin_2, cfe_2, cfd_2, fita_2, cxi_2, cint_2, dlt_2, eta_2, etalg_2, bin_2, A_2)
+    !$acc routine seq
+    double precision, intent(in) :: T
+    double precision, intent(in) :: cpms(nspec_2)
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: eps_2(nspec_2)
+    double precision, intent(in) :: zrot_2(nspec_2)
+    integer, intent(in) :: nlin_2(nspec_2)
+    double precision, intent(in) :: cfe_2(no_2,nspec_2)
+    double precision, intent(in) :: cfd_2(no_2,nspec_2,nspec_2)
+    double precision, intent(in) :: fita_2(nfit,nspec_2,nspec_2)
+    double precision, intent(out) :: cxi_2(nspec_2)
+    double precision, intent(out) :: cint_2(nspec_2)
+    double precision, intent(out) :: dlt_2(6)
+    double precision, intent(out) :: eta_2(nspec_2)
+    double precision, intent(out) :: etalg_2(nspec_2)
+    double precision, intent(out) :: bin_2(nspec_2,nspec_2)
+    double precision, intent(out) :: A_2(nspec_2,nspec_2)
+
+    integer :: m, n
+    double precision :: tmp, crot
+    double precision :: wru, dr, sqdr, dr32, aaaa1, dd, sqdd, dd32, bbbb
+    double precision, parameter :: PI1=1.d0/3.1415926535D0, PI32O2=2.7842D+00, &
+         P2O4P2=4.4674D+00, PI32=5.5683D+00
+
+    dlt_2(1) = log(T)
+    dlt_2(2) = dlt_2(1) * dlt_2(1)
+    dlt_2(3) = dlt_2(2) * dlt_2(1)
+    dlt_2(4) = dlt_2(3) * dlt_2(1)
+    dlt_2(5) = dlt_2(4) * dlt_2(1)
+    dlt_2(6) = dlt_2(5) * dlt_2(1)
+
+    do n=1,nspec_2
+       etalg_2(n) = cfe_2(1,n) + cfe_2(2,n)*dlt_2(1) + cfe_2(3,n)*dlt_2(2) + cfe_2(4,n)*dlt_2(3)
+       eta_2(n) = exp(etalg_2(n))
+    end do
+
+    !if (iflag_2 .le. 1) return
+
+    do n=1,nspec_2
+       do m=1,n-1
+          tmp = -(cfd_2(1,m,n)+cfd_2(2,m,n)*dlt_2(1)+cfd_2(3,m,n)*dlt_2(2) &
+               + cfd_2(4,m,n)*dlt_2(3))
+          bin_2(m,n) = exp(tmp)
+          bin_2(n,m) = bin_2(m,n)
+       end do
+       bin_2(n,n) = 0.d0
+    end do
+
+    !if (iflag_2 .le. 2) return
+
+    !if (iflag_2.eq.3 .or. iflag_2.eq.5) then
+       do n=1,nspec_2
+          do m=1,n-1
+             A_2(m,n) = fita_2(1,m,n) + fita_2(2,m,n)*dlt_2(1) + fita_2(3,m,n)*dlt_2(2) &
+                  + fita_2(4,m,n)*dlt_2(3) + fita_2(5,m,n)*dlt_2(4) &
+                  + fita_2(6,m,n)*dlt_2(5) + fita_2(7,m,n)*dlt_2(6)
+             A_2(n,m) = A_2(m,n)
+          end do
+          A_2(n,n) = fita_2(1,n,n) + fita_2(2,n,n)*dlt_2(1) + fita_2(3,n,n)*dlt_2(2) &
+               + fita_2(4,n,n)*dlt_2(3) + fita_2(5,n,n)*dlt_2(4) &
+               + fita_2(6,n,n)*dlt_2(5) + fita_2(7,n,n)*dlt_2(6)
+       end do
+    !end if
+
+    !if (iflag_2 .eq. 3) return
+!-----------------------------------------------------------------------
+!         COMPUTE PARKER CORRECTION FOR ZROT
+!         AND ALSO THE ROTATIONAL AND INTERNAL PARTS OF SPECIFIC HEAT
+!-----------------------------------------------------------------------
+
+    do n=1,nspec_2
+       select case(nlin_2(n))
+       case (0)
+          crot = 0.d0
+          cint_2(n) = 0.d0
+       case (1)
+          wru = wt_2(n) / Ru
+          crot = 1.d0
+          cint_2(n) = cpms(n) * wru - 2.50d0
+       case (2)
+          wru = wt_2(n) / Ru
+          crot = 1.5d0
+          cint_2(n) = cpms(n) * wru - 2.50d0
+       !case default
+       !   print *, "EFZ: wrong value in nlin"
+       !   stop
+       end select
+       
+       dr = eps_2(n) / 298.d0
+       sqdr = sqrt(dr)
+       dr32 = sqdr*dr
+       aaaa1 = 1.d0/((1.0d0 + PI32O2*sqdr + P2O4P2*dr + PI32*dr32) * max(1.0d0, zrot_2(n)))
+
+       dd = eps_2(n) / T
+       sqdd = sqrt(dd)
+       dd32 = sqdd*dd
+       bbbb = (1.0d0 + PI32O2*sqdd + P2O4P2*dd + PI32*dd32) 
+       cxi_2(n) = crot * PI1 * bbbb * aaaa1
+    end do
+  end subroutine LZPAR_2
+
+  subroutine EGZE3_2(T, mu, wt_2, xtr_2, beta_2, eta_2, rn_2, an_2, zn_2, dmi_2, G_2, bin_2, A_2)
+    !$acc routine seq
+    double precision, intent(in) :: T
+    double precision, intent(out) :: mu
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: xtr_2(nspec_2)
+    double precision, intent(inout) :: beta_2(nspec_2)
+    double precision, intent(in) :: eta_2(nspec_2)
+    double precision, intent(inout) :: rn_2(nspec_2)
+    double precision, intent(inout) :: an_2(nspec_2)
+    double precision, intent(inout) :: zn_2(nspec_2)
+    double precision, intent(inout) :: dmi_2(nspec_2)
+    double precision, intent(inout) :: G_2(nspec_2,nspec_2)
+    double precision, intent(inout) :: bin_2(nspec_2,nspec_2)
+    double precision, intent(inout) :: A_2(nspec_2,nspec_2)
+
+    integer :: n
+
+    call EGZEMH_2(T, wt_2, xtr_2, beta_2, eta_2, G_2, bin_2, A_2)
+    
+    rn_2 = beta_2
+
+    call EGZCG1_2(1, rn_2, an_2, zn_2, dmi_2, G_2)
+
+    mu = 0.d0
+    do n=1,nspec_2
+       mu = mu + an_2(n) * beta_2(n)
+    end do
+  end subroutine EGZE3_2
+
+  subroutine EGZEMH_2(T, wt_2, xtr_2, beta_2, eta_2, G_2, bin_2, A_2)
+    !$acc routine seq
+    double precision, intent(in) :: T
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: xtr_2(nspec_2)
+    double precision, intent(inout) :: beta_2(nspec_2)
+    double precision, intent(in) :: eta_2(nspec_2)
+    double precision, intent(inout) :: G_2(nspec_2,nspec_2)
+    double precision, intent(in) :: bin_2(nspec_2,nspec_2)
+    double precision, intent(in) :: A_2(nspec_2,nspec_2)
+
+    integer ::  m, n
+    double precision :: FAC, CCC, wtfac, wtmn, wtnm, aaa
+
+    ! EVALUATE THE MATRIX H
+    ! Note:    FAC * BIN = 2 W_{ij} / \eta_{ij} / A_{ij}
+    FAC = (6.0D0 * RU / ( 5.0D0 * PATMOS )) * T
+    CCC = 5.0D0 / 3.0D0
+
+    do n=1,nspec_2
+       G_2(n,n) = xtr_2(n) * xtr_2(n) / eta_2(n)
+       ! EVALUATE THE RHS BETA
+       beta_2(n) = xtr_2(n)
+    end do
+
+    do n=1,nspec_2
+       do m=1,n-1
+          wtfac = 1.d0/(wt_2(m) + wt_2(n))
+          wtmn = wt_2(m)*(1.d0/wt_2(n))
+          wtnm = wt_2(n)*(1.d0/wt_2(m))
+          aaa = bin_2(m,n) * xtr_2(n) * xtr_2(m) * FAC * wtfac
+          G_2(m,m) = G_2(m,m) + aaa*(A_2(m,n)*wtnm + CCC)
+          G_2(m,n) = aaa * (A_2(m,n) - CCC)
+          G_2(n,m) = G_2(m,n)
+          G_2(n,n) = G_2(n,n) + aaa*(A_2(m,n)*wtmn + CCC)
+       end do
+    end do
+
+  end subroutine EGZEMH_2
+
+
+  subroutine EGZCG1_2(itmax, rn_2, an_2, zn_2, dmi_2, G_2)
+    !$acc routine seq
+    integer, intent(in) :: itmax
+    double precision, intent(inout) :: rn_2(nspec_2)
+    double precision, intent(inout) :: an_2(nspec_2)
+    double precision, intent(inout) :: zn_2(nspec_2)
+    double precision, intent(inout) :: dmi_2(nspec_2)
+    double precision, intent(in) :: G_2(nspec_2,nspec_2)
+
+    integer :: niter,  n
+    double precision :: betan, aaa, bbb, ccc, temp(nspec_2)
+
+    aaa = 0.d0
+    betan = 0.d0
+
+    do n = 1, nspec_2
+       an_2(n) = 0.0d0
+       zn_2(n) = 0.0d0
+       dmi_2(n) = 1.0D0 / G_2(n,n)
+       aaa = aaa + dmi_2(n) * rn_2(n)*rn_2(n)
+    enddo
+
+    do niter=1, itmax
+       do n=1, nspec_2
+          zn_2(n) = dmi_2(n)*rn_2(n) + betan*zn_2(n)
+       end do
+
+       CALL EGZAXS_2(G_2, zn_2, temp)
+
+       bbb = 0.d0
+       do n=1,nspec_2
+          bbb = bbb + zn_2(n) * temp(n)
+       end do
+
+       do n=1,nspec_2
+          an_2(n) = an_2(n) + aaa/bbb*zn_2(n)
+          rn_2(n) = rn_2(n) - aaa/bbb*temp(n)
+       end do
+
+       if (niter .eq. itmax) exit
+
+       ccc = 0.d0
+       do n=1,nspec_2
+          ccc = ccc + dmi_2(n) * rn_2(n)*rn_2(n)
+       end do
+
+       betan = ccc / aaa
+       aaa = ccc
+
+    end do
+
+  end subroutine EGZCG1_2
+
+  subroutine EGZAXS_2(AA, X, B) ! B = AA.X, AA is symmetric.
+    !$acc routine seq
+    double precision, intent(in) :: AA(nspec_2,nspec_2)
+    double precision, intent(in) :: X(nspec_2)
+    double precision, intent(out) :: B(nspec_2)
+    integer ::  m, n
+    B = 0.d0
+    do n=1,nspec_2
+       B(n) = 0.d0
+       do m=1,nspec_2
+          B(n) = B(n) + AA(m,n) * X(m)
+       end do
+    end do
+  end subroutine EGZAXS_2
+
+
+  subroutine EGZK3_2(T, VV, wt_2, xtr_2, cxi_2, cint_2, beta_2, eta_2, G_2, bin_2, A_2)
+    !$acc routine seq
+    double precision, intent(in) :: T
+    double precision, intent(out) :: VV
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: xtr_2(nspec_2)
+    double precision, intent(in) :: cxi_2(nspec_2)
+    double precision, intent(in) :: cint_2(nspec_2)
+    double precision, intent(inout) :: beta_2(nspec_2)
+    double precision, intent(in) :: eta_2(nspec_2)
+    double precision, intent(inout) :: G_2(nspec_2,nspec_2)
+    double precision, intent(in) :: bin_2(nspec_2,nspec_2)
+    double precision, intent(in) :: A_2(nspec_2,nspec_2)
+    
+    integer ::  m, n
+    double precision :: ccc, wtfac, bb
+    double precision, parameter :: denfac = 2.4d0 * Ru / Patmos
+
+    !if (.not. use_bulk_visc) then
+    !   VV = 0.d0
+    !   return
+    !end if
+
+    ccc = 0.0d0
+    do n=1,nspec_2
+       ccc = ccc + xtr_2(n)*cint_2(n)
+    end do
+
+    do n=1,nspec_2
+       G_2(n,n) = 4.d0*cxi_2(n)/eta_2(n)*xtr_2(n)*xtr_2(n)
+       beta_2(n) = -xtr_2(n) * cint_2(n) / (ccc+1.5d0)          
+    end do
+
+    do n=1,nspec_2
+       do m=1,n-1
+          wtfac = (1.d0/wt_2(m)) + (1.d0/wt_2(n))
+          bb = xtr_2(m)*xtr_2(n)*bin_2(m,n)*denfac*T*A_2(m,n)*wtfac
+          G_2(m,m) = G_2(m,m) + bb*cxi_2(m)
+!          G_2(n,m) = 0.d0
+!          G_2(m,n) = 0.d0
+          G_2(n,n) = G_2(n,n) + bb*cxi_2(n)
+       end do
+    end do
+
+    VV = 0.d0
+    do n=1,nspec_2
+       if (cxi_2(n) .eq. 0.d0) then
+          VV = VV + beta_2(n) * beta_2(n) 
+       else
+          VV = VV + beta_2(n) * beta_2(n) / G_2(n,n)
+       end if
+    end do
+  end subroutine EGZK3_2
+
+
+  subroutine EGZL1_2(alpha, X, con, cfl_2, dlt_2)
+    !$acc routine seq
+    double precision, intent(in) :: alpha
+    double precision, intent(in) :: X(nspec_2)
+    double precision, intent(out) :: con
+    double precision, intent(in) :: cfl_2(no_2,nspec_2)
+    double precision, intent(in) :: dlt_2(6)
+
+    integer ::  n
+    double precision :: asum, alpha1
+
+    asum = 0.d0
+    if (alpha .eq. 0.d0) then
+       do n=1,nspec_2
+          asum = asum + X(n)*(cfl_2(1,n) + cfl_2(2,n)*dlt_2(1) &
+               + cfl_2(3,n)*dlt_2(2) + cfl_2(4,n)*dlt_2(3))
+       end do
+       con = exp(asum) 
+    else
+       alpha1 = 1.d0 / alpha
+       do n=1,nspec_2
+          asum = asum + X(n)*exp(alpha*(cfl_2(1,n) + cfl_2(2,n)*dlt_2(1) &
+               + cfl_2(3,n)*dlt_2(2) + cfl_2(4,n)*dlt_2(3)))
+       end do
+       if (alpha .eq. 1.d0) then
+          con = asum
+       else if (alpha .eq. -1.d0) then
+          con = 1.d0/asum
+       else
+          con = asum**alpha1
+       end if
+    end if
+    
+  end subroutine EGZL1_2
+ 
+
+  subroutine EGZVR1_2(T, D, wt_2, xtr_2, aux_2, bin_2)
+    !$acc routine seq
+    double precision, intent(in) :: T
+    double precision, intent(out) :: D(nspec_2)
+    double precision, intent(in) :: wt_2(nspec_2)
+    double precision, intent(in) :: xtr_2(nspec_2)
+    double precision, intent(in) :: aux_2(nspec_2)
+    double precision, intent(in) :: bin_2(nspec_2,nspec_2)
+
+    integer ::  m, n
+    double precision :: fac
+
+    D = 0.d0
+    do n=1,nspec_2
+       do m=1,nspec_2
+          D(m) = D(m) + xtr_2(n)*bin_2(m,n)
+       end do
+    end do
+
+    fac = (Patmos/Ru) / T
+
+    do n=1,nspec_2
+       D(n) = wt_2(n) * fac * aux_2(n) / D(n)
+    end do
+
+  end subroutine EGZVR1_2
+
+ subroutine egzabc_2(FA, FA0, eps2_2)
+    double precision, intent(in) :: FA0(nfit)
+    double precision, intent(out) :: FA(nfit,nspec_2,nspec_2)
+    double precision, intent(in) :: eps2_2(nspec_2,nspec_2)
+    integer i,j,k,l,m,mm
+    double precision :: SUMA, prod
+    DO J = 1, NS
+       DO I = J, NS
+          do m = 1, nfit
+             SUMA = 0.0D0
+             mm   = m - 1
+             do k = mm, nfit-1
+                prod = 1.0d0
+                do l = 1, k-mm
+                   prod = prod * (-eps2_2(i,j)) * dble(mm+l) / dble(l)
+                enddo
+                SUMA = SUMA + FA0(k+1) * PROD
+             enddo
+             FA(m,I,J) = SUMA
+          enddo
+       ENDDO
+    ENDDO
+    DO J = 1, NS
+       DO I = 1, J-1
+          do m = 1, nfit
+             FA(m,I,J) = FA(m,J,I)
+          enddo
+       ENDDO
+    ENDDO
+  end subroutine egzabc_2
+
+
+  subroutine LEVEPS_2(eps_2, eps2_2, dip_2, pol_2, sig_2)
+    double precision, intent(in) :: eps_2(nspec_2)
+    double precision, intent(inout) :: eps2_2(nspec_2,nspec_2)
+    double precision, intent(in) :: dip_2(nspec_2)
+    double precision, intent(in) :: pol_2(nspec_2)
+    double precision, intent(in) :: sig_2(nspec_2)
+
+    double precision, parameter :: pi = 3.1415926535D0, &
+         fac = 1.0D-12, dipmin = 1.0D-20, boltz = 1.38056D-16
+    integer :: j, k
+    double precision :: rooteps(nspec_2)
+
+    do j=1,nspec_2
+       rooteps(j) = sqrt(EPS_2(j))
+    end do
+    do j=1,nspec_2
+       do k=1,j
+          IF((DIP_2(J).LT.DIPMIN .AND. DIP_2(K).GT.DIPMIN)) THEN
+!-----------------------------------------------------------------------
+!                K IS POLAR, J IS NONPOLAR
+!-----------------------------------------------------------------------
+             eps2_2(K,J) = 1.0D0 + 0.25D0*(POL_2(J)/SIG_2(J)**3) * &
+                  (FAC/BOLTZ) * &
+                  (DIP_2(K)**2/(EPS_2(K)*SIG_2(K)**3)) * &
+                  rooteps(k)/rooteps(j)
+          ELSE IF((DIP_2(J).GT.DIPMIN .AND. DIP_2(K).LT.DIPMIN)) THEN
+!-----------------------------------------------------------------------
+!             J IS POLAR, K IS NONPOLAR
+!-----------------------------------------------------------------------
+             eps2_2(K,J) = 1.0D0 + 0.25D0*(POL_2(K)/SIG_2(K)**3) * &
+                  (FAC/BOLTZ) * &
+                  (DIP_2(J)**2/(EPS_2(J)*SIG_2(J)**3)) * &
+                  rooteps(j)/rooteps(k)
+          ELSE
+!-----------------------------------------------------------------------
+!              NORMAL CASE, EITHER BOTH POLAR OR BOTH NONPOLAR
+!-----------------------------------------------------------------------
+             eps2_2(K,J) = 1.d0
+          ENDIF
+          eps2_2(K,J) = log(rooteps(j)*rooteps(k)* eps2_2(K,J)*eps2_2(K,J))
+       end do
+    end do
+    do j=1,nspec_2
+       do k=j+1,nspec_2
+          eps2_2(k,j) = eps2_2(j,k)
+       end do
+    end do
+  end subroutine LEVEPS_2
+
+
+  subroutine egz_init_2(wt_2,eps_2,sig_2,dip_2,pol_2,zrot_2,nlin_2,cfe_2,cfl_2,cfd_2,fita_2,fita0_2,eps2_2)
+
+    USE fuego_module, ONLY: egtransetWT, egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL
+
+    double precision, intent(out) :: wt_2(nspec_2)
+    double precision, intent(out) :: eps_2(nspec_2)
+    double precision, intent(out) :: sig_2(nspec_2)
+    double precision, intent(out) :: dip_2(nspec_2)
+    double precision, intent(out) :: pol_2(nspec_2)
+    double precision, intent(out) :: zrot_2(nspec_2)
+    integer, intent(out) :: nlin_2(nspec_2)
+    double precision, intent(out) :: cfe_2(no_2,nspec_2)
+    double precision, intent(out) :: cfl_2(no_2,nspec_2)
+    double precision, intent(out) :: cfd_2(no_2,nspec_2,nspec_2)
+    double precision, intent(out) :: fita_2(nfit,nspec_2,nspec_2)
+    double precision, intent(in) :: fita0_2(nfit)
+    double precision, intent(out) :: eps2_2(nspec_2,nspec_2)
+
+    call egtransetWT(wt_2)
+    call egtransetEPS(eps_2)
+    call egtransetSIG(sig_2)
+    call egtransetDIP(dip_2)
+    call egtransetPOL(pol_2)
+    call egtransetZROT(zrot_2)
+    call egtransetNLIN(nlin_2)
+    call egtransetCOFETA(cfe_2)
+    call egtransetCOFLAM(cfl_2)
+    call egtransetCOFD(cfd_2)
+    call levEPS_2(eps_2,eps2_2,dip_2,pol_2,sig_2)
+    call egzABC_2(fita_2,fita0_2,eps2_2)
+
+  end subroutine egz_init_2
+
+
 
 
   ! This subroutine can be called inside OMP PARALLEL
