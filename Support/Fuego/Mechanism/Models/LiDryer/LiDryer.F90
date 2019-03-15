@@ -667,6 +667,8 @@ end subroutine
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
 subroutine ckytx2(y, iwrk, rwrk, x)
 
+    !$acc routine seq
+
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
     double precision, intent(in) :: rwrk
@@ -917,6 +919,8 @@ end subroutine
 ! Returns the specific heats at constant pressure
 ! in mass units (Eq. 26)
 subroutine ckcpms(T, iwrk, rwrk, cpms)
+
+    !$acc routine seq
 
     implicit none
 
@@ -2010,6 +2014,8 @@ end subroutine
 ! compute Cp/R at the given temperature
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cp_R(species, tc)
+
+    !$acc routine seq
 
     implicit none
 

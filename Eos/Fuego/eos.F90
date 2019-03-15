@@ -18,8 +18,9 @@ module eos_module
   real(amrex_real), save, public :: smallT = 1.d-50
   integer :: iwrk
   real(amrex_real) :: rwrk
+  !$acc declare create(iwrk,rwrk)
 
-  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui, eos_rp1
+  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, eos_cpi, eos_cpi2, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, eos_mui, eos_rp1
   private :: nspecies, Ru, inv_mwt
 
   interface
@@ -185,6 +186,8 @@ contains
 
   subroutine eos_ytx2(Y, X, Nsp)
 
+    !$acc routine seq
+
     implicit none
 
     double precision, intent(in), dimension(1:Nsp) :: Y
@@ -194,6 +197,19 @@ contains
     call ckytx2(Y(:),iwrk,rwrk,X(:))
 
   end subroutine eos_ytx2
+
+  subroutine eos_ytx2_2(Y, X)
+
+    !$acc routine seq
+
+    implicit none
+
+    double precision, intent(in) :: Y(:)
+    double precision, intent(out) :: X(:)
+
+    call ckytx2(Y(:),iwrk,rwrk,X(:))
+
+  end subroutine eos_ytx2_2
 
 !  subroutine eos_ytx_vec(Y, ylo, yhi, X, xlo, xhi, lo, hi, Nsp)
 !
@@ -246,7 +262,24 @@ contains
 
   end subroutine eos_ytx_vec
 
+
+  subroutine eos_cpi2(state_t, state_cpi)
+
+    !$acc routine seq
+
+    implicit none
+
+    double precision, intent(in) :: state_T
+    double precision, intent(out) :: state_cpi(:)
+
+    call ckcpms(state_T, iwrk, rwrk, state_cpi)
+
+  end subroutine eos_cpi2
+
+
   subroutine eos_cpi(state)
+
+    !$acc routine seq
 
     implicit none
 
