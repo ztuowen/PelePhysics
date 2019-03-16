@@ -56,7 +56,7 @@ module egz_module
 
   public :: iflag
   public :: egz_init, egz_close, EGZINI, EGZPAR, EGZE1, EGZE3, EGZK1, EGZK3, EGZL1, EGZVR1
-  public :: egz_init_2, EGZPAR_2, EGZE1_2, EGZE3_2, EGZK3_2, EGZL1_2, EGZVR1_2
+  public :: egz_init_2, EGZPAR_2, EGZE3_2, EGZK3_2, EGZL1_2, EGZVR1_2
   ! egz_init and egz_close should be called outside OMP PARALLEL,
   ! whereas others are inside
 
