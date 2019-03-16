@@ -667,7 +667,7 @@ end subroutine
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
 subroutine ckytx2(y, iwrk, rwrk, x)
 
-    !$acc routine seq
+    !$acc routine(ckytx2) seq
 
     double precision, intent(in) :: y(9)
     integer, intent(in) :: iwrk
@@ -920,7 +920,7 @@ end subroutine
 ! in mass units (Eq. 26)
 subroutine ckcpms(T, iwrk, rwrk, cpms)
 
-    !$acc routine seq
+    !$acc routine(ckcpms) seq
 
     implicit none
 
@@ -2015,7 +2015,7 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine cp_R(species, tc)
 
-    !$acc routine seq
+    !$acc routine(cp_r) seq
 
     implicit none
 

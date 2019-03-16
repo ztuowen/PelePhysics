@@ -239,7 +239,7 @@ contains
 
   end subroutine eos_ytx2
 
-  subroutine eos_ytx2_2(Y, X)
+  subroutine eos_ytx_gpu(Y, X)
 
     !$acc routine seq
 
@@ -250,7 +250,7 @@ contains
 
     call ckytx2(Y(:),iwrk,rwrk,X(:))
 
-  end subroutine eos_ytx2_2
+  end subroutine eos_ytx_gpu
 
 !  subroutine eos_ytx_vec(Y, ylo, yhi, X, xlo, xhi, lo, hi, Nsp)
 !
@@ -275,7 +275,7 @@ contains
 !
 !  end subroutine eos_ytx_vec
 
-  subroutine eos_ytx_vec(q, x, lo, hi, nspec, qfs, qvar)
+  subroutine eos_ytx_vec_gpu(q, x, lo, hi, nspec, qfs, qvar)
 
     !$acc routine(eos_ytx_vec) gang
     !$acc routine(ckytx) seq
@@ -301,10 +301,9 @@ contains
     enddo
     !$acc end loop
 
-  end subroutine eos_ytx_vec
+  end subroutine eos_ytx_vec_gpu
 
-
-  subroutine eos_cpi2(state_t, state_cpi)
+  subroutine eos_cpi_gpu(state_t, state_cpi)
 
     !$acc routine seq
 
@@ -315,12 +314,9 @@ contains
 
     call ckcpms(state_T, iwrk, rwrk, state_cpi)
 
-  end subroutine eos_cpi2
-
+  end subroutine eos_cpi_gpu
 
   subroutine eos_cpi(state)
-
-    !$acc routine seq
 
     implicit none
 
@@ -378,9 +374,9 @@ contains
 !
 !  end subroutine eos_hi_vec
 
-  subroutine eos_hi_vec(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
+  subroutine eos_hi_vec_gpu(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
 
-    !$acc routine(eos_hi_vec) gang
+    !$acc routine(eos_hi_vec_gpu) gang
     !$acc routine(ckhms) seq
 
     implicit none
@@ -402,7 +398,7 @@ contains
     enddo
     !$acc end loop
 
-  end subroutine eos_hi_vec
+  end subroutine eos_hi_vec_gpu
 
   subroutine eos_cv(state)
 
