@@ -277,7 +277,7 @@ contains
 
   subroutine eos_ytx_vec_gpu(q, x, lo, hi, nspec, qfs, qvar)
 
-    !$acc routine(eos_ytx_vec) gang
+    !$acc routine(eos_ytx_vec_gpu) gang
     !$acc routine(ckytx) seq
 
     implicit none
