@@ -24,7 +24,6 @@ contains
 
   end subroutine transport_init
 
-
   subroutine transport_close()
 
     use extern_probin_module
@@ -38,8 +37,6 @@ contains
 
 
   subroutine transport(which, coeff)
-
-    !acc routine seq
 
     implicit none
 
@@ -87,50 +84,49 @@ contains
     real (kind=dp_t), intent(inout) :: xi(xi_lo(1):xi_hi(1),xi_lo(2):xi_hi(2),xi_lo(3):xi_hi(3))
     real (kind=dp_t), intent(inout) :: lam(lam_lo(1):lam_hi(1),lam_lo(2):lam_hi(2),lam_lo(3):lam_hi(3))
 
-
-      double precision :: trv_eos_state_massfrac(nspec)
-      double precision :: trv_eos_state_molefrac(nspec)
-      double precision :: trv_eos_state_cpi(nspec)
-      double precision :: trv_ddiag(nspec)
-      double precision :: trv_eos_state_t
-      double precision :: trv_eos_state_rho
-      double precision :: trv_mu
-      double precision :: trv_xi
-      double precision :: trv_lam
-      integer :: trv_npts
-      double precision :: wt(nspec)
-      double precision :: eps(nspec)
-      double precision :: dip(nspec)
-      double precision :: pol(nspec)
-      double precision :: sig(nspec)
-      double precision :: zrot(nspec)
-      integer :: nlin(nspec)
-      integer, parameter :: no=4
-      double precision :: cfe(no,nspec)
-      double precision :: cfl(no,nspec)
-      double precision :: cfd(no,nspec,nspec)
-      integer, parameter :: nfit=7
-      double precision :: fita(nfit,nspec,nspec)
-      double precision :: fita0(nfit) = (/ &
-       .1106910525D+01, -.7065517161D-02, -.1671975393D-01, .1188708609D-01, &
-       .7569367323D-03, -.1313998345D-02,  .1720853282D-03 /)
-      double precision :: eps2(nspec,nspec)
-      double precision :: xtr(nspec)
-      double precision :: ytr(nspec)
-      double precision :: aux(nspec)
-      double precision :: cxi(nspec)
-      double precision :: cint(nspec)
-      double precision :: dlt(6)
-      double precision :: beta(nspec)
-      double precision :: eta(nspec)
-      double precision :: etalg(nspec)
-      double precision :: rn(nspec)
-      double precision :: an(nspec)
-      double precision :: zn(nspec)
-      double precision :: dmi(nspec)
-      double precision :: g(nspec,nspec)
-      double precision :: bin(nspec,nspec)
-      double precision :: a(nspec,nspec)
+    double precision :: trv_eos_state_massfrac(nspec)
+    double precision :: trv_eos_state_molefrac(nspec)
+    double precision :: trv_eos_state_cpi(nspec)
+    double precision :: trv_ddiag(nspec)
+    double precision :: trv_eos_state_t
+    double precision :: trv_eos_state_rho
+    double precision :: trv_mu
+    double precision :: trv_xi
+    double precision :: trv_lam
+    integer :: trv_npts
+    double precision :: wt(nspec)
+    double precision :: eps(nspec)
+    double precision :: dip(nspec)
+    double precision :: pol(nspec)
+    double precision :: sig(nspec)
+    double precision :: zrot(nspec)
+    integer :: nlin(nspec)
+    integer, parameter :: no=4
+    double precision :: cfe(no,nspec)
+    double precision :: cfl(no,nspec)
+    double precision :: cfd(no,nspec,nspec)
+    integer, parameter :: nfit=7
+    double precision :: fita(nfit,nspec,nspec)
+    double precision :: fita0(nfit) = (/ &
+     .1106910525D+01, -.7065517161D-02, -.1671975393D-01, .1188708609D-01, &
+     .7569367323D-03, -.1313998345D-02,  .1720853282D-03 /)
+    double precision :: eps2(nspec,nspec)
+    double precision :: xtr(nspec)
+    double precision :: ytr(nspec)
+    double precision :: aux(nspec)
+    double precision :: cxi(nspec)
+    double precision :: cint(nspec)
+    double precision :: dlt(6)
+    double precision :: beta(nspec)
+    double precision :: eta(nspec)
+    double precision :: etalg(nspec)
+    double precision :: rn(nspec)
+    double precision :: an(nspec)
+    double precision :: zn(nspec)
+    double precision :: dmi(nspec)
+    double precision :: g(nspec,nspec)
+    double precision :: bin(nspec,nspec)
+    double precision :: a(nspec,nspec)
 
     !! local variables
     integer      :: i, j, k, n, np
@@ -175,7 +171,7 @@ contains
 
     !call destroy(coeff)
 
-    call egz_init_2(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+    call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
     !$acc update device(nspec)
     !$acc enter data copyin(hi,lo,massfrac,temperature,density,mu,xi,lam,D) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
@@ -189,7 +185,7 @@ contains
              trv_eos_state_T = temperature(i,j,k)
              trv_eos_state_rho = density(i,j,k)
 
-             call actual_transport_2(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspec, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, fita0, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
+             call actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspec, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, fita0, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
 
              mu(i,j,k)  = trv_mu
              xi(i,j,k)  = trv_xi
@@ -205,6 +201,5 @@ contains
     !$acc exit data copyout(mu,xi,lam,d) delete(hi,lo,massfrac,temperature,density,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
   end subroutine get_transport_coeffs
-
 
 end module transport_module
