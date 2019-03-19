@@ -21,8 +21,7 @@ module chemistry_module
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
-  !$acc declare &
-  !$acc create(inv_mwt, ru)
+  !$acc declare create(ru)
 
 contains
 
@@ -71,6 +70,8 @@ contains
     call ckrp(iwrk, rwrk, Ru, Ruc, Patm)
 
     chemistry_initialized = .true.
+
+    !$acc update device(ru)
 
   end subroutine chemistry_init
 
