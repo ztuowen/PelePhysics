@@ -8,8 +8,9 @@ module eos_module
   use amrex_fort_module, only : amrex_real
   use amrex_constants_module
   use eos_type_module
-  use fuego_chemistry
-  use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  !use fuego_chemistry
+  !use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  use chemistry_module, only : Ru, chemistry_init, chemistry_initialized, spec_names, elem_names
   use fuego_module, only : ckytx2, ckytx, ckhms2, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
   implicit none
@@ -28,7 +29,8 @@ module eos_module
   !real(amrex_real) :: rwrk
   !acc declare create(iwrk,rwrk)
 
-  private :: nspecies, Ru, inv_mwt
+  !private :: nspecies, Ru, inv_mwt
+  private :: Ru
 
   interface
      subroutine amrex_array_init_snan (p, nelem) bind(C,name="amrex_array_init_snan")
@@ -46,18 +48,28 @@ contains
     !$acc routine(ckums1) seq
     !$acc routine(ckcvms1) seq
 
-    USE chemistry_module, ONLY: Ru, inv_mwt
+    USE chemistry_module, ONLY: Ru
     USE fuego_module, ONLY: ckcvms1, ckums1
 
     implicit none
 
-    double precision, intent(in) :: rho, p, massfrac(nspec)
+    double precision, intent(in) :: rho, p, massfrac(9)
     double precision, intent(out) :: e, gam1, cs
     integer, intent(in) :: nspec
 
     double precision :: wbar, T, cv
     !double precision :: ei(nspec), cvi(nspec) !Does not work with OpenACC. Why?
     double precision :: ei(9), cvi(9)
+    double precision, parameter :: inv_mwt(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     wbar = 1.d0 / sum(massfrac(:) * inv_mwt(:))
     T = p * wbar / (rho * Ru)
@@ -436,6 +448,16 @@ contains
     implicit none
 
     type (eos_t), intent(inout) :: state
+    double precision, parameter :: inv_mwt(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
 
     state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
 

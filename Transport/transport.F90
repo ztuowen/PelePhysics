@@ -68,6 +68,7 @@ contains
 
     implicit none
 
+    integer, parameter :: nspec=9
     integer         , intent(in   ) ::     lo(3),    hi(3)
     integer         , intent(in   ) ::  mf_lo(3), mf_hi(3)
     integer         , intent(in   ) ::   t_lo(3),  t_hi(3)
@@ -173,7 +174,6 @@ contains
 
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
-    !$acc update device(nspec)
     !$acc enter data copyin(hi,lo,massfrac,temperature,density,mu,xi,lam,D) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
     !$acc parallel loop gang vector collapse(3) private(k,j,i,n,trv_eos_state_t,trv_eos_state_rho,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,trv_mu,trv_xi,trv_lam,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) present(hi,lo,massfrac,temperature,density,mu,xi,lam,D,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
     do k = lo(3),hi(3)
