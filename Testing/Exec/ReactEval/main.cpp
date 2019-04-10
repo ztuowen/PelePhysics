@@ -12,10 +12,7 @@ using namespace amrex;
 #include <main_F.H>
 #include <PlotFileFromMF.H>
 
-std::string inputs_name = "";
-
-using namespace amrex;
-
+/**********************************/
 int
 main (int   argc,
       char* argv[])
