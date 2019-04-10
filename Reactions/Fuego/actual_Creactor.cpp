@@ -51,9 +51,8 @@
 /**********************************/
 /* Definitions */
 /* Initialization routine, called once at the begining of the problem */
-int extern_cInit(const int* cvode_meth,const int* cvode_itmeth, 
-		const int* cvode_iJac, const int* cvode_iE,
-		const int* cvode_iDense, const int* Ncells){
+int reactor_init(const int* cvode_iE, const int* cvode_iJac,
+		const int* cvode_iDense, const int* Ncells) {
 
 	int flag;
 	realtype reltol, time;
@@ -83,13 +82,13 @@ int extern_cInit(const int* cvode_meth,const int* cvode_itmeth,
 
 	/* Call CVodeCreate to create the solver memory and specify the
 	 * Backward Differentiation Formula and the use of a Newton iteration */
-	if ((*cvode_meth == 2) && (*cvode_itmeth == 2))
-	{
-	    cvode_mem = CVodeCreate(CV_BDF);
-	    if (check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
-	} else {
-	    amrex::Abort("\n--> Weird inputs to CVodeCreate. Viable options are CV_BDF (=2), CV_NEWTON (=2)\n");
-	}
+	//if ((*cvode_meth == 2) && (*cvode_itmeth == 2))
+	//{
+	cvode_mem = CVodeCreate(CV_BDF);
+	if (check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
+	//} else {
+	//    amrex::Abort("\n--> Weird inputs to CVodeCreate. Viable options are CV_BDF (=2), CV_NEWTON (=2)\n");
+	//}
 
         /* Does not work for more than 1 cell right now */
 	data = AllocUserData();
@@ -254,7 +253,7 @@ int extern_cInit(const int* cvode_meth,const int* cvode_itmeth,
 }
 
 /* Main CVODE call routine */
-int actual_cReact(realtype *rY_in, realtype *rY_src_in, 
+int react(realtype *rY_in, realtype *rY_src_in, 
 		realtype *rX_in, realtype *rX_src_in,
 		realtype *P_in, 
                 realtype *dt_react, realtype *time, int *Init){
@@ -1230,7 +1229,7 @@ static UserData AllocUserData(void)
 
 
 /* Free memory */
-void extern_cFree(){
+void reactor_close(){
 
   CVodeFree(&cvode_mem);
   SUNLinSolFree(LS);
