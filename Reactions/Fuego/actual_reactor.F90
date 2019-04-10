@@ -56,10 +56,11 @@ contains
     if (parallel_IOProcessor()) then
        print *,"Using good ol' dvode"
        print *,"--> DENSE solver without Analytical J"
+       print *,"--> Reusing the analytical Jac ? ",always_new_J, new_Jacobian_each_cell
     endif
     iE = iE_in
     if (iE == 1) then
-       if (parallel_IOProcessor()) print *," ->with internal energy (UV cst)"
+       if (parallel_IOProcessor()) print *,"    ... with internal energy (UV cst)"
        allocate(rhoydot_ext(nspec))
     else if (iE == 5) then
        if (parallel_IOProcessor()) print *," ->with enthalpy (HP cst)"
@@ -112,11 +113,11 @@ contains
     react_state_in % rhoYdot_ext(:) = rY_src_in(1:nspec)
 
     if (iE == 1) then
-        react_state_in %              e = rX_in !/ react_state_in % rho
+        react_state_in %              e = rX_in / react_state_in % rho
         react_state_in %    rhoedot_ext = rX_src_in
     else if (iE == 5) then
         react_state_in %              p = P_in
-        react_state_in %              h = rX_in !/ react_state_in % rho
+        react_state_in %              h = rX_in / react_state_in % rho
         react_state_in %    rhohdot_ext = rX_src_in
     else
         react_state_in %              h = rX_in / react_state_in % rho
@@ -232,7 +233,7 @@ contains
            eos_state % e                 = (rhoe_init  +  dt_react*rhoedot_ext) /eos_state % rho
            call eos_re(eos_state)
            rY_in(1:nspec)                = vodeVec(1:nspec)
-           rX_in                         = eos_state % e
+           rX_in                         = eos_state % e * eos_state % rho
            rX_src_in                     = rhoedot_ext
            rY_src_in(1:nspec)            = rhoydot_ext(1:nspec)
        else if (iE == 5) then

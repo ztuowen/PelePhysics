@@ -119,9 +119,9 @@ contains
 
              call eos_tp(eos_state)
 
-             eint(i,j,k) = eos_state % e
-             rhoY(i,j,k,1:nspec) = eos_state % massfrac * eos_state % rho
-             temperature(i,j,k) = eos_state % T
+             eint(i,j,k)          = eos_state % e * eos_state % rho
+             rhoY(i,j,k,1:nspec)  = eos_state % massfrac * eos_state % rho
+             temperature(i,j,k)   = eos_state % T
 
           end do
        end do
@@ -178,7 +178,7 @@ contains
     integer          :: i, j, k
 
     real(amrex_real) ::    rY(nspec+1), rY_src(nspec)
-    real(amrex_real) ::    energy, energy_src
+    real(amrex_real) ::    rEnergy, rEnergy_src
 
     pressure = 1013250.d0
 
@@ -190,14 +190,14 @@ contains
                 rY(1:nspec)      = mold(i,j,k,1:nspec)
                 rY_src(1:nspec)  = ysrc(i,j,k,1:nspec)
                 rY(nspec+1)      = Told(i,j,k)
-                energy           = eold(i,j,k)
-                energy_src       = esrc(i,j,k)
+                rEnergy          = eold(i,j,k)
+                rEnergy_src      = esrc(i,j,k)
 
                 cost(i,j,k) = react(rY, rY_src,&
-                                    energy, energy_src,&
+                                    rEnergy, rEnergy_src,&
                                     pressure,dt_react,time,0)
 
-                enew(i,j,k)         = energy 
+                enew(i,j,k)         = rEnergy
                 Tnew(i,j,k)         = rY(nspec+1)
                 mnew(i,j,k,1:nspec) = rY(1:nspec)
              end if
