@@ -1,4 +1,5 @@
 #include <actual_Creactor.h> 
+#include <AMReX_ParmParse.H>
 
 /**********************************/
 
@@ -51,8 +52,7 @@
 /**********************************/
 /* Definitions */
 /* Initialization routine, called once at the begining of the problem */
-int reactor_init(const int* cvode_iE, const int* cvode_iJac,
-		const int* cvode_iDense, const int* Ncells) {
+int reactor_init(const int* cvode_iE, const int* Ncells) {
 
 	int flag;
 	realtype reltol, time;
@@ -66,8 +66,12 @@ int reactor_init(const int* cvode_iE, const int* cvode_iJac,
 	    printf("Nb of spec is %d \n", NEQ);
 	}
 
-	iDense_Creact  = *cvode_iDense;
-	iJac_Creact    = *cvode_iJac;
+	/* ParmParse from the inputs file */ 
+	amrex::ParmParse pp;
+	pp.query("cvode_iJac",iJac_Creact);
+	pp.get("cvode_iDense", iDense_Creact);
+
+	/* Args */
 	iE_Creact      = *cvode_iE;
 	NCELLS         = *Ncells;
         neq_tot        = (NEQ + 1) * NCELLS;

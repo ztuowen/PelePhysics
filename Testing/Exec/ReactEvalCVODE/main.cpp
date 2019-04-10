@@ -29,7 +29,7 @@ main (int   argc,
     std::string txtfile_in=""; 
     /* CVODE inputs */
     int cvode_ncells = 1;
-    int cvode_iJac,cvode_iE,cvode_iDense;
+    int cvode_iE = 1;
     int ndt = 1; 
     Real dt = 1.e-5; 
 
@@ -49,39 +49,23 @@ main (int   argc,
       // time stepping
       pp.query("ndt",ndt); 
 
-      cvode_iJac = 0;
-      pp.query("cvode_iJac",cvode_iJac);
-      // Select CVODE Jacobian eval.
-      //   0 = finite differences
-      //   1 = User supplied function
-      
       pp.get("cvode_iE",cvode_iE);
       // Select CVODE type of energy employed.
       //1 for UV, 2 for HP
       //   1 = Internal energy
       //   anything else = enthalpy (PeleLM restart)
       
-      pp.get("cvode_iDense",cvode_iDense);
-      //1 for regular dense solver, otherwise it is sparse
-      
       pp.query("txtfile_in",txtfile_in);
 
     }
 
-    amrex::Print() << "CVODE method: ";
+    amrex::Print() << "Integration method: ";
         amrex::Print() << "BDF (stiff)";
     amrex::Print() << std::endl;
 
-    amrex::Print() << "CVODE iteration method: ";
+    amrex::Print() << "Integration iteration method: ";
         amrex::Print() << "Newton";
     amrex::Print() << std::endl;
-
-    amrex::Print() << "CVODE use of Analytical J: ";
-    if (cvode_iJac == 0) {
-      amrex::Print() << "NO";
-    } else {
-        amrex::Print() << "YUP";
-    }
     
     amrex::Print() << std::endl;
 
@@ -93,8 +77,8 @@ main (int   argc,
 	    probin_file_name[i] = probin_file[i];
     extern_init(&(probin_file_name[0]),&probin_file_length, &cvode_iE);
 
-    /* Initialize CVODE reactor */
-    reactor_init(&cvode_iE, &cvode_iJac, &cvode_iDense, &cvode_ncells);
+    /* Initialize D/CVODE reactor */
+    reactor_init(&cvode_iE, &cvode_ncells);
 
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
