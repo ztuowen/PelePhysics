@@ -74,15 +74,14 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 
 /**********************************/
 /* Functions Called by the Program */
-int extern_cInit(const int* cvode_meth,const int* cvode_itmeth, 
-		const int* cvode_iJac, const int* cvode_iE,
+int reactor_init(const int* cvode_iE, const int* cvode_iJac,
 		const int* cvode_iDense, const int* Ncells);
 
-int actual_cReact(realtype *rY_in, realtype *rY_src_in, 
+int react(realtype *rY_in, realtype *rY_src_in, 
 		realtype *rX_in, realtype *rX_src_in, 
 		realtype *P_in, realtype *dt_react, realtype *time, int *Init);
 
-void extern_cFree();
+void reactor_close();
 
 
 /**********************************/
