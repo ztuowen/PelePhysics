@@ -67,9 +67,9 @@ int reactor_init(const int* cvode_iE, const int* Ncells) {
 	}
 
 	/* ParmParse from the inputs file */ 
-	amrex::ParmParse pp;
+	amrex::ParmParse pp("ns");
 	pp.query("cvode_iJac",iJac_Creact);
-	pp.get("cvode_iDense", iDense_Creact);
+	pp.query("cvode_iDense", iDense_Creact);
 
 	/* Args */
 	iE_Creact      = *cvode_iE;
