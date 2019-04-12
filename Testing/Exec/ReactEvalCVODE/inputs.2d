@@ -8,6 +8,6 @@ cvode_iJac = 0
 cvode_iE = 1
 
 # choose sparse or dense
-cvode_iDense = 1
+cvode_iDense = 99
 
 amr.plot_file       = plt

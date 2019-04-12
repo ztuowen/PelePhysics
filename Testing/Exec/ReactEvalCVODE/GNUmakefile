@@ -20,9 +20,10 @@ PELE_PHYSICS_HOME    := ../../..
 #######################
 USE_SUNDIALS_3x4x = TRUE
 
-USE_KLU = FALSE
+USE_KLU = TRUE
 ifeq ($(USE_KLU), TRUE)
     DEFINES  += -DUSE_KLU
+    include Make.CVODE
 endif
 
 #######################
