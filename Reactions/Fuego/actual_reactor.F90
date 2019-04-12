@@ -57,7 +57,7 @@ contains
     if (parallel_IOProcessor()) then
        print *,"Using good ol' dvode"
        print *,"--> DENSE solver without Analytical J"
-       print *,"--> Reusing the analytical Jac ? ",always_new_J, Ncells
+       print *,"--> Reusing the analytical Jac ? ",always_new_J
     endif
     iE = iE_in
     if (iE == 1) then
