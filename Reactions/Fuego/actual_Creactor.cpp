@@ -1006,15 +1006,16 @@ static void check_state(N_Vector yvec)
   for (int tid = 0; tid < NCELLS; tid ++) {
       rho = 0.0;
       offset = tid * (NEQ + 1); 
+      //amrex::Print() << " cell, offset, T " << tid << " " << offset << " " << ydata[offset + NEQ] << std::endl; 
       for (int k = 0; k < NEQ; k ++) {
           rho =  rho + ydata[offset + k];
-	  Temp = ydata[offset + NEQ];
-	  if ((rho < 1.0e-10) || (rho > 1.e10)) {
-	      actual_ok_to_react = false;
-	  }
-	  if ((Temp < 200.0) || (Temp > 5000.0)) {
-              actual_ok_to_react = false; 
-	  }
+      }
+      Temp = ydata[offset + NEQ];
+      if ((rho < 1.0e-10) || (rho > 1.e10)) {
+          actual_ok_to_react = false;
+      }
+      if ((Temp < 200.0) || (Temp > 5000.0)) {
+          actual_ok_to_react = false; 
       }
   }
 

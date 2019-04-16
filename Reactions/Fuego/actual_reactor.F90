@@ -33,7 +33,7 @@ contains
     integer(c_int),  intent(in   ), optional :: Ncells
     integer :: neq, verbose, itol, order, maxstep
     real(amrex_real) :: rtol, atol
-    logical :: use_ajac, save_ajac, always_new_j, stiff
+    logical :: use_ajac, save_ajac, always_new_j_loc, stiff
 
     neq = nspec + 1
     verbose = 0
@@ -43,21 +43,21 @@ contains
     use_ajac = .false.
     save_ajac = .false.
     if (new_Jacobian_each_cell .ne. 0) then
-       always_new_J = .true.
+       always_new_j_loc = .true.
     else
-       always_new_J = .false.
+       always_new_j_loc = .false.
     endif
     stiff = .true.
     rtol = 1.d-10
     atol = 1.d-10
 
     call vode_init(neq,verbose,itol,rtol,atol,order,&
-         maxstep,use_ajac,save_ajac,always_new_j,stiff)
+         maxstep,use_ajac,save_ajac,always_new_j_loc,stiff)
 
     if (parallel_IOProcessor()) then
        print *,"Using good ol' dvode"
        print *,"--> DENSE solver without Analytical J"
-       print *,"--> Reusing the analytical Jac ? ",always_new_J
+       print *,"--> Reusing the analytical Jac ? ",always_new_j_loc
     endif
     iE = iE_in
     if (iE == 1) then
