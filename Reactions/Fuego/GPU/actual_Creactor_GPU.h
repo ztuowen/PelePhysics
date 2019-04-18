@@ -85,7 +85,7 @@ static void PrintFinalStats(void *cvode_mem);
 extern "C" {
     void ckindx_(int * mm, int * kk, int * ii, int * nfit); 
     void sparsity_info_precond_( int * njdata, int * consp);
-    void sparsity_preproc_precond_( int * rowVals, int * colPtrs, int * consP);
+    void sparsity_preproc_precond_gpu_( int * rowPtr, int * colIndx, int * consP);
 }
 
 

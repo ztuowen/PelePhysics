@@ -86,7 +86,7 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
             cudaMallocManaged(&(user_data->csr_jac_d), user_data->NNZ * NCELLS * sizeof(double));
             cudaMallocManaged(&(user_data->csr_val_d), user_data->NNZ * NCELLS * sizeof(double));
 
-            sparsity_preproc_precond_(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
+            sparsity_preproc_precond_gpu_(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
             if (iverbose > 1) {
                 for (int i=0; i<NEQ+1; i++) {
                     printf("\n row %d csr_row_count %d \n", i, user_data->csr_row_count_d[i+1]);

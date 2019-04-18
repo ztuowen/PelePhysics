@@ -87,6 +87,7 @@
 #define SPARSITY_INFO_PRECOND SPARSITY_INFO_PRECOND
 #define SPARSITY_PREPROC SPARSITY_PREPROC
 #define SPARSITY_PREPROC_PRECOND SPARSITY_PREPROC_PRECOND
+#define SPARSITY_PREPROC_PRECOND_GPU SPARSITY_PREPROC_PRECOND_GPU
 #define VCKHMS VCKHMS
 #define VCKPY VCKPY
 #define VCKWYR VCKWYR
@@ -178,6 +179,7 @@
 #define SPARSITY_INFO_PRECOND sparsity_info_precond
 #define SPARSITY_PREPROC sparsity_preproc
 #define SPARSITY_PREPROC_PRECOND sparsity_preproc_precond
+#define SPARSITY_PREPROC_PRECOND_GPU sparsity_preproc_precond_gpu
 #define VCKHMS vckhms
 #define VCKPY vckpy
 #define VCKWYR vckwyr
@@ -269,6 +271,7 @@
 #define SPARSITY_INFO_PRECOND sparsity_info_precond_ 
 #define SPARSITY_PREPROC sparsity_preproc_
 #define SPARSITY_PREPROC_PRECOND sparsity_preproc_precond_
+#define SPARSITY_PREPROC_PRECOND_GPU sparsity_preproc_precond_gpu_
 #define VCKHMS vckhms_
 #define VCKPY vckpy_
 #define VCKWYR vckwyr_
@@ -397,6 +400,7 @@ void SPARSITY_INFO(int * nJdata, int * consP, int NCELLS);
 void SPARSITY_INFO_PRECOND(int * nJdata, int * consP);
 void SPARSITY_PREPROC(int * rowVals, int * colPtrs, int * consP, int NCELLS);
 void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP);
+void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP);
 void aJacobian(double *  J, double *  sc, double T, int consP);
 void aJacobian_precond(double *  J, double *  sc, double T, int HP);
 void dcvpRdT(double *  species, double *  tc);
@@ -8540,6 +8544,39 @@ void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)
 
     return;
 }
+
+/*compute the sparsity pattern of the simplified precond Jacobian */
+void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP)
+{
+    double c[21];
+    double J[484];
+
+    for (int k=0; k<21; k++) {
+        c[k] = 1.0/ 21.000000 ;
+    }
+
+    aJacobian_precond(J, c, 1500.0, *consP);
+
+    rowPtr[0] = 1;
+    int nJdata_tmp = 1;
+    for (int l=0; l<22; l++) {
+        for (int k=0; k<22; k++) {
+            if (k == l) {
+                colIndx[nJdata_tmp-1] = l+1; 
+                nJdata_tmp = nJdata_tmp + 1; 
+            } else {
+                if(J[22*k + l] != 0.0) {
+                    colIndx[nJdata_tmp-1] = k+1; 
+                    nJdata_tmp = nJdata_tmp + 1; 
+                }
+            }
+        }
+        rowPtr[l+1] = nJdata_tmp;
+    }
+
+    return;
+}
+
 /*compute the sparsity pattern of the Jacobian */
 void SPARSITY_PREPROC(int *  rowVals, int *  colPtrs, int * consP, int NCELLS)
 {
