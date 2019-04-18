@@ -307,29 +307,29 @@ int react(realtype *rY_in, realtype *rY_src_in,
         if (iverbose > 1) {
             printf("\n -------------------------------------\n");
 	}
-	if (*Init == 1) {
+	//if (*Init == 1) {
             if (iverbose > 1) {
                 printf("ReInit always \n");
 	    }
 	    CVodeReInit(cvode_mem, time_init, y);
 	    InitPartial = false;
-	} else {
-	    temp_old = fabs(rY_in[NEQ] - temp_old);
-	    // Sloppy but I can't think of anything better now
-            if (temp_old > 50.0) {
-                if (iverbose > 1) {
-	            printf("ReInit delta_T = %f \n", temp_old);
-		}
-	        CVodeReInit(cvode_mem, time_init, y);
-		InitPartial = false;
-	    } else {
-                if (iverbose > 1) {
-	            printf("ReInit Partial delta_T = %f \n", temp_old);
-		}
-	        CVodeReInitPartial(cvode_mem, time_init, y);
-		InitPartial = true;
-	    }
-	}
+	//} else {
+	//    temp_old = fabs(rY_in[NEQ] - temp_old);
+	//    // Sloppy but I can't think of anything better now
+        //    if (temp_old > 50.0) {
+        //        if (iverbose > 1) {
+	//            printf("ReInit delta_T = %f \n", temp_old);
+	//	}
+	//        CVodeReInit(cvode_mem, time_init, y);
+	//	InitPartial = false;
+	//    } else {
+        //        if (iverbose > 1) {
+	//            printf("ReInit Partial delta_T = %f \n", temp_old);
+	//	}
+	//        CVodeReInitPartial(cvode_mem, time_init, y);
+	//	InitPartial = true;
+	//    }
+	//}
 
 	flag = CVode(cvode_mem, time_out, y, &dummy_time, CV_NORMAL);
 	/* ONE STEP MODE FOR DEBUGGING */
