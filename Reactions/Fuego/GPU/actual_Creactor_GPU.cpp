@@ -357,7 +357,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	//}
 
 	/* If in debug mode: print stats */
-        if (iverbose > 2) {
+        if (iverbose > 1) {
            int ierr;
 	   double htmp;
            printf("\n......cvode done:\n");
@@ -381,16 +381,14 @@ int react(realtype *rY_in, realtype *rY_src_in,
            printf(" -- method order last used = %d \n", itmp3);
            ierr = CVodeGetCurrentOrder(cvode_mem, &itmp3);
            printf(" -- method order to be used = %d \n", itmp3);
-           ierr = CVodeGetNumLinSolvSetups(cvode_mem, &itmp);
-	   printf(" -- number of linear solver setups %-6ld \n", itmp);
-           ierr = CVodeGetNumErrTestFails(cvode_mem,  &itmp);
-	   printf(" -- number of err test fails (netf) %-6ld \n", itmp);
+           if (iDense_Creact == 99){
+               ierr = CVSpilsGetNumPrecSolves(cvode_mem, &itmp);
+	       printf(" -- number of Precond Solves %-6ld \n", itmp);
+           }
            ierr = CVodeGetNumNonlinSolvIters(cvode_mem, &itmp);
            printf(" -- number of Newton iterations (nni) %-6ld \n", itmp);
            ierr = CVodeGetNumNonlinSolvConvFails(cvode_mem, &itmp);
 	   printf(" -- number of Newton failures %-6ld \n", itmp);
-           ierr = CVodeGetNumGEvals(cvode_mem, &itmp);
-	   printf(" -- nge ? %-6ld \n", itmp);
            printf(" -------------------------------------\n");
 	}
 
@@ -475,10 +473,10 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
             *jcurPtr = SUNTRUE;
         }
 
-        //printf(" ... after kernels, NNZ ? %d \n", udata->NNZ);
-        //for (int i = 0; i < udata->NNZ; i++) {
-        //     printf(" FIRST CELL csr_val_d[ %d ] = %14.6e \n", i, udata->csr_val_d[i]); //, csr_val[i]);
-        //}
+        printf(" ... after kernels, NNZ ? %d \n", udata->NNZ);
+        for (int i = 0; i < udata->NNZ; i++) {
+             printf(" FIRST CELL csr_val_d[ %d ] = %14.6e \n", i, udata->csr_val_d[i]); //, csr_val[i]);
+        }
 
         cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,NEQ+1,NEQ+1, 
                                 (udata->NNZ),
