@@ -473,10 +473,10 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
             *jcurPtr = SUNTRUE;
         }
 
-        printf(" ... after kernels, NNZ ? %d \n", udata->NNZ);
-        for (int i = 0; i < udata->NNZ; i++) {
-             printf(" FIRST CELL csr_val_d[ %d ] = %14.6e \n", i, udata->csr_val_d[i]); //, csr_val[i]);
-        }
+        //printf(" ... after kernels, NNZ ? %d \n", udata->NNZ);
+        //for (int i = 0; i < udata->NNZ; i++) {
+        //     printf(" FIRST CELL csr_val_d[ %d ] = %14.6e \n", i, udata->csr_val_d[i]); //, csr_val[i]);
+        //}
 
         cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,NEQ+1,NEQ+1, 
                                 (udata->NNZ),
