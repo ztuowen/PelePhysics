@@ -10,6 +10,9 @@ module mod_sdc_defs
       real(amrex_real), allocatable :: rhoydot_ext(:)
       double precision, allocatable :: mwt(:), invmwt(:)
       double precision, allocatable :: rhs(:)
+      logical                       :: new_subcycling
+      real(amrex_real), allocatable :: sub_dt_react(:)
+      integer                       :: nsubcycles
       !integer                       :: iwrk
       !double precision              :: rwrk
 

@@ -119,7 +119,7 @@ contains
       integer                           :: Init, cost_value
       !type(reaction_stat_t)          :: actual_react_sdc
 
-      integer                        :: n, j, sdc
+      integer                        :: n, j, i, sdc
       real(amrex_real)               :: rhoInv
 
       if (verbose .ge. 1) then
@@ -128,166 +128,197 @@ contains
           print *, "----------------------------" 
       end if
 
-!     Initialize dt intervals
-!     Compute the Gauss-Lobatto intervals between 0 and dt
-      call compute_dt_intervals(dt_react)
-
-!     Setup the initial state of each iterations (tn)  
-      !CALL t_eos%start          
-      eos_state_k(1) % T                 = rY_in(nspec+1)
-      eos_state_k(1) % rho               = sum(rY_in(1:nspec))  
-      rhoInv                             = 1.d0 / eos_state_k(1) % rho
-      eos_state_k(1) % massfrac(1:nspec) = rY_in(1:nspec) * rhoInv
-      ! Deal with energy and compute T and conc + other useful eos var
-      if (iE == 1) then
-          eos_state_k(1) % e   = rX_in / eos_state_k(1) % rho 
-          rhoe_init            = rX_in
-          rhoedot_ext          = rX_src_in
-          call eos_re(eos_state_k(1))
-          call eos_get_activity(eos_state_k(1))
-      else
-          eos_state_k(1) % h   = rX_in / eos_state_k(1) % rho
-          rhoh_init            = rX_in
-          rhohdot_ext          = rX_src_in
-          call eos_rh(eos_state_k(1))
-          call eos_get_activity_h(eos_state_k(1))
+!     Sort out the subcycling if needed  
+      if (dt_react > 1.0e-7) then
+          new_subcycling = .true.
+          nsubcycles = ceiling(dt_react / 1.0e-7)
       end if
-      rhoydot_ext(1:nspec) = rY_src_in(1:nspec)
-
-!     Determine if the system to solve is stiff 
-      iStiff = 1
-!      if (eos_state_k(1) % T < 500.0) then
-!              iStiff = 1
-!      else if (eos_state_k(1) % T > 3000.0) then
-!              iStiff = 1
-!      end if
-
-      !Compute species prod rates and correct with ext source term
-      !CALL t_ck%start          
-      call ckwc(eos_state_k(1) % T, eos_state_k(1) % Acti, cdot_k(1,1:nspec))
-      !CALL t_ck%stop         
-      cdot_k(1,1:nspec) = cdot_k(1,1:nspec)* molecular_weight(1:nspec) + rhoydot_ext(:)
-      !Compute T source term
-      if (iE == 1) then
-          cdot_k(1,nspec+1) = rhoedot_ext
-          do n=1,nspec
-              cdot_k(1,nspec+1) = cdot_k(1,nspec+1) - eos_state_k(1) % ei(n)*cdot_k(1,n)
-          end do
-          cdot_k(1,nspec+1) = cdot_k(1,nspec+1)/(eos_state_k(1) % rho * eos_state_k(1) % cv)
-      else
-          cdot_k(1,nspec+1) = rhohdot_ext
-          do n=1,nspec
-              cdot_k(1,nspec+1) = cdot_k(1,nspec+1) - eos_state_k(1) % hi(n)*cdot_k(1,n)
-          end do
-          cdot_k(1,nspec+1) = cdot_k(1,nspec+1)/(eos_state_k(1) % rho * eos_state_k(1) % cp)
-      end if
-
-!     Initialize the SDC loop by setting all Gauss-Lobatto points with the initial state (1)       
-      do j=2,nLobato
-          eos_state_k(j)   = eos_state_k(1)
-          cdot_k(j,:)      = cdot_k(1,:)
-      end do
-
-!     Start the loop
-      if (verbose .ge. 1) then
-          print *, "----------------------------" 
-          print *, "    STARTING SDC LOOPS" 
-          print *, "----------------------------" 
-      end if
-      do sdc = 1, nsdcite
-           if (verbose .ge. 1) then
-               write(*,'(A,I2,A)') " SDC ite ", sdc ,"  -------------------- "
-
-               write(*,'(A,3(ES16.8))') "    T:",eos_state_k(1)%T, eos_state_k(2)%T, eos_state_k(3)%T 
-               write(*,'(A,3(ES16.8))') "  rho:",eos_state_k(1)%rho, eos_state_k(2)%rho, eos_state_k(3)%rho 
-           end if
-
-!         First Lobatto point of each sdc iteration is always the same (previous dt)
-          eos_state_kp1(1)     = eos_state_k(1)
-          cdot_kp1(1,:)        = cdot_k(1,:)
-          delta_SDC(1,:)       = 0.0d0
-          delta_SDC_max(1)     = 0.0d0
-
-!         Compute the quadrature for the state k     
-          call compute_quadrature(I_k, cdot_k, dt_react)
-
-!         Update the state with the correction integrals & the quadratures   
-          do j=1,nLobato-1
-             if (verbose .ge. 2) then
-                 print *," - Working on the ", j+1, " Lobatto node"
-             end if
-             call sdc_advance_chem(eos_state_kp1(j+1), eos_state_kp1(j), eos_state_k(j+1), &
-                      cdot_k(j,:), cdot_kp1(j,:), cdot_k(j+1,:), cdot_kp1(j+1,:), &
-                      I_k(j,:), j)
-          end do
-
-          if (verbose .ge. 5) then
-          !   Only works for ndodecane wang !
-              write(*,'(A,3(ES16.8))') "   I_k(O2):",I_k(:,8)
-              write(*,'(A,3(ES16.8))') "   c.k(O2):",cdot_k(:,8)
-              write(*,'(A,3(ES16.8))') " c.kp1(O2):",cdot_kp1(:,8)
-          end if
-
-!         Copy state k+1 into k for the next iteration      
-          if (verbose .ge. 2) then
-              print *," - Update state and wdot for next iteration"
-          end if
-
-          do j=2,nLobato
-              delta_SDC(j,nspec+1) = eos_state_k(j)%T - eos_state_kp1(j)%T
-              delta_SDC(j,1:nspec) = eos_state_k(j)%massfrac(1:nspec) - eos_state_kp1(j)%massfrac(1:nspec)
-              delta_SDC_max(j)     = maxval(abs(delta_SDC(j,:)))
-              eos_state_k(j) = eos_state_kp1(j) 
-              cdot_k(j,:)    = cdot_kp1(j,:)
-          end do
-          if (verbose .ge. 3) then
-              !write(*,'(A,3(ES16.8))') "    deltaYO2 (on each nLobatto) :",delta_SDC(:,8)
-              write(*,'(A,3(ES16.8))') "    deltaM (on each nLobatto) :",delta_SDC_max(:) 
-          end if
-
-
+      if (new_subcycling) then
+          if (allocated(sub_dt_react))      deallocate(sub_dt_react)
+          allocate(sub_dt_react(nsubcycles))
           if (verbose .ge. 1) then
-              write(*,'(A,3(ES16.8))') "    T (end):",eos_state_kp1(1)%T, eos_state_kp1(2)%T, eos_state_kp1(3)%T 
-              write(*,'(A,3(ES16.8))') "        rho:",eos_state_kp1(1)%rho, eos_state_kp1(2)%rho, eos_state_kp1(3)%rho 
-              print *," "
-              print *," "
+              print *, ""
+              print *, "  --> subcycling activated, with ", nsubcycles, " subcycles, dt_ss = ", dt_react / nsubcycles, " <-- "
+              print *, ""
           end if
-
-          if ((maxval(delta_SDC_max(:)) < tol) .and. (sdc > 2*nLobato - 2)) then
-              exit
-          end if
-      end do
-
-!     Update out state      
-      rY_in(1+nspec)     = eos_state_kp1(nLobato) % T 
-      rY_in(1:nspec)     = eos_state_kp1(nLobato)%massfrac(1:nspec) * eos_state_kp1(nLobato)%rho 
-      if (iE == 1) then  
-             rX_in              = eos_state_kp1(nLobato) % e * eos_state_kp1(nLobato)%rho
-      else
-             rX_in              = eos_state_kp1(nLobato) % h * eos_state_kp1(nLobato)%rho
       end if
 
+!     Subcycling
+      do i = 1, nsubcycles
+              if (verbose .ge. 1) then
+                  print *, " " 
+                  print *, "    - FIRST SUBCYCLE          " 
+                  print *, " " 
+              end if
+              sub_dt_react(i) = dt_react / nsubcycles
+        !     Initialize dt intervals
+        !     Compute the Gauss-Lobatto intervals between 0 and dt
+              call compute_dt_intervals(sub_dt_react(i))
+        
+        !     Setup the initial state of each iterations (tn)  
+              !CALL t_eos%start          
+              eos_state_k(1) % T                 = rY_in(nspec+1)
+              eos_state_k(1) % rho               = sum(rY_in(1:nspec))  
+              rhoInv                             = 1.d0 / eos_state_k(1) % rho
+              eos_state_k(1) % massfrac(1:nspec) = rY_in(1:nspec) * rhoInv
+              ! Deal with energy and compute T and conc + other useful eos var
+              if (iE == 1) then
+                  eos_state_k(1) % e   = rX_in / eos_state_k(1) % rho 
+                  rhoe_init            = rX_in
+                  rhoedot_ext          = rX_src_in
+                  call eos_re(eos_state_k(1))
+                  call eos_get_activity(eos_state_k(1))
+              else
+                  eos_state_k(1) % h   = rX_in / eos_state_k(1) % rho
+                  rhoh_init            = rX_in
+                  rhohdot_ext          = rX_src_in
+                  call eos_rh(eos_state_k(1))
+                  call eos_get_activity_h(eos_state_k(1))
+              end if
+              rhoydot_ext(1:nspec) = rY_src_in(1:nspec)
+        
+        !     Determine if the system to solve is stiff 
+              iStiff = 1
+        !      if (eos_state_k(1) % T < 500.0) then
+        !              iStiff = 1
+        !      else if (eos_state_k(1) % T > 3000.0) then
+        !              iStiff = 1
+        !      end if
+        
+              !Compute species prod rates and correct with ext source term
+              !CALL t_ck%start          
+              call ckwc(eos_state_k(1) % T, eos_state_k(1) % Acti, cdot_k(1,1:nspec))
+              !CALL t_ck%stop         
+              cdot_k(1,1:nspec) = cdot_k(1,1:nspec)* molecular_weight(1:nspec) + rhoydot_ext(:)
+              !Compute T source term
+              if (iE == 1) then
+                  cdot_k(1,nspec+1) = rhoedot_ext
+                  do n=1,nspec
+                      cdot_k(1,nspec+1) = cdot_k(1,nspec+1) - eos_state_k(1) % ei(n)*cdot_k(1,n)
+                  end do
+                  cdot_k(1,nspec+1) = cdot_k(1,nspec+1)/(eos_state_k(1) % rho * eos_state_k(1) % cv)
+              else
+                  cdot_k(1,nspec+1) = rhohdot_ext
+                  do n=1,nspec
+                      cdot_k(1,nspec+1) = cdot_k(1,nspec+1) - eos_state_k(1) % hi(n)*cdot_k(1,n)
+                  end do
+                  cdot_k(1,nspec+1) = cdot_k(1,nspec+1)/(eos_state_k(1) % rho * eos_state_k(1) % cp)
+              end if
+        
+        !     Initialize the SDC loop by setting all Gauss-Lobatto points with the initial state (1)       
+              do j=2,nLobato
+                  eos_state_k(j)   = eos_state_k(1)
+                  cdot_k(j,:)      = cdot_k(1,:)
+              end do
+        
+        !     Start the loop
+              if (verbose .ge. 1) then
+                  print *, "----------------------------" 
+                  print *, "    STARTING SDC LOOPS" 
+                  print *, "----------------------------" 
+              end if
+              do sdc = 1, nsdcite
+                   if (verbose .ge. 1) then
+                       write(*,'(A,I2,A)') " SDC ite ", sdc ,"  -------------------- "
+        
+                       write(*,'(A,3(ES16.8))') "    T:",eos_state_k(1)%T, eos_state_k(2)%T, eos_state_k(3)%T 
+                       write(*,'(A,3(ES16.8))') "  rho:",eos_state_k(1)%rho, eos_state_k(2)%rho, eos_state_k(3)%rho 
+                   end if
+        
+        !         First Lobatto point of each sdc iteration is always the same (previous dt)
+                  eos_state_kp1(1)     = eos_state_k(1)
+                  cdot_kp1(1,:)        = cdot_k(1,:)
+                  delta_SDC(1,:)       = 0.0d0
+                  delta_SDC_max(1)     = 0.0d0
+        
+        !         Compute the quadrature for the state k     
+                  call compute_quadrature(I_k, cdot_k, sub_dt_react(i))
+        
+        !         Update the state with the correction integrals & the quadratures   
+                  do j=1,nLobato-1
+                     if (verbose .ge. 2) then
+                         print *," - Working on the ", j+1, " Lobatto node"
+                     end if
+                     call sdc_advance_chem(eos_state_kp1(j+1), eos_state_kp1(j), eos_state_k(j+1), &
+                              cdot_k(j,:), cdot_kp1(j,:), cdot_k(j+1,:), cdot_kp1(j+1,:), &
+                              I_k(j,:), j)
+                  end do
+        
+                  if (verbose .ge. 5) then
+                  !   Only works for ndodecane wang !
+                      write(*,'(A,3(ES16.8))') "   I_k(O2):",I_k(:,8)
+                      write(*,'(A,3(ES16.8))') "   c.k(O2):",cdot_k(:,8)
+                      write(*,'(A,3(ES16.8))') " c.kp1(O2):",cdot_kp1(:,8)
+                  end if
+        
+        !         Copy state k+1 into k for the next iteration      
+                  if (verbose .ge. 2) then
+                      print *," - Update state and wdot for next iteration"
+                  end if
+        
+                  do j=2,nLobato
+                      delta_SDC(j,nspec+1) = eos_state_k(j)%T - eos_state_kp1(j)%T
+                      delta_SDC(j,1:nspec) = eos_state_k(j)%massfrac(1:nspec) - eos_state_kp1(j)%massfrac(1:nspec)
+                      delta_SDC_max(j)     = maxval(abs(delta_SDC(j,:)))
+                      eos_state_k(j) = eos_state_kp1(j) 
+                      cdot_k(j,:)    = cdot_kp1(j,:)
+                  end do
+                  if (verbose .ge. 3) then
+                      !write(*,'(A,3(ES16.8))') "    deltaYO2 (on each nLobatto) :",delta_SDC(:,8)
+                      write(*,'(A,3(ES16.8))') "    deltaM (on each nLobatto) :",delta_SDC_max(:) 
+                  end if
+        
+        
+                  if (verbose .ge. 1) then
+                      write(*,'(A,3(ES16.8))') "    T (end):",eos_state_kp1(1)%T, eos_state_kp1(2)%T, eos_state_kp1(3)%T 
+                      write(*,'(A,3(ES16.8))') "        rho:",eos_state_kp1(1)%rho, eos_state_kp1(2)%rho, eos_state_kp1(3)%rho 
+                      print *," "
+                      print *," "
+                  end if
+        
+                  if ((maxval(delta_SDC_max(:)) < tol) .and. (sdc > 2*nLobato - 2)) then
+                      exit
+                  end if
+              end do
+        
+        !     Update out state      
+              rY_in(1+nspec)     = eos_state_kp1(nLobato) % T 
+              rY_in(1:nspec)     = eos_state_kp1(nLobato)%massfrac(1:nspec) * eos_state_kp1(nLobato)%rho 
+              if (iE == 1) then  
+                     rX_in              = eos_state_kp1(nLobato) % e * eos_state_kp1(nLobato)%rho
+              else
+                     rX_in              = eos_state_kp1(nLobato) % h * eos_state_kp1(nLobato)%rho
+              end if
+        
+        
+        !     Get a sense of cell difficulty 
+              !actual_react_sdc%reactions_succesful = .true.
+              cost_value = sdc
+        
+        !     Timers 
+              !CALL t_total%stop
+              !CALL t_total%norm(t_total)
+              !CALL t_bechem%norm(t_total)
+              !CALL t_eos%norm(t_total)
+              !CALL t_ck%norm(t_total)
+              !!PRINTS
+              !CALL t_total%print
+              !CALL t_bechem%print
+              !CALL t_eos%print
+              !CALL t_ck%print
+              !!RESETS
+              !CALL t_total%reset
+              !CALL t_bechem%reset
+              !CALL t_eos%reset
+              !CALL t_ck%reset
 
-!     Get a sense of cell difficulty 
-      !actual_react_sdc%reactions_succesful = .true.
-      cost_value = sdc
-
-!     Timers 
-      !CALL t_total%stop
-      !CALL t_total%norm(t_total)
-      !CALL t_bechem%norm(t_total)
-      !CALL t_eos%norm(t_total)
-      !CALL t_ck%norm(t_total)
-      !!PRINTS
-      !CALL t_total%print
-      !CALL t_bechem%print
-      !CALL t_eos%print
-      !CALL t_ck%print
-      !!RESETS
-      !CALL t_total%reset
-      !CALL t_bechem%reset
-      !CALL t_eos%reset
-      !CALL t_ck%reset
+              if (verbose .ge. 1) then
+                  print *, " " 
+                  print *, "    - END OF FIRST SUBCYCLE          " 
+                  print *, " " 
+              end if
+      end do
+!     End Subcycling
 
   end function react
   !--------------------------!

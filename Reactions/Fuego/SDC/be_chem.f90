@@ -75,7 +75,7 @@ contains
      double precision, intent(inout ) :: T
      double precision, intent(in )    :: dt
      
-     integer          :: iter, n, ierr
+     integer          :: iter 
      integer          :: flag
      double precision :: rmax, rho_inv, Tdot, res_nl_norm
      double precision, dimension(Nspec+1) :: res_nl
