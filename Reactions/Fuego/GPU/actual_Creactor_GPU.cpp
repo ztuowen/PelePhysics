@@ -1,5 +1,6 @@
 #include <actual_Creactor_GPU.h> 
 #include <AMReX_ParmParse.H>
+#include <chemistry_file.H>
 
 /**********************************/
 /* Global Variables */
@@ -41,7 +42,7 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 	realtype *ratol;
 	int mm, ii, nfit;
 
-	ckindx_(&mm,&NEQ,&ii,&nfit);
+	CKINDX(&mm,&NEQ,&ii,&nfit);
         if (iverbose > 0) {
 	    printf("Nb of spec is %d \n", NEQ);
 	}
@@ -78,7 +79,7 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
             if (iverbose > 0) {
                 printf("Alloc stuff for Precond \n");
                 // Find sparsity pattern to fill structure of sparse matrix
-                sparsity_info_precond_(&(user_data->NNZ),&HP);
+                SPARSITY_INFO_PRECOND(&(user_data->NNZ),&HP);
                 printf("--> SPARSE Preconditioner -- non zero entries %d represents %f %% fill pattern.\n", user_data->NNZ, user_data->NNZ/float((NEQ+1) * (NEQ+1)) *100.0);
             }
             cudaMallocManaged(&(user_data->csr_row_count_d), (NEQ+2) * sizeof(int));
@@ -86,7 +87,7 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
             cudaMallocManaged(&(user_data->csr_jac_d), user_data->NNZ * NCELLS * sizeof(double));
             cudaMallocManaged(&(user_data->csr_val_d), user_data->NNZ * NCELLS * sizeof(double));
 
-            sparsity_preproc_precond_gpu_(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
+            SPARSITY_PREPROC_PRECOND_GPU(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
             if (iverbose > 1) {
                 for (int i=0; i<NEQ+1; i++) {
                     printf("\n row %d csr_row_count %d \n", i, user_data->csr_row_count_d[i+1]);

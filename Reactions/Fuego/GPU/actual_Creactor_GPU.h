@@ -81,14 +81,6 @@ static int check_flag(void *flagvalue, const char *funcname, int opt);
 
 static void PrintFinalStats(void *cvode_mem);
 
-/* Stuff that comes from Fuego on Host */
-extern "C" {
-    void ckindx_(int * mm, int * kk, int * ii, int * nfit); 
-    void sparsity_info_precond_( int * njdata, int * consp);
-    void sparsity_preproc_precond_gpu_( int * rowPtr, int * colIndx, int * consP);
-}
-
-
 /**********************************/
 /* Device crap               */
 
