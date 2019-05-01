@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <AMReX_Gpu.H>
 #if defined(BL_FORT_USE_UPPERCASE)
 #define CKINDX CKINDX
 #define CKINIT CKINIT
@@ -323,90 +323,90 @@ void CKSYME(int * kname, int * lenkname);
 void CKSYMS(int * kname, int * lenkname);
 void CKRP(double *  ru, double *  ruc, double *  pa);
 void CKPX(double *  rho, double *  T, double *  x, double *  P);
-void CKPY(double *  rho, double *  T, double *  y, double *  P);
-void CKPC(double *  rho, double *  T, double *  c, double *  P);
-void CKRHOX(double *  P, double *  T, double *  x, double *  rho);
-void CKRHOY(double *  P, double *  T, double *  y, double *  rho);
-void CKRHOC(double *  P, double *  T, double *  c, double *  rho);
-void CKWT(double *  wt);
-void CKAWT(double *  awt);
-void CKMMWY(double *  y, double *  wtm);
-void CKMMWX(double *  x, double *  wtm);
-void CKMMWC(double *  c, double *  wtm);
-void CKYTX(double *  y, double *  x);
-void CKYTCP(double *  P, double *  T, double *  y, double *  c);
-void CKYTCR(double *  rho, double *  T, double *  y, double *  c);
-void CKXTY(double *  x, double *  y);
-void CKXTCP(double *  P, double *  T, double *  x, double *  c);
-void CKXTCR(double *  rho, double *  T, double *  x, double *  c);
-void CKCTX(double *  c, double *  x);
-void CKCTY(double *  c, double *  y);
-void CKCPOR(double *  T, double *  cpor);
-void CKHORT(double *  T, double *  hort);
-void CKSOR(double *  T, double *  sor);
-void CKCVML(double *  T, double *  cvml);
-void CKCPML(double *  T, double *  cvml);
-void CKUML(double *  T, double *  uml);
-void CKHML(double *  T, double *  uml);
-void CKGML(double *  T, double *  gml);
-void CKAML(double *  T, double *  aml);
-void CKSML(double *  T, double *  sml);
-void CKCVMS(double *  T, double *  cvms);
-void CKCPMS(double *  T, double *  cvms);
-void CKUMS(double *  T, double *  ums);
-void CKHMS(double *  T, double *  ums);
-void CKGMS(double *  T, double *  gms);
-void CKAMS(double *  T, double *  ams);
-void CKSMS(double *  T, double *  sms);
-void CKCPBL(double *  T, double *  x, double *  cpbl);
-void CKCPBS(double *  T, double *  y, double *  cpbs);
-void CKCVBL(double *  T, double *  x, double *  cpbl);
-void CKCVBS(double *  T, double *  y, double *  cpbs);
-void CKHBML(double *  T, double *  x, double *  hbml);
-void CKHBMS(double *  T, double *  y, double *  hbms);
-void CKUBML(double *  T, double *  x, double *  ubml);
-void CKUBMS(double *  T, double *  y, double *  ubms);
-void CKSBML(double *  P, double *  T, double *  x, double *  sbml);
-void CKSBMS(double *  P, double *  T, double *  y, double *  sbms);
-void CKGBML(double *  P, double *  T, double *  x, double *  gbml);
-void CKGBMS(double *  P, double *  T, double *  y, double *  gbms);
-void CKABML(double *  P, double *  T, double *  x, double *  abml);
-void CKABMS(double *  P, double *  T, double *  y, double *  abms);
-void CKWC(double *  T, double *  C, double *  wdot);
-void CKWYP(double *  P, double *  T, double *  y, double *  wdot);
-void CKWXP(double *  P, double *  T, double *  x, double *  wdot);
-void CKWYR(double *  rho, double *  T, double *  y, double *  wdot);
-void CKWXR(double *  rho, double *  T, double *  x, double *  wdot);
-void CKQC(double *  T, double *  C, double *  qdot);
-void CKKFKR(double *  P, double *  T, double *  x, double *  q_f, double *  q_r);
-void CKQYP(double *  P, double *  T, double *  y, double *  qdot);
-void CKQXP(double *  P, double *  T, double *  x, double *  qdot);
-void CKQYR(double *  rho, double *  T, double *  y, double *  qdot);
-void CKQXR(double *  rho, double *  T, double *  x, double *  qdot);
-void CKNU(int * kdim, int * nuki);
-void CKNCF(int * mdim, int * ncf);
-void CKABE(double *  a, double *  b, double *  e );
-void CKEQC(double *  T, double *  C , double *  eqcon );
-void CKEQYP(double *  P, double *  T, double *  y, double *  eqcon);
-void CKEQXP(double *  P, double *  T, double *  x, double *  eqcon);
-void CKEQYR(double *  rho, double *  T, double *  y, double *  eqcon);
-void CKEQXR(double *  rho, double *  T, double *  x, double *  eqcon);
-void DWDOT(double *  J, double *  sc, double *  T, int * consP);
-void DWDOT_PRECOND(double *  J, double *  sc, double *  Tp, int * HP);
-void SPARSITY_INFO(int * nJdata, int * consP, int NCELLS);
-void SPARSITY_INFO_PRECOND(int * nJdata, int * consP);
-void SPARSITY_PREPROC(int * rowVals, int * colPtrs, int * consP, int NCELLS);
-void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP);
-void aJacobian(double *  J, double *  sc, double T, int consP);
-void aJacobian_precond(double *  J, double *  sc, double T, int HP);
-void dcvpRdT(double *  species, double *  tc);
-void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int *ierr);
-void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);
-void GET_REACTION_MAP(int *  rmap);
-/*vector version */
-void vproductionRate(int npt, double *  wdot, double *  c, double *  T);
-void VCKHMS(int *  np, double *  T, double *  ums);
-void VCKPY(int *  np, double *  rho, double *  T, double *  y, double *  P);
+AMREX_GPU_HOST_DEVICE void CKPY(double *  rho, double *  T, double *  y, double *  P);
+        void CKPC(double *  rho, double *  T, double *  c, double *  P);
+        void CKRHOX(double *  P, double *  T, double *  x, double *  rho);
+        void CKRHOY(double *  P, double *  T, double *  y, double *  rho);
+        void CKRHOC(double *  P, double *  T, double *  c, double *  rho);
+        void CKWT(double *  wt);
+        void CKAWT(double *  awt);
+        void CKMMWY(double *  y, double *  wtm);
+        void CKMMWX(double *  x, double *  wtm);
+        void CKMMWC(double *  c, double *  wtm);
+        void CKYTX(double *  y, double *  x);
+        void CKYTCP(double *  P, double *  T, double *  y, double *  c);
+        void CKYTCR(double *  rho, double *  T, double *  y, double *  c);
+        void CKXTY(double *  x, double *  y);
+        void CKXTCP(double *  P, double *  T, double *  x, double *  c);
+        void CKXTCR(double *  rho, double *  T, double *  x, double *  c);
+        void CKCTX(double *  c, double *  x);
+        void CKCTY(double *  c, double *  y);
+        void CKCPOR(double *  T, double *  cpor);
+        void CKHORT(double *  T, double *  hort);
+        void CKSOR(double *  T, double *  sor);
+        void CKCVML(double *  T, double *  cvml);
+        void CKCPML(double *  T, double *  cvml);
+        void CKUML(double *  T, double *  uml);
+        void CKHML(double *  T, double *  uml);
+        void CKGML(double *  T, double *  gml);
+        void CKAML(double *  T, double *  aml);
+        void CKSML(double *  T, double *  sml);
+AMREX_GPU_HOST_DEVICE void CKCVMS(double *  T, double *  cvms);
+AMREX_GPU_HOST_DEVICE void CKCPMS(double *  T, double *  cvms);
+AMREX_GPU_HOST_DEVICE void CKUMS(double *  T, double *  ums);
+AMREX_GPU_HOST_DEVICE void CKHMS(double *  T, double *  ums);
+        void CKGMS(double *  T, double *  gms);
+        void CKAMS(double *  T, double *  ams);
+        void CKSMS(double *  T, double *  sms);
+        void CKCPBL(double *  T, double *  x, double *  cpbl);
+        void CKCPBS(double *  T, double *  y, double *  cpbs);
+        void CKCVBL(double *  T, double *  x, double *  cpbl);
+        void CKCVBS(double *  T, double *  y, double *  cpbs);
+        void CKHBML(double *  T, double *  x, double *  hbml);
+        void CKHBMS(double *  T, double *  y, double *  hbms);
+        void CKUBML(double *  T, double *  x, double *  ubml);
+        void CKUBMS(double *  T, double *  y, double *  ubms);
+        void CKSBML(double *  P, double *  T, double *  x, double *  sbml);
+        void CKSBMS(double *  P, double *  T, double *  y, double *  sbms);
+        void CKGBML(double *  P, double *  T, double *  x, double *  gbml);
+        void CKGBMS(double *  P, double *  T, double *  y, double *  gbms);
+        void CKABML(double *  P, double *  T, double *  x, double *  abml);
+        void CKABMS(double *  P, double *  T, double *  y, double *  abms);
+        void CKWC(double *  T, double *  C, double *  wdot);
+        void CKWYP(double *  P, double *  T, double *  y, double *  wdot);
+        void CKWXP(double *  P, double *  T, double *  x, double *  wdot);
+        void CKWYR(double *  rho, double *  T, double *  y, double *  wdot);
+        void CKWXR(double *  rho, double *  T, double *  x, double *  wdot);
+        void CKQC(double *  T, double *  C, double *  qdot);
+        void CKKFKR(double *  P, double *  T, double *  x, double *  q_f, double *  q_r);
+        void CKQYP(double *  P, double *  T, double *  y, double *  qdot);
+        void CKQXP(double *  P, double *  T, double *  x, double *  qdot);
+        void CKQYR(double *  rho, double *  T, double *  y, double *  qdot);
+        void CKQXR(double *  rho, double *  T, double *  x, double *  qdot);
+        void CKNU(int * kdim, int * nuki);
+        void CKNCF(int * mdim, int * ncf);
+        void CKABE(double *  a, double *  b, double *  e );
+        void CKEQC(double *  T, double *  C , double *  eqcon );
+        void CKEQYP(double *  P, double *  T, double *  y, double *  eqcon);
+        void CKEQXP(double *  P, double *  T, double *  x, double *  eqcon);
+        void CKEQYR(double *  rho, double *  T, double *  y, double *  eqcon);
+        void CKEQXR(double *  rho, double *  T, double *  x, double *  eqcon);
+        void DWDOT(double *  J, double *  sc, double *  T, int * consP);
+        void DWDOT_PRECOND(double *  J, double *  sc, double *  Tp, int * HP);
+        void SPARSITY_INFO(int * nJdata, int * consP, int NCELLS);
+        void SPARSITY_INFO_PRECOND(int * nJdata, int * consP);
+        void SPARSITY_PREPROC(int * rowVals, int * colPtrs, int * consP, int NCELLS);
+        void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP);
+        void aJacobian(double *  J, double *  sc, double T, int consP);
+        void aJacobian_precond(double *  J, double *  sc, double T, int HP);
+        void dcvpRdT(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int *ierr);
+        void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);
+        void GET_REACTION_MAP(int *  rmap);
+        /*vector version */
+        void vproductionRate(int npt, double *  wdot, double *  c, double *  T);
+        void VCKHMS(int *  np, double *  T, double *  ums);
+        void VCKPY(int *  np, double *  rho, double *  T, double *  y, double *  P);
 void VCKWYR(int *  np, double *  rho, double *  T,
             double *  y,
             double *  wdot);
@@ -418,9 +418,10 @@ void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentri
 void vcomp_wdot(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
+  AMREX_GPU_HOST_DEVICE void get_imw(double* neww);
 
 /* Inverse molecular weights */
-static const double imw[9] = {
+static AMREX_GPU_DEVICE_MANAGED double imw[9] = {
     1.0 / 2.015940,  /*H2 */
     1.0 / 31.998800,  /*O2 */
     1.0 / 18.015340,  /*H2O */
@@ -430,7 +431,6 @@ static const double imw[9] = {
     1.0 / 33.006770,  /*HO2 */
     1.0 / 34.014740,  /*H2O2 */
     1.0 / 28.013400};  /*N2 */
-
 
 
 static double fwd_A[21], fwd_beta[21], fwd_Ea[21];
@@ -451,6 +451,14 @@ static double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF
 static int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
 static double *TB_DEF[21];
 static int rxn_map[21] = {6,7,8,9,2,3,4,5,0,10,11,12,13,14,15,1,16,17,18,19,20};
+
+
+AMREX_GPU_HOST_DEVICE
+void get_imw(double *imw_new){
+#pragma unroll
+    for(int i = 0; i<9; ++i) imw_new[i] = imw[i];
+}
+
 
 void GET_REACTION_MAP(int *rmap)
 {
@@ -1064,7 +1072,7 @@ void CKPX(double *  rho, double *  T, double *  x, double *  P)
 
 
 /*Compute P = rhoRT/W(y) */
-void CKPY(double *  rho, double *  T, double *  y,  double *  P)
+AMREX_GPU_HOST_DEVICE void CKPY(double *  rho, double *  T, double *  y,  double *  P)
 {
     double YOW = 0;/* for computing mean MW */
     YOW += y[0]*imw[0]; /*H2 */
@@ -1638,7 +1646,7 @@ void CKSML(double *  T,  double *  sml)
 
 /*Returns the specific heats at constant volume */
 /*in mass units (Eq. 29) */
-void CKCVMS(double *  T,  double *  cvms)
+AMREX_GPU_HOST_DEVICE void CKCVMS(double *  T,  double *  cvms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1658,7 +1666,7 @@ void CKCVMS(double *  T,  double *  cvms)
 
 /*Returns the specific heats at constant pressure */
 /*in mass units (Eq. 26) */
-void CKCPMS(double *  T,  double *  cpms)
+AMREX_GPU_HOST_DEVICE void CKCPMS(double *  T,  double *  cpms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1677,7 +1685,7 @@ void CKCPMS(double *  T,  double *  cpms)
 
 
 /*Returns internal energy in mass units (Eq 30.) */
-void CKUMS(double *  T,  double *  ums)
+AMREX_GPU_HOST_DEVICE void CKUMS(double *  T,  double *  ums)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -1691,7 +1699,7 @@ void CKUMS(double *  T,  double *  ums)
 
 
 /*Returns enthalpy in mass units (Eq 27.) */
-void CKHMS(double *  T,  double *  hms)
+AMREX_GPU_HOST_DEVICE void CKHMS(double *  T,  double *  hms)
 {
     double tT = *T; /*temporary temperature */
     double tc[] = { 0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT }; /*temperature cache */
@@ -7872,7 +7880,7 @@ void atomicWeight(double *  awt)
     return;
 }
 /* get temperature given internal energy in mass units and mass fracs */
-void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int * ierr)
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int * ierr)
 {
 #ifdef CONVERGENCE
     const int maxiter = 5000;
