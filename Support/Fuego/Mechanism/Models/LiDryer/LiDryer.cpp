@@ -302,11 +302,11 @@ void atomicWeight(double *  awt);
 void molecularWeight(double *  wt);
 void gibbs(double *  species, double *  tc);
 void helmholtz(double *  species, double *  tc);
-void speciesInternalEnergy(double *  species, double *  tc);
-void speciesEnthalpy(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double *  species, double *  tc);
 void speciesEntropy(double *  species, double *  tc);
-void cp_R(double *  species, double *  tc);
-void cv_R(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void cp_R(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void cv_R(double *  species, double *  tc);
 void equilibriumConstants(double *  kc, double *  g_RT, double T);
 void productionRate(double *  wdot, double *  sc, double T);
 void comp_k_f(double *  tc, double invT, double *  k_f);
@@ -361,11 +361,11 @@ AMREX_GPU_HOST_DEVICE void CKHMS(double *  T, double *  ums);
         void CKCPBL(double *  T, double *  x, double *  cpbl);
         void CKCPBS(double *  T, double *  y, double *  cpbs);
         void CKCVBL(double *  T, double *  x, double *  cpbl);
-        void CKCVBS(double *  T, double *  y, double *  cpbs);
+AMREX_GPU_HOST_DEVICE void CKCVBS(double *  T, double *  y, double *  cpbs);
         void CKHBML(double *  T, double *  x, double *  hbml);
         void CKHBMS(double *  T, double *  y, double *  hbms);
         void CKUBML(double *  T, double *  x, double *  ubml);
-        void CKUBMS(double *  T, double *  y, double *  ubms);
+AMREX_GPU_HOST_DEVICE void CKUBMS(double *  T, double *  y, double *  ubms);
         void CKSBML(double *  P, double *  T, double *  x, double *  sbml);
         void CKSBMS(double *  P, double *  T, double *  y, double *  sbms);
         void CKGBML(double *  P, double *  T, double *  x, double *  gbml);
@@ -1853,7 +1853,7 @@ void CKCVBL(double *  T, double *  x,  double *  cvbl)
 
 
 /*Returns the mean specific heat at CV (Eq. 36) */
-void CKCVBS(double *  T, double *  y,  double *  cvbs)
+AMREX_GPU_HOST_DEVICE void CKCVBS(double *  T, double *  y,  double *  cvbs)
 {
     double result = 0; 
     double tT = *T; /*temporary temperature */
@@ -1937,7 +1937,7 @@ void CKUBML(double *  T, double *  x,  double *  ubml)
 
 
 /*get mean internal energy in mass units */
-void CKUBMS(double *  T, double *  y,  double *  ubms)
+AMREX_GPU_HOST_DEVICE void CKUBMS(double *  T, double *  y,  double *  ubms)
 {
     double result = 0;
     double tT = *T; /*temporary temperature */
@@ -7089,7 +7089,7 @@ void helmholtz(double *  species, double *  tc)
 
 /*compute Cv/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void cv_R(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE void cv_R(double *  species, double *  tc)
 {
 
     /*temperature */
@@ -7231,7 +7231,7 @@ void cv_R(double *  species, double *  tc)
 
 /*compute Cp/R at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void cp_R(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE void cp_R(double *  species, double *  tc)
 {
 
     /*temperature */
@@ -7373,7 +7373,7 @@ void cp_R(double *  species, double *  tc)
 
 /*compute the e/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void speciesInternalEnergy(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double *  species, double *  tc)
 {
 
     /*temperature */
@@ -7534,7 +7534,7 @@ void speciesInternalEnergy(double *  species, double *  tc)
 
 /*compute the h/(RT) at the given temperature (Eq 20) */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void speciesEnthalpy(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double *  species, double *  tc)
 {
 
     /*temperature */
