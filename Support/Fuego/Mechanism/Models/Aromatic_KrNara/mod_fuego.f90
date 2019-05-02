@@ -125,7 +125,7 @@ module fuego_chemistry
             use amrex_fort_module, only : amrex_real
             real(amrex_real), intent(in  ) :: h
             real(amrex_real), intent(in  ) :: y(*)
-            real(amrex_real), intent(out ) :: t
+            real(amrex_real), intent(inout ) :: t
             integer, intent(out )          :: ierr
         end subroutine
 
@@ -169,6 +169,13 @@ module fuego_chemistry
             use amrex_fort_module, only : amrex_real
             real(amrex_real), intent(in   ) :: T
             real(amrex_real), intent(inout) :: hms(*)
+        end subroutine
+
+        subroutine ckhbms(T,y,hbms) bind(c,name='CKHBMS') 
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(in   ) :: T
+            real(amrex_real), intent(in   ) :: y(*)
+            real(amrex_real), intent(out)   :: hbms
         end subroutine
 
         subroutine ckums(T,ums) bind(c,name='CKUMS') 
@@ -244,6 +251,19 @@ module fuego_chemistry
         subroutine ckwt(wt) bind(c,name='CKWT')
             use amrex_fort_module, only : amrex_real
             real(amrex_real), intent(inout) :: wt(*)
+        end subroutine
+
+        subroutine ckwc(T,c,wdot) bind(c,name='CKWC')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(in   ) :: T
+            real(amrex_real), intent(in   ) :: c(*)
+            real(amrex_real), intent(inout) :: wdot(*)
+        end subroutine
+
+        subroutine ckmmwy(y,wtm) bind(c,name='CKMMWY')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(in   ) :: y(*)
+            real(amrex_real), intent(inout) :: wtm
         end subroutine
 
     end interface
