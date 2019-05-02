@@ -1,4 +1,8 @@
-CEXE_sources+=LiDryer.cpp
+CEXE_headers+=chemistry_file.H
+
+f90EXE_sources += mod_fuego.f90
+
+CEXE_sources+=LiDryer_chop.cpp LiDryer_chop_1.cpp
 
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
 
