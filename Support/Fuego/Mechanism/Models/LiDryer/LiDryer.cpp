@@ -333,7 +333,7 @@ AMREX_GPU_HOST_DEVICE void CKPY(double *  rho, double *  T, double *  y, double 
         void CKMMWY(double *  y, double *  wtm);
         void CKMMWX(double *  x, double *  wtm);
         void CKMMWC(double *  c, double *  wtm);
-        void CKYTX(double *  y, double *  x);
+AMREX_GPU_HOST_DEVICE        void CKYTX(double *  y, double *  x);
         void CKYTCP(double *  P, double *  T, double *  y, double *  c);
         void CKYTCR(double *  rho, double *  T, double *  y, double *  c);
         void CKXTY(double *  x, double *  y);
@@ -1287,6 +1287,7 @@ void CKMMWC(double *  c,  double *  wtm)
 
 
 /*convert y[species] (mass fracs) to x[species] (mole fracs) */
+AMREX_GPU_HOST_DEVICE
 void CKYTX(double *  y,  double *  x)
 {
     double YOW = 0;
