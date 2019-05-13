@@ -87,6 +87,7 @@
 #define SPARSITY_INFO_PRECOND SPARSITY_INFO_PRECOND
 #define SPARSITY_PREPROC SPARSITY_PREPROC
 #define SPARSITY_PREPROC_PRECOND SPARSITY_PREPROC_PRECOND
+#define SPARSITY_PREPROC_PRECOND_GPU SPARSITY_PREPROC_PRECOND_GPU
 #define VCKHMS VCKHMS
 #define VCKPY VCKPY
 #define VCKWYR VCKWYR
@@ -178,6 +179,7 @@
 #define SPARSITY_INFO_PRECOND sparsity_info_precond
 #define SPARSITY_PREPROC sparsity_preproc
 #define SPARSITY_PREPROC_PRECOND sparsity_preproc_precond
+#define SPARSITY_PREPROC_PRECOND_GPU sparsity_preproc_precond_gpu
 #define VCKHMS vckhms
 #define VCKPY vckpy
 #define VCKWYR vckwyr
@@ -269,6 +271,7 @@
 #define SPARSITY_INFO_PRECOND sparsity_info_precond_ 
 #define SPARSITY_PREPROC sparsity_preproc_
 #define SPARSITY_PREPROC_PRECOND sparsity_preproc_precond_
+#define SPARSITY_PREPROC_PRECOND_GPU sparsity_preproc_precond_gpu_
 #define VCKHMS vckhms_
 #define VCKPY vckpy_
 #define VCKWYR vckwyr_
@@ -397,6 +400,7 @@ void SPARSITY_INFO(int * nJdata, int * consP, int NCELLS);
 void SPARSITY_INFO_PRECOND(int * nJdata, int * consP);
 void SPARSITY_PREPROC(int * rowVals, int * colPtrs, int * consP, int NCELLS);
 void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP);
+void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP);
 void aJacobian(double *  J, double *  sc, double T, int consP);
 void aJacobian_precond(double *  J, double *  sc, double T, int HP);
 void dcvpRdT(double *  species, double *  tc);
@@ -14842,6 +14846,37 @@ void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)
             }
         }
         colPtrs[k+1] = nJdata_tmp;
+    }
+
+    return;
+}
+/*compute the sparsity pattern of the simplified precond Jacobian */
+void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP)
+{
+    double c[32];
+    double J[1089];
+
+    for (int k=0; k<32; k++) {
+        c[k] = 1.0/ 32.000000 ;
+    }
+
+    aJacobian_precond(J, c, 1500.0, *consP);
+
+    rowPtr[0] = 1;
+    int nJdata_tmp = 1;
+    for (int l=0; l<33; l++) {
+        for (int k=0; k<33; k++) {
+            if (k == l) {
+                colIndx[nJdata_tmp-1] = l+1; 
+                nJdata_tmp = nJdata_tmp + 1; 
+            } else {
+                if(J[33*k + l] != 0.0) {
+                    colIndx[nJdata_tmp-1] = k+1; 
+                    nJdata_tmp = nJdata_tmp + 1; 
+                }
+            }
+        }
+        rowPtr[l+1] = nJdata_tmp;
     }
 
     return;
@@ -41154,6 +41189,23 @@ void egtransetWT(double* WT ) {
 #define egtransetEPS egtranseteps_
 #endif
 void egtransetEPS(double* EPS ) {
+    EPS[7] = 1.07400000E+02;
+    EPS[8] = 7.14000000E+01;
+    EPS[9] = 8.00000000E+01;
+    EPS[10] = 1.44000000E+02;
+    EPS[11] = 1.44000000E+02;
+    EPS[12] = 1.44000000E+02;
+    EPS[29] = 4.36000000E+02;
+    EPS[13] = 1.41400000E+02;
+    EPS[14] = 9.81000000E+01;
+    EPS[15] = 2.44000000E+02;
+    EPS[16] = 4.98000000E+02;
+    EPS[17] = 4.98000000E+02;
+    EPS[18] = 4.17000000E+02;
+    EPS[30] = 9.75300000E+01;
+    EPS[19] = 4.17000000E+02;
+    EPS[20] = 4.81800000E+02;
+    EPS[21] = 2.09000000E+02;
     EPS[22] = 2.09000000E+02;
     EPS[23] = 2.09000000E+02;
     EPS[24] = 2.80800000E+02;
@@ -41164,28 +41216,11 @@ void egtransetEPS(double* EPS ) {
     EPS[3] = 1.07400000E+02;
     EPS[2] = 8.00000000E+01;
     EPS[31] = 1.36500000E+02;
-    EPS[29] = 4.36000000E+02;
     EPS[1] = 1.45000000E+02;
     EPS[0] = 3.80000000E+01;
     EPS[4] = 8.00000000E+01;
     EPS[5] = 5.72400000E+02;
     EPS[6] = 1.07400000E+02;
-    EPS[7] = 1.07400000E+02;
-    EPS[30] = 9.75300000E+01;
-    EPS[8] = 7.14000000E+01;
-    EPS[9] = 8.00000000E+01;
-    EPS[10] = 1.44000000E+02;
-    EPS[11] = 1.44000000E+02;
-    EPS[12] = 1.44000000E+02;
-    EPS[13] = 1.41400000E+02;
-    EPS[14] = 9.81000000E+01;
-    EPS[15] = 2.44000000E+02;
-    EPS[16] = 4.98000000E+02;
-    EPS[17] = 4.98000000E+02;
-    EPS[18] = 4.17000000E+02;
-    EPS[19] = 4.17000000E+02;
-    EPS[20] = 4.81800000E+02;
-    EPS[21] = 2.09000000E+02;
 }
 
 
@@ -41198,6 +41233,23 @@ void egtransetEPS(double* EPS ) {
 #define egtransetSIG egtransetsig_
 #endif
 void egtransetSIG(double* SIG ) {
+    SIG[7] = 3.45800000E+00;
+    SIG[8] = 3.29800000E+00;
+    SIG[9] = 2.75000000E+00;
+    SIG[10] = 3.80000000E+00;
+    SIG[11] = 3.80000000E+00;
+    SIG[12] = 3.80000000E+00;
+    SIG[29] = 3.97000000E+00;
+    SIG[13] = 3.74600000E+00;
+    SIG[14] = 3.65000000E+00;
+    SIG[15] = 3.76300000E+00;
+    SIG[16] = 3.59000000E+00;
+    SIG[17] = 3.59000000E+00;
+    SIG[18] = 3.69000000E+00;
+    SIG[30] = 3.62100000E+00;
+    SIG[19] = 3.69000000E+00;
+    SIG[20] = 3.62600000E+00;
+    SIG[21] = 4.10000000E+00;
     SIG[22] = 4.10000000E+00;
     SIG[23] = 4.10000000E+00;
     SIG[24] = 3.97100000E+00;
@@ -41208,28 +41260,11 @@ void egtransetSIG(double* SIG ) {
     SIG[3] = 3.45800000E+00;
     SIG[2] = 2.75000000E+00;
     SIG[31] = 3.33000000E+00;
-    SIG[29] = 3.97000000E+00;
     SIG[1] = 2.05000000E+00;
     SIG[0] = 2.92000000E+00;
     SIG[4] = 2.75000000E+00;
     SIG[5] = 2.60500000E+00;
     SIG[6] = 3.45800000E+00;
-    SIG[7] = 3.45800000E+00;
-    SIG[30] = 3.62100000E+00;
-    SIG[8] = 3.29800000E+00;
-    SIG[9] = 2.75000000E+00;
-    SIG[10] = 3.80000000E+00;
-    SIG[11] = 3.80000000E+00;
-    SIG[12] = 3.80000000E+00;
-    SIG[13] = 3.74600000E+00;
-    SIG[14] = 3.65000000E+00;
-    SIG[15] = 3.76300000E+00;
-    SIG[16] = 3.59000000E+00;
-    SIG[17] = 3.59000000E+00;
-    SIG[18] = 3.69000000E+00;
-    SIG[19] = 3.69000000E+00;
-    SIG[20] = 3.62600000E+00;
-    SIG[21] = 4.10000000E+00;
 }
 
 
@@ -41242,6 +41277,23 @@ void egtransetSIG(double* SIG ) {
 #define egtransetDIP egtransetdip_
 #endif
 void egtransetDIP(double* DIP ) {
+    DIP[7] = 0.00000000E+00;
+    DIP[8] = 0.00000000E+00;
+    DIP[9] = 0.00000000E+00;
+    DIP[10] = 0.00000000E+00;
+    DIP[11] = 0.00000000E+00;
+    DIP[12] = 0.00000000E+00;
+    DIP[29] = 0.00000000E+00;
+    DIP[13] = 0.00000000E+00;
+    DIP[14] = 0.00000000E+00;
+    DIP[15] = 0.00000000E+00;
+    DIP[16] = 0.00000000E+00;
+    DIP[17] = 0.00000000E+00;
+    DIP[18] = 1.70000000E+00;
+    DIP[30] = 0.00000000E+00;
+    DIP[19] = 1.70000000E+00;
+    DIP[20] = 0.00000000E+00;
+    DIP[21] = 0.00000000E+00;
     DIP[22] = 0.00000000E+00;
     DIP[23] = 0.00000000E+00;
     DIP[24] = 0.00000000E+00;
@@ -41252,28 +41304,11 @@ void egtransetDIP(double* DIP ) {
     DIP[3] = 0.00000000E+00;
     DIP[2] = 0.00000000E+00;
     DIP[31] = 0.00000000E+00;
-    DIP[29] = 0.00000000E+00;
     DIP[1] = 0.00000000E+00;
     DIP[0] = 0.00000000E+00;
     DIP[4] = 0.00000000E+00;
     DIP[5] = 1.84400000E+00;
     DIP[6] = 0.00000000E+00;
-    DIP[7] = 0.00000000E+00;
-    DIP[30] = 0.00000000E+00;
-    DIP[8] = 0.00000000E+00;
-    DIP[9] = 0.00000000E+00;
-    DIP[10] = 0.00000000E+00;
-    DIP[11] = 0.00000000E+00;
-    DIP[12] = 0.00000000E+00;
-    DIP[13] = 0.00000000E+00;
-    DIP[14] = 0.00000000E+00;
-    DIP[15] = 0.00000000E+00;
-    DIP[16] = 0.00000000E+00;
-    DIP[17] = 0.00000000E+00;
-    DIP[18] = 1.70000000E+00;
-    DIP[19] = 1.70000000E+00;
-    DIP[20] = 0.00000000E+00;
-    DIP[21] = 0.00000000E+00;
 }
 
 
@@ -41286,6 +41321,23 @@ void egtransetDIP(double* DIP ) {
 #define egtransetPOL egtransetpol_
 #endif
 void egtransetPOL(double* POL ) {
+    POL[7] = 0.00000000E+00;
+    POL[8] = 0.00000000E+00;
+    POL[9] = 0.00000000E+00;
+    POL[10] = 0.00000000E+00;
+    POL[11] = 0.00000000E+00;
+    POL[12] = 0.00000000E+00;
+    POL[29] = 0.00000000E+00;
+    POL[13] = 2.60000000E+00;
+    POL[14] = 1.95000000E+00;
+    POL[15] = 2.65000000E+00;
+    POL[16] = 0.00000000E+00;
+    POL[17] = 0.00000000E+00;
+    POL[18] = 0.00000000E+00;
+    POL[30] = 1.76000000E+00;
+    POL[19] = 0.00000000E+00;
+    POL[20] = 0.00000000E+00;
+    POL[21] = 0.00000000E+00;
     POL[22] = 0.00000000E+00;
     POL[23] = 0.00000000E+00;
     POL[24] = 0.00000000E+00;
@@ -41296,28 +41348,11 @@ void egtransetPOL(double* POL ) {
     POL[3] = 1.60000000E+00;
     POL[2] = 0.00000000E+00;
     POL[31] = 0.00000000E+00;
-    POL[29] = 0.00000000E+00;
     POL[1] = 0.00000000E+00;
     POL[0] = 7.90000000E-01;
     POL[4] = 0.00000000E+00;
     POL[5] = 0.00000000E+00;
     POL[6] = 0.00000000E+00;
-    POL[7] = 0.00000000E+00;
-    POL[30] = 1.76000000E+00;
-    POL[8] = 0.00000000E+00;
-    POL[9] = 0.00000000E+00;
-    POL[10] = 0.00000000E+00;
-    POL[11] = 0.00000000E+00;
-    POL[12] = 0.00000000E+00;
-    POL[13] = 2.60000000E+00;
-    POL[14] = 1.95000000E+00;
-    POL[15] = 2.65000000E+00;
-    POL[16] = 0.00000000E+00;
-    POL[17] = 0.00000000E+00;
-    POL[18] = 0.00000000E+00;
-    POL[19] = 0.00000000E+00;
-    POL[20] = 0.00000000E+00;
-    POL[21] = 0.00000000E+00;
 }
 
 
@@ -41330,6 +41365,23 @@ void egtransetPOL(double* POL ) {
 #define egtransetZROT egtransetzrot_
 #endif
 void egtransetZROT(double* ZROT ) {
+    ZROT[7] = 3.80000000E+00;
+    ZROT[8] = 0.00000000E+00;
+    ZROT[9] = 0.00000000E+00;
+    ZROT[10] = 0.00000000E+00;
+    ZROT[11] = 0.00000000E+00;
+    ZROT[12] = 0.00000000E+00;
+    ZROT[29] = 2.00000000E+00;
+    ZROT[13] = 1.30000000E+01;
+    ZROT[14] = 1.80000000E+00;
+    ZROT[15] = 2.10000000E+00;
+    ZROT[16] = 0.00000000E+00;
+    ZROT[17] = 2.00000000E+00;
+    ZROT[18] = 2.00000000E+00;
+    ZROT[30] = 4.00000000E+00;
+    ZROT[19] = 2.00000000E+00;
+    ZROT[20] = 1.00000000E+00;
+    ZROT[21] = 2.50000000E+00;
     ZROT[22] = 2.50000000E+00;
     ZROT[23] = 1.00000000E+00;
     ZROT[24] = 1.50000000E+00;
@@ -41340,28 +41392,11 @@ void egtransetZROT(double* ZROT ) {
     ZROT[3] = 3.80000000E+00;
     ZROT[2] = 0.00000000E+00;
     ZROT[31] = 0.00000000E+00;
-    ZROT[29] = 2.00000000E+00;
     ZROT[1] = 0.00000000E+00;
     ZROT[0] = 2.80000000E+02;
     ZROT[4] = 0.00000000E+00;
     ZROT[5] = 4.00000000E+00;
     ZROT[6] = 1.00000000E+00;
-    ZROT[7] = 3.80000000E+00;
-    ZROT[30] = 4.00000000E+00;
-    ZROT[8] = 0.00000000E+00;
-    ZROT[9] = 0.00000000E+00;
-    ZROT[10] = 0.00000000E+00;
-    ZROT[11] = 0.00000000E+00;
-    ZROT[12] = 0.00000000E+00;
-    ZROT[13] = 1.30000000E+01;
-    ZROT[14] = 1.80000000E+00;
-    ZROT[15] = 2.10000000E+00;
-    ZROT[16] = 0.00000000E+00;
-    ZROT[17] = 2.00000000E+00;
-    ZROT[18] = 2.00000000E+00;
-    ZROT[19] = 2.00000000E+00;
-    ZROT[20] = 1.00000000E+00;
-    ZROT[21] = 2.50000000E+00;
 }
 
 
@@ -41374,6 +41409,23 @@ void egtransetZROT(double* ZROT ) {
 #define egtransetNLIN egtransetnlin_
 #endif
 void egtransetNLIN(int* NLIN) {
+    NLIN[7] = 2;
+    NLIN[8] = 0;
+    NLIN[9] = 1;
+    NLIN[10] = 1;
+    NLIN[11] = 1;
+    NLIN[12] = 1;
+    NLIN[29] = 2;
+    NLIN[13] = 2;
+    NLIN[14] = 1;
+    NLIN[15] = 1;
+    NLIN[16] = 2;
+    NLIN[17] = 2;
+    NLIN[18] = 2;
+    NLIN[30] = 1;
+    NLIN[19] = 2;
+    NLIN[20] = 2;
+    NLIN[21] = 1;
     NLIN[22] = 1;
     NLIN[23] = 2;
     NLIN[24] = 2;
@@ -41384,28 +41436,11 @@ void egtransetNLIN(int* NLIN) {
     NLIN[3] = 1;
     NLIN[2] = 0;
     NLIN[31] = 0;
-    NLIN[29] = 2;
     NLIN[1] = 0;
     NLIN[0] = 1;
     NLIN[4] = 1;
     NLIN[5] = 2;
     NLIN[6] = 2;
-    NLIN[7] = 2;
-    NLIN[30] = 1;
-    NLIN[8] = 0;
-    NLIN[9] = 1;
-    NLIN[10] = 1;
-    NLIN[11] = 1;
-    NLIN[12] = 1;
-    NLIN[13] = 2;
-    NLIN[14] = 1;
-    NLIN[15] = 1;
-    NLIN[16] = 2;
-    NLIN[17] = 2;
-    NLIN[18] = 2;
-    NLIN[19] = 2;
-    NLIN[20] = 2;
-    NLIN[21] = 1;
 }
 
 
