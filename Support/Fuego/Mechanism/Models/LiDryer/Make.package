@@ -1,7 +1,5 @@
 CEXE_headers+=chemistry_file.H
 
-f90EXE_sources += $(CHEM_DIR)/../mod_fuego.f90
-
 CEXE_sources+=LiDryer.cpp
 
 LIBRARIES += 
