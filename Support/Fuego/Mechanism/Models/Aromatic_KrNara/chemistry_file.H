@@ -210,27 +210,26 @@ void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
 }
 
-namespace thermo 
+namespace thermo
 {
- extern std::vector<double> imw;
+    extern std::vector<double> imw;
 
- extern double fwd_A[1049], fwd_beta[1049], fwd_Ea[1049];
- extern double low_A[1049], low_beta[1049], low_Ea[1049];
- extern double rev_A[1049], rev_beta[1049], rev_Ea[1049];
- extern double troe_a[1049],troe_Ts[1049], troe_Tss[1049], troe_Tsss[1049];
- extern double sri_a[1049], sri_b[1049], sri_c[1049], sri_d[1049], sri_e[1049];
- extern double activation_units[1049], prefactor_units[1049], phase_units[1049];
- extern int is_PD[1049], troe_len[1049], sri_len[1049], nTB[1049], *TBid[1049];
- extern double *TB[1049];
-  
- extern double fwd_A_DEF[1049], fwd_beta_DEF[1049], fwd_Ea_DEF[1049];
- extern double low_A_DEF[1049], low_beta_DEF[1049], low_Ea_DEF[1049];
- extern double rev_A_DEF[1049], rev_beta_DEF[1049], rev_Ea_DEF[1049];
- extern double troe_a_DEF[1049],troe_Ts_DEF[1049], troe_Tss_DEF[1049], troe_Tsss_DEF[1049];
- extern double sri_a_DEF[1049], sri_b_DEF[1049], sri_c_DEF[1049], sri_d_DEF[1049], sri_e_DEF[1049];
- extern double activation_units_DEF[1049], prefactor_units_DEF[1049], phase_units_DEF[1049];
- extern int is_PD_DEF[1049], troe_len_DEF[1049], sri_len_DEF[1049], nTB_DEF[1049], *TBid_DEF[1049];
- extern double *TB_DEF[1049];
+    extern double fwd_A[1049], fwd_beta[1049], fwd_Ea[1049];
+    extern double low_A[1049], low_beta[1049], low_Ea[1049];
+    extern double rev_A[1049], rev_beta[1049], rev_Ea[1049];
+    extern double troe_a[1049],troe_Ts[1049], troe_Tss[1049], troe_Tsss[1049];
+    extern double sri_a[1049], sri_b[1049], sri_c[1049], sri_d[1049], sri_e[1049];
+    extern double activation_units[1049], prefactor_units[1049], phase_units[1049];
+    extern int is_PD[1049], troe_len[1049], sri_len[1049], nTB[1049], *TBid[1049];
+    extern double *TB[1049];
 
- extern std::vector<int> rxn_map;  
+    extern double fwd_A_DEF[1049], fwd_beta_DEF[1049], fwd_Ea_DEF[1049];
+    extern double low_A_DEF[1049], low_beta_DEF[1049], low_Ea_DEF[1049];
+    extern double rev_A_DEF[1049], rev_beta_DEF[1049], rev_Ea_DEF[1049];
+    extern double troe_a_DEF[1049],troe_Ts_DEF[1049], troe_Tss_DEF[1049], troe_Tsss_DEF[1049];
+    extern double sri_a_DEF[1049], sri_b_DEF[1049], sri_c_DEF[1049], sri_d_DEF[1049], sri_e_DEF[1049];
+    extern double activation_units_DEF[1049], prefactor_units_DEF[1049], phase_units_DEF[1049];
+    extern int is_PD_DEF[1049], troe_len_DEF[1049], sri_len_DEF[1049], nTB_DEF[1049], *TBid_DEF[1049];
+    extern double *TB_DEF[1049];
+    extern std::vector<int> rxn_map;
 }

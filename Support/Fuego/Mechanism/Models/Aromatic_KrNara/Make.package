@@ -2,9 +2,11 @@ CEXE_headers+=chemistry_file.H
 
 f90EXE_sources += mod_fuego.f90
 
-LIBRARIES += -L/home/amfelden/CODES/PeleRegressionTesting/Repositories/PelePhysics/Support/Fuego/Mechanism/Models/Aromatic_KrNara/ -lAromNara
+EXE_sources += 
 
-INCLUDE_LOCATIONS += /home/amfelden/CODES/PeleRegressionTesting/Repositories/PelePhysics/Support/Fuego/Mechanism/Models/Aromatic_KrNara/
+LIBRARIES += -L$(CHEM_DIR) -lAromNara
+
+INCLUDE_LOCATIONS += $(CHEM_DIR) 
 
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
 

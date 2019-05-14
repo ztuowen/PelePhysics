@@ -129,7 +129,6 @@ void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentri
 void vcomp_wdot(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
-
 void SetAllDefaults();
 /*Transport function declarations */
 void egtransetLENIMC(int* LENIMC);
@@ -151,27 +150,26 @@ void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
 }
 
-namespace thermo 
+namespace thermo
 {
- extern std::vector<double> imw;
+    extern std::vector<double> imw;
 
- extern double fwd_A[21], fwd_beta[21], fwd_Ea[21];
- extern double low_A[21], low_beta[21], low_Ea[21];
- extern double rev_A[21], rev_beta[21], rev_Ea[21];
- extern double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
- extern double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
- extern double activation_units[21], prefactor_units[21], phase_units[21];
- extern int is_PD[21], troe_len[21], sri_len[21], nTB[21], *TBid[21];
- extern double *TB[21];
-  
- extern double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
- extern double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
- extern double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
- extern double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
- extern double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
- extern double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
- extern int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
- extern double *TB_DEF[21];
+    extern double fwd_A[21], fwd_beta[21], fwd_Ea[21];
+    extern double low_A[21], low_beta[21], low_Ea[21];
+    extern double rev_A[21], rev_beta[21], rev_Ea[21];
+    extern double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
+    extern double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
+    extern double activation_units[21], prefactor_units[21], phase_units[21];
+    extern int is_PD[21], troe_len[21], sri_len[21], nTB[21], *TBid[21];
+    extern double *TB[21];
 
- extern std::vector<int> rxn_map;  
+    extern double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
+    extern double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
+    extern double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
+    extern double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
+    extern double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
+    extern double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
+    extern int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
+    extern double *TB_DEF[21];
+    extern std::vector<int> rxn_map;
 }

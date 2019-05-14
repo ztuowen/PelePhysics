@@ -1,31 +1,31 @@
 #include "chemistry_file.H"
 
 namespace thermo
-{	
- /* Inverse molecular weights */
- std::vector<double> imw;
+{
+    /* Inverse molecular weights */
+    std::vector<double> imw;
 
- double fwd_A[21], fwd_beta[21], fwd_Ea[21];
- double low_A[21], low_beta[21], low_Ea[21];
- double rev_A[21], rev_beta[21], rev_Ea[21];
- double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
- double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
- double activation_units[21], prefactor_units[21], phase_units[21];
- int is_PD[21], troe_len[21], sri_len[21], nTB[21], *TBid[21];
- double *TB[21];
+    double fwd_A[21], fwd_beta[21], fwd_Ea[21];
+    double low_A[21], low_beta[21], low_Ea[21];
+    double rev_A[21], rev_beta[21], rev_Ea[21];
+    double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
+    double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
+    double activation_units[21], prefactor_units[21], phase_units[21];
+    int is_PD[21], troe_len[21], sri_len[21], nTB[21], *TBid[21];
+    double *TB[21];
 
- double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
- double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
- double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
- double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
- double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
- double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
- int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
- double *TB_DEF[21];
- std::vector<int> rxn_map;
+    double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
+    double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
+    double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
+    double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
+    double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
+    double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
+    int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
+    double *TB_DEF[21];
+    std::vector<int> rxn_map;
 };
 
-using namespace thermo; 
+using namespace thermo;
 
 
 /* Initializes parameter database */
@@ -43,106 +43,10 @@ void CKINIT()
         1.0 / 33.006770,  /*HO2 */
         1.0 / 34.014740,  /*H2O2 */
         1.0 / 28.013400};  /*N2 */
-    
-    rxn_map = {6,7,8,9,2,3,4,5,0,10,11,12,13,14,15,1,16,17,18,19,20};
 
-    // (0):  H + O2 <=> O + OH
-    fwd_A[6]     = 3547000000000000;
-    fwd_beta[6]  = -0.40600000000000003;
-    fwd_Ea[6]    = 16599;
-    prefactor_units[6]  = 1.0000000000000002e-06;
-    activation_units[6] = 0.50321666580471969;
-    phase_units[6]      = 1e-12;
-    is_PD[6] = 0;
-    nTB[6] = 0;
+    rxn_map = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
 
-    // (1):  O + H2 <=> H + OH
-    fwd_A[7]     = 50800;
-    fwd_beta[7]  = 2.6699999999999999;
-    fwd_Ea[7]    = 6290;
-    prefactor_units[7]  = 1.0000000000000002e-06;
-    activation_units[7] = 0.50321666580471969;
-    phase_units[7]      = 1e-12;
-    is_PD[7] = 0;
-    nTB[7] = 0;
-
-    // (2):  H2 + OH <=> H2O + H
-    fwd_A[8]     = 216000000;
-    fwd_beta[8]  = 1.51;
-    fwd_Ea[8]    = 3430;
-    prefactor_units[8]  = 1.0000000000000002e-06;
-    activation_units[8] = 0.50321666580471969;
-    phase_units[8]      = 1e-12;
-    is_PD[8] = 0;
-    nTB[8] = 0;
-
-    // (3):  O + H2O <=> OH + OH
-    fwd_A[9]     = 2970000;
-    fwd_beta[9]  = 2.02;
-    fwd_Ea[9]    = 13400;
-    prefactor_units[9]  = 1.0000000000000002e-06;
-    activation_units[9] = 0.50321666580471969;
-    phase_units[9]      = 1e-12;
-    is_PD[9] = 0;
-    nTB[9] = 0;
-
-    // (4):  H2 + M <=> H + H + M
-    fwd_A[2]     = 4.577e+19;
-    fwd_beta[2]  = -1.3999999999999999;
-    fwd_Ea[2]    = 104380;
-    prefactor_units[2]  = 1.0000000000000002e-06;
-    activation_units[2] = 0.50321666580471969;
-    phase_units[2]      = 1e-6;
-    is_PD[2] = 0;
-    nTB[2] = 2;
-    TB[2] = (double *) malloc(2 * sizeof(double));
-    TBid[2] = (int *) malloc(2 * sizeof(int));
-    TBid[2][0] = 0; TB[2][0] = 2.5; // H2
-    TBid[2][1] = 2; TB[2][1] = 12; // H2O
-
-    // (5):  O + O + M <=> O2 + M
-    fwd_A[3]     = 6165000000000000;
-    fwd_beta[3]  = -0.5;
-    fwd_Ea[3]    = 0;
-    prefactor_units[3]  = 1.0000000000000002e-12;
-    activation_units[3] = 0.50321666580471969;
-    phase_units[3]      = 1e-12;
-    is_PD[3] = 0;
-    nTB[3] = 2;
-    TB[3] = (double *) malloc(2 * sizeof(double));
-    TBid[3] = (int *) malloc(2 * sizeof(int));
-    TBid[3][0] = 0; TB[3][0] = 2.5; // H2
-    TBid[3][1] = 2; TB[3][1] = 12; // H2O
-
-    // (6):  O + H + M <=> OH + M
-    fwd_A[4]     = 4.714e+18;
-    fwd_beta[4]  = -1;
-    fwd_Ea[4]    = 0;
-    prefactor_units[4]  = 1.0000000000000002e-12;
-    activation_units[4] = 0.50321666580471969;
-    phase_units[4]      = 1e-12;
-    is_PD[4] = 0;
-    nTB[4] = 2;
-    TB[4] = (double *) malloc(2 * sizeof(double));
-    TBid[4] = (int *) malloc(2 * sizeof(int));
-    TBid[4][0] = 0; TB[4][0] = 2.5; // H2
-    TBid[4][1] = 2; TB[4][1] = 12; // H2O
-
-    // (7):  H + OH + M <=> H2O + M
-    fwd_A[5]     = 3.8000000000000004e+22;
-    fwd_beta[5]  = -2;
-    fwd_Ea[5]    = 0;
-    prefactor_units[5]  = 1.0000000000000002e-12;
-    activation_units[5] = 0.50321666580471969;
-    phase_units[5]      = 1e-12;
-    is_PD[5] = 0;
-    nTB[5] = 2;
-    TB[5] = (double *) malloc(2 * sizeof(double));
-    TBid[5] = (int *) malloc(2 * sizeof(int));
-    TBid[5][0] = 0; TB[5][0] = 2.5; // H2
-    TBid[5][1] = 2; TB[5][1] = 12; // H2O
-
-    // (8):  H + O2 (+M) <=> HO2 (+M)
+    // (0):  H + O2 (+M) <=> HO2 (+M)
     fwd_A[0]     = 1475000000000;
     fwd_beta[0]  = 0.59999999999999998;
     fwd_Ea[0]    = 0;
@@ -164,67 +68,7 @@ void CKINIT()
     TBid[0][1] = 2; TB[0][1] = 11; // H2O
     TBid[0][2] = 1; TB[0][2] = 0.78000000000000003; // O2
 
-    // (9):  HO2 + H <=> H2 + O2
-    fwd_A[10]     = 16600000000000;
-    fwd_beta[10]  = 0;
-    fwd_Ea[10]    = 823;
-    prefactor_units[10]  = 1.0000000000000002e-06;
-    activation_units[10] = 0.50321666580471969;
-    phase_units[10]      = 1e-12;
-    is_PD[10] = 0;
-    nTB[10] = 0;
-
-    // (10):  HO2 + H <=> OH + OH
-    fwd_A[11]     = 70790000000000;
-    fwd_beta[11]  = 0;
-    fwd_Ea[11]    = 295;
-    prefactor_units[11]  = 1.0000000000000002e-06;
-    activation_units[11] = 0.50321666580471969;
-    phase_units[11]      = 1e-12;
-    is_PD[11] = 0;
-    nTB[11] = 0;
-
-    // (11):  HO2 + O <=> O2 + OH
-    fwd_A[12]     = 32500000000000;
-    fwd_beta[12]  = 0;
-    fwd_Ea[12]    = 0;
-    prefactor_units[12]  = 1.0000000000000002e-06;
-    activation_units[12] = 0.50321666580471969;
-    phase_units[12]      = 1e-12;
-    is_PD[12] = 0;
-    nTB[12] = 0;
-
-    // (12):  HO2 + OH <=> H2O + O2
-    fwd_A[13]     = 28900000000000;
-    fwd_beta[13]  = 0;
-    fwd_Ea[13]    = -497;
-    prefactor_units[13]  = 1.0000000000000002e-06;
-    activation_units[13] = 0.50321666580471969;
-    phase_units[13]      = 1e-12;
-    is_PD[13] = 0;
-    nTB[13] = 0;
-
-    // (13):  HO2 + HO2 <=> H2O2 + O2
-    fwd_A[14]     = 420000000000000;
-    fwd_beta[14]  = 0;
-    fwd_Ea[14]    = 11982;
-    prefactor_units[14]  = 1.0000000000000002e-06;
-    activation_units[14] = 0.50321666580471969;
-    phase_units[14]      = 1e-12;
-    is_PD[14] = 0;
-    nTB[14] = 0;
-
-    // (14):  HO2 + HO2 <=> H2O2 + O2
-    fwd_A[15]     = 130000000000;
-    fwd_beta[15]  = 0;
-    fwd_Ea[15]    = -1629.3;
-    prefactor_units[15]  = 1.0000000000000002e-06;
-    activation_units[15] = 0.50321666580471969;
-    phase_units[15]      = 1e-12;
-    is_PD[15] = 0;
-    nTB[15] = 0;
-
-    // (15):  H2O2 (+M) <=> OH + OH (+M)
+    // (1):  H2O2 (+M) <=> OH + OH (+M)
     fwd_A[1]     = 295100000000000;
     fwd_beta[1]  = 0;
     fwd_Ea[1]    = 48430;
@@ -244,6 +88,162 @@ void CKINIT()
     TBid[1] = (int *) malloc(2 * sizeof(int));
     TBid[1][0] = 0; TB[1][0] = 2.5; // H2
     TBid[1][1] = 2; TB[1][1] = 12; // H2O
+
+    // (2):  H2 + M <=> H + H + M
+    fwd_A[2]     = 4.577e+19;
+    fwd_beta[2]  = -1.3999999999999999;
+    fwd_Ea[2]    = 104380;
+    prefactor_units[2]  = 1.0000000000000002e-06;
+    activation_units[2] = 0.50321666580471969;
+    phase_units[2]      = 1e-6;
+    is_PD[2] = 0;
+    nTB[2] = 2;
+    TB[2] = (double *) malloc(2 * sizeof(double));
+    TBid[2] = (int *) malloc(2 * sizeof(int));
+    TBid[2][0] = 0; TB[2][0] = 2.5; // H2
+    TBid[2][1] = 2; TB[2][1] = 12; // H2O
+
+    // (3):  O + O + M <=> O2 + M
+    fwd_A[3]     = 6165000000000000;
+    fwd_beta[3]  = -0.5;
+    fwd_Ea[3]    = 0;
+    prefactor_units[3]  = 1.0000000000000002e-12;
+    activation_units[3] = 0.50321666580471969;
+    phase_units[3]      = 1e-12;
+    is_PD[3] = 0;
+    nTB[3] = 2;
+    TB[3] = (double *) malloc(2 * sizeof(double));
+    TBid[3] = (int *) malloc(2 * sizeof(int));
+    TBid[3][0] = 0; TB[3][0] = 2.5; // H2
+    TBid[3][1] = 2; TB[3][1] = 12; // H2O
+
+    // (4):  O + H + M <=> OH + M
+    fwd_A[4]     = 4.714e+18;
+    fwd_beta[4]  = -1;
+    fwd_Ea[4]    = 0;
+    prefactor_units[4]  = 1.0000000000000002e-12;
+    activation_units[4] = 0.50321666580471969;
+    phase_units[4]      = 1e-12;
+    is_PD[4] = 0;
+    nTB[4] = 2;
+    TB[4] = (double *) malloc(2 * sizeof(double));
+    TBid[4] = (int *) malloc(2 * sizeof(int));
+    TBid[4][0] = 0; TB[4][0] = 2.5; // H2
+    TBid[4][1] = 2; TB[4][1] = 12; // H2O
+
+    // (5):  H + OH + M <=> H2O + M
+    fwd_A[5]     = 3.8000000000000004e+22;
+    fwd_beta[5]  = -2;
+    fwd_Ea[5]    = 0;
+    prefactor_units[5]  = 1.0000000000000002e-12;
+    activation_units[5] = 0.50321666580471969;
+    phase_units[5]      = 1e-12;
+    is_PD[5] = 0;
+    nTB[5] = 2;
+    TB[5] = (double *) malloc(2 * sizeof(double));
+    TBid[5] = (int *) malloc(2 * sizeof(int));
+    TBid[5][0] = 0; TB[5][0] = 2.5; // H2
+    TBid[5][1] = 2; TB[5][1] = 12; // H2O
+
+    // (6):  H + O2 <=> O + OH
+    fwd_A[6]     = 3547000000000000;
+    fwd_beta[6]  = -0.40600000000000003;
+    fwd_Ea[6]    = 16599;
+    prefactor_units[6]  = 1.0000000000000002e-06;
+    activation_units[6] = 0.50321666580471969;
+    phase_units[6]      = 1e-12;
+    is_PD[6] = 0;
+    nTB[6] = 0;
+
+    // (7):  O + H2 <=> H + OH
+    fwd_A[7]     = 50800;
+    fwd_beta[7]  = 2.6699999999999999;
+    fwd_Ea[7]    = 6290;
+    prefactor_units[7]  = 1.0000000000000002e-06;
+    activation_units[7] = 0.50321666580471969;
+    phase_units[7]      = 1e-12;
+    is_PD[7] = 0;
+    nTB[7] = 0;
+
+    // (8):  H2 + OH <=> H2O + H
+    fwd_A[8]     = 216000000;
+    fwd_beta[8]  = 1.51;
+    fwd_Ea[8]    = 3430;
+    prefactor_units[8]  = 1.0000000000000002e-06;
+    activation_units[8] = 0.50321666580471969;
+    phase_units[8]      = 1e-12;
+    is_PD[8] = 0;
+    nTB[8] = 0;
+
+    // (9):  O + H2O <=> OH + OH
+    fwd_A[9]     = 2970000;
+    fwd_beta[9]  = 2.02;
+    fwd_Ea[9]    = 13400;
+    prefactor_units[9]  = 1.0000000000000002e-06;
+    activation_units[9] = 0.50321666580471969;
+    phase_units[9]      = 1e-12;
+    is_PD[9] = 0;
+    nTB[9] = 0;
+
+    // (10):  HO2 + H <=> H2 + O2
+    fwd_A[10]     = 16600000000000;
+    fwd_beta[10]  = 0;
+    fwd_Ea[10]    = 823;
+    prefactor_units[10]  = 1.0000000000000002e-06;
+    activation_units[10] = 0.50321666580471969;
+    phase_units[10]      = 1e-12;
+    is_PD[10] = 0;
+    nTB[10] = 0;
+
+    // (11):  HO2 + H <=> OH + OH
+    fwd_A[11]     = 70790000000000;
+    fwd_beta[11]  = 0;
+    fwd_Ea[11]    = 295;
+    prefactor_units[11]  = 1.0000000000000002e-06;
+    activation_units[11] = 0.50321666580471969;
+    phase_units[11]      = 1e-12;
+    is_PD[11] = 0;
+    nTB[11] = 0;
+
+    // (12):  HO2 + O <=> O2 + OH
+    fwd_A[12]     = 32500000000000;
+    fwd_beta[12]  = 0;
+    fwd_Ea[12]    = 0;
+    prefactor_units[12]  = 1.0000000000000002e-06;
+    activation_units[12] = 0.50321666580471969;
+    phase_units[12]      = 1e-12;
+    is_PD[12] = 0;
+    nTB[12] = 0;
+
+    // (13):  HO2 + OH <=> H2O + O2
+    fwd_A[13]     = 28900000000000;
+    fwd_beta[13]  = 0;
+    fwd_Ea[13]    = -497;
+    prefactor_units[13]  = 1.0000000000000002e-06;
+    activation_units[13] = 0.50321666580471969;
+    phase_units[13]      = 1e-12;
+    is_PD[13] = 0;
+    nTB[13] = 0;
+
+    // (14):  HO2 + HO2 <=> H2O2 + O2
+    fwd_A[14]     = 420000000000000;
+    fwd_beta[14]  = 0;
+    fwd_Ea[14]    = 11982;
+    prefactor_units[14]  = 1.0000000000000002e-06;
+    activation_units[14] = 0.50321666580471969;
+    phase_units[14]      = 1e-12;
+    is_PD[14] = 0;
+    nTB[14] = 0;
+
+    // (15):  HO2 + HO2 <=> H2O2 + O2
+    fwd_A[15]     = 130000000000;
+    fwd_beta[15]  = 0;
+    fwd_Ea[15]    = -1629.3;
+    prefactor_units[15]  = 1.0000000000000002e-06;
+    activation_units[15] = 0.50321666580471969;
+    phase_units[15]      = 1e-12;
+    is_PD[15] = 0;
+    nTB[15] = 0;
 
     // (16):  H2O2 + H <=> H2O + OH
     fwd_A[16]     = 24100000000000;
@@ -304,7 +304,6 @@ void GET_REACTION_MAP(int *rmap)
         rmap[i] = rxn_map[i];
     }
 }
-
 
 #include <ReactionData.H>
 double* GetParamPtr(int                reaction_id,
@@ -487,7 +486,6 @@ void CKFINALIZE()
     nTB_DEF[i] = 0;
   }
 }
-
 
 
 
@@ -3651,6 +3649,39 @@ void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)
 
     return;
 }
+
+/*compute the sparsity pattern of the simplified precond Jacobian */
+void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP)
+{
+    double c[9];
+    double J[100];
+
+    for (int k=0; k<9; k++) {
+        c[k] = 1.0/ 9.000000 ;
+    }
+
+    aJacobian_precond(J, c, 1500.0, *consP);
+
+    rowPtr[0] = 1;
+    int nJdata_tmp = 1;
+    for (int l=0; l<10; l++) {
+        for (int k=0; k<10; k++) {
+            if (k == l) {
+                colIndx[nJdata_tmp-1] = l+1; 
+                nJdata_tmp = nJdata_tmp + 1; 
+            } else {
+                if(J[10*k + l] != 0.0) {
+                    colIndx[nJdata_tmp-1] = k+1; 
+                    nJdata_tmp = nJdata_tmp + 1; 
+                }
+            }
+        }
+        rowPtr[l+1] = nJdata_tmp;
+    }
+
+    return;
+}
+
 /*compute the sparsity pattern of the Jacobian */
 void SPARSITY_PREPROC(int *  rowVals, int *  colPtrs, int * consP, int NCELLS)
 {
@@ -3683,6 +3714,7 @@ void SPARSITY_PREPROC(int *  rowVals, int *  colPtrs, int * consP, int NCELLS)
 
     return;
 }
+
 
 /*compute the reaction Jacobian */
 void aJacobian(double *  J, double *  sc, double T, int consP)
@@ -7640,17 +7672,22 @@ void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentri
     return;
 }
 
+
 void egtransetLENIMC(int* LENIMC ) {
     *LENIMC = 38;}
+
 
 void egtransetLENRMC(int* LENRMC ) {
     *LENRMC = 1854;}
 
+
 void egtransetNO(int* NO ) {
     *NO = 4;}
 
+
 void egtransetKK(int* KK ) {
     *KK = 9;}
+
 
 void egtransetNLITE(int* NLITE ) {
     *NLITE = 2;}
@@ -7659,6 +7696,7 @@ void egtransetNLITE(int* NLITE ) {
 /*Patm in ergs/cm3 */
 void egtransetPATM(double* PATM) {
     *PATM =   0.1013250000000000E+07;}
+
 
 /*the molecular weights in g/mol */
 void egtransetWT(double* WT ) {
@@ -7676,85 +7714,85 @@ void egtransetWT(double* WT ) {
 
 /*the lennard-jones potential well depth eps/kb in K */
 void egtransetEPS(double* EPS ) {
+    EPS[1] = 1.07400000E+02;
     EPS[2] = 5.72400000E+02;
     EPS[3] = 1.45000000E+02;
     EPS[4] = 8.00000000E+01;
+    EPS[8] = 9.75300000E+01;
     EPS[5] = 8.00000000E+01;
     EPS[6] = 1.07400000E+02;
     EPS[7] = 1.07400000E+02;
-    EPS[8] = 9.75300000E+01;
     EPS[0] = 3.80000000E+01;
-    EPS[1] = 1.07400000E+02;
 }
 
 
 /*the lennard-jones collision diameter in Angstroms */
 void egtransetSIG(double* SIG ) {
+    SIG[1] = 3.45800000E+00;
     SIG[2] = 2.60500000E+00;
     SIG[3] = 2.05000000E+00;
     SIG[4] = 2.75000000E+00;
+    SIG[8] = 3.62100000E+00;
     SIG[5] = 2.75000000E+00;
     SIG[6] = 3.45800000E+00;
     SIG[7] = 3.45800000E+00;
-    SIG[8] = 3.62100000E+00;
     SIG[0] = 2.92000000E+00;
-    SIG[1] = 3.45800000E+00;
 }
 
 
 /*the dipole moment in Debye */
 void egtransetDIP(double* DIP ) {
+    DIP[1] = 0.00000000E+00;
     DIP[2] = 1.84400000E+00;
     DIP[3] = 0.00000000E+00;
     DIP[4] = 0.00000000E+00;
+    DIP[8] = 0.00000000E+00;
     DIP[5] = 0.00000000E+00;
     DIP[6] = 0.00000000E+00;
     DIP[7] = 0.00000000E+00;
-    DIP[8] = 0.00000000E+00;
     DIP[0] = 0.00000000E+00;
-    DIP[1] = 0.00000000E+00;
 }
 
 
 /*the polarizability in cubic Angstroms */
 void egtransetPOL(double* POL ) {
+    POL[1] = 1.60000000E+00;
     POL[2] = 0.00000000E+00;
     POL[3] = 0.00000000E+00;
     POL[4] = 0.00000000E+00;
+    POL[8] = 1.76000000E+00;
     POL[5] = 0.00000000E+00;
     POL[6] = 0.00000000E+00;
     POL[7] = 0.00000000E+00;
-    POL[8] = 1.76000000E+00;
     POL[0] = 7.90000000E-01;
-    POL[1] = 1.60000000E+00;
 }
 
 
 /*the rotational relaxation collision number at 298 K */
 void egtransetZROT(double* ZROT ) {
+    ZROT[1] = 3.80000000E+00;
     ZROT[2] = 4.00000000E+00;
     ZROT[3] = 0.00000000E+00;
     ZROT[4] = 0.00000000E+00;
+    ZROT[8] = 4.00000000E+00;
     ZROT[5] = 0.00000000E+00;
     ZROT[6] = 1.00000000E+00;
     ZROT[7] = 3.80000000E+00;
-    ZROT[8] = 4.00000000E+00;
     ZROT[0] = 2.80000000E+02;
-    ZROT[1] = 3.80000000E+00;
 }
 
 
 /*0: monoatomic, 1: linear, 2: nonlinear */
 void egtransetNLIN(int* NLIN) {
+    NLIN[1] = 1;
     NLIN[2] = 2;
     NLIN[3] = 0;
     NLIN[4] = 0;
+    NLIN[8] = 1;
     NLIN[5] = 1;
     NLIN[6] = 2;
     NLIN[7] = 2;
-    NLIN[8] = 1;
     NLIN[0] = 1;
-    NLIN[1] = 1;
 }
 
 
@@ -8176,4 +8214,80 @@ void egtransetKTDIF(int* KTDIF) {
 }
 
 
+/*Poly fits for thermal diff ratios, dim NO*NLITE*KK */
+void egtransetCOFTD(double* COFTD) {
+    COFTD[0] = 0.00000000E+00;
+    COFTD[1] = 0.00000000E+00;
+    COFTD[2] = 0.00000000E+00;
+    COFTD[3] = 0.00000000E+00;
+    COFTD[4] = 4.42739084E-01;
+    COFTD[5] = 7.11770818E-05;
+    COFTD[6] = -3.84768062E-08;
+    COFTD[7] = 6.86323437E-12;
+    COFTD[8] = 6.02028221E-02;
+    COFTD[9] = 5.61561867E-04;
+    COFTD[10] = -2.55372862E-07;
+    COFTD[11] = 3.63389913E-11;
+    COFTD[12] = -1.52534742E-01;
+    COFTD[13] = -5.46404022E-05;
+    COFTD[14] = 2.93412470E-08;
+    COFTD[15] = -4.87091914E-12;
+    COFTD[16] = 4.15583337E-01;
+    COFTD[17] = 1.09738399E-05;
+    COFTD[18] = -3.96021963E-09;
+    COFTD[19] = 1.14414443E-12;
+    COFTD[20] = 4.21932443E-01;
+    COFTD[21] = 1.11414935E-05;
+    COFTD[22] = -4.02072219E-09;
+    COFTD[23] = 1.16162418E-12;
+    COFTD[24] = 4.44452569E-01;
+    COFTD[25] = 7.14525507E-05;
+    COFTD[26] = -3.86257187E-08;
+    COFTD[27] = 6.88979640E-12;
+    COFTD[28] = 4.46070183E-01;
+    COFTD[29] = 7.17126069E-05;
+    COFTD[30] = -3.87662996E-08;
+    COFTD[31] = 6.91487226E-12;
+    COFTD[32] = 4.45261966E-01;
+    COFTD[33] = 4.94697174E-05;
+    COFTD[34] = -2.63023442E-08;
+    COFTD[35] = 4.90306217E-12;
+    COFTD[36] = 1.52534742E-01;
+    COFTD[37] = 5.46404022E-05;
+    COFTD[38] = -2.93412470E-08;
+    COFTD[39] = 4.87091914E-12;
+    COFTD[40] = 2.20482843E-01;
+    COFTD[41] = 4.80164288E-04;
+    COFTD[42] = -2.32927944E-07;
+    COFTD[43] = 3.46470436E-11;
+    COFTD[44] = -1.41883744E-01;
+    COFTD[45] = 7.66558810E-04;
+    COFTD[46] = -3.06550003E-07;
+    COFTD[47] = 4.02959502E-11;
+    COFTD[48] = 0.00000000E+00;
+    COFTD[49] = 0.00000000E+00;
+    COFTD[50] = 0.00000000E+00;
+    COFTD[51] = 0.00000000E+00;
+    COFTD[52] = 2.70010150E-01;
+    COFTD[53] = 3.61555093E-04;
+    COFTD[54] = -1.80744752E-07;
+    COFTD[55] = 2.75321248E-11;
+    COFTD[56] = 2.72041664E-01;
+    COFTD[57] = 3.64275376E-04;
+    COFTD[58] = -1.82104647E-07;
+    COFTD[59] = 2.77392722E-11;
+    COFTD[60] = 2.20907853E-01;
+    COFTD[61] = 4.81089870E-04;
+    COFTD[62] = -2.33376944E-07;
+    COFTD[63] = 3.47138305E-11;
+    COFTD[64] = 2.21308399E-01;
+    COFTD[65] = 4.81962174E-04;
+    COFTD[66] = -2.33800100E-07;
+    COFTD[67] = 3.47767730E-11;
+    COFTD[68] = 2.40744421E-01;
+    COFTD[69] = 4.45343451E-04;
+    COFTD[70] = -2.18173874E-07;
+    COFTD[71] = 3.26958506E-11;
+}
 
+/* End of file  */
