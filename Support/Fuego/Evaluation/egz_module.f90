@@ -833,9 +833,8 @@ contains
        fac(i) = (Patmos/Ru) / T(i)
     end do
 
-    do i=1,np
-       do n=1,ns
-          !print *, "        --In EGLIB ", wt(n), fac(i), aux(i,n), D(i,n), i
+    do n=1,ns
+       do i=1,np
           D(i,n) = wt(n) * fac(i) * aux(i,n) / D(i,n)
        end do
     end do

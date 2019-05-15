@@ -121,11 +121,11 @@ contains
     endif
 
     if (which % wtr_get_lam) then
-  !     call egzl1( .25d0, Xp, L1)
-      call egzl1( 1.d0, Xp, L1)
-      call egzl1(-1.d0, Xp, L2)
-      coeff % lam = 0.5d0 * (L1 + L2)
-    !   coeff % lam = L1
+       call egzl1( .25d0, Xp, L1)
+ !     call egzl1( 1.d0, Xp, L1)
+ !     call egzl1(-1.d0, Xp, L2)
+ !     coeff % lam = 0.5d0 * (L1 + L2)
+       coeff % lam = L1
     endif
 
     if (which % wtr_get_Ddiag) then
