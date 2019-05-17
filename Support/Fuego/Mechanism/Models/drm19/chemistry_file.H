@@ -133,10 +133,6 @@ void vcomp_wdot_51_84(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
 void SetAllDefaults();
-void ResetAllParametersToDefault();
-#include <ReactionData.H>
-double* GetParamPtr(int reaction_id, REACTION_PARAMETER param_id, 
-		int species_id, int  get_default);
 /*Transport function declarations */
 void egtransetLENIMC(int* LENIMC);
 void egtransetLENRMC(int* LENRMC);
