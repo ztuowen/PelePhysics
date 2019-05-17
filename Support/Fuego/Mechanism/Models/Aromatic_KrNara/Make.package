@@ -1,7 +1,5 @@
 CEXE_headers+=chemistry_file.H
 
-f90EXE_sources += mod_fuego.f90
-
 EXE_sources += 
 
 LIBRARIES += -L$(CHEM_DIR) -lAromNara
