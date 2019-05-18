@@ -1,6 +1,10 @@
 ifeq ($(TRANSPORT_TYPE), IDEAL_GAS)
   # f90EXE_sources += actual_transport.f90
-  F90EXE_sources += actual_transport_sp.F90
+  #F90EXE_sources += actual_transport_sp.F90
+  CEXE_sources += actual_transport.cpp
+  CEXE_sources += trans_params.cpp
+  CEXE_headers += actual_transport.H
+  CEXE_headers += trans_params.H
 else
   f90EXE_sources += actual_transport_nonideal.f90
 endif

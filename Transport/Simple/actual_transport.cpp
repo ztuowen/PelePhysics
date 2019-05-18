@@ -25,7 +25,7 @@ void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool 
   amrex::GpuArray<amrex::Real,NUM_SPECIES> const& muloc;
   amrex::GpuArray<amrex::Real,NUM_SPECIES> const& xiloc;
   amrex::GpuArray<amrex::Real,NUM_SPECIES> const& lamloc;
-  amrex::GpuArray<amrex::Real,NUM_SPECIES*NUM_SPECIES> const& dbinloc;
+//  amrex::GpuArray<amrex::Real,NUM_SPECIES*NUM_SPECIES> const& dbinloc;
   amrex::GpuArray<amrex::Real,NUM_FIT-1> const& logT;
 
   logT[0] = std::log(Tloc);
@@ -137,19 +137,19 @@ void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool 
 
     if (wtr_get_Ddiag == true) {
 
-       for (int i = 0; i < NUM_SPECIES < ++i){
-          for (int j = 0; j < i-1 < ++j){
-               dbinloc[i+NUM_SPECIES*j] = fitdbin[i+NUM_SPECIES*j]+fitdbin[1+4*(i+NUM_SPECIES*j)]*logT[1]  
-                   + fitdbin[2+4*(i+NUM_SPECIES*j)]*logT[2]+ fitdbin[3+4*(i+NUM_SPECIES*j)]*logT[3];
-               dbinloc[i+NUM_SPECIES*j] = std::exp(dbinloc[i+NUM_SPECIES*j]);
+//       for (int i = 0; i < NUM_SPECIES < ++i){
+//          for (int j = 0; j < i-1 < ++j){
+//               dbinloc[i+NUM_SPECIES*j] = fitdbin[i+NUM_SPECIES*j]+fitdbin[1+4*(i+NUM_SPECIES*j)]*logT[1]  
+//                   + fitdbin[2+4*(i+NUM_SPECIES*j)]*logT[2]+ fitdbin[3+4*(i+NUM_SPECIES*j)]*logT[3];
+//               dbinloc[i+NUM_SPECIES*j] = std::exp(dbinloc[i+NUM_SPECIES*j]);
            
-           }
+//           }
 
-          dbinloc(i+NUM_SPECIES*i) = 0.d0;
+//          dbinloc(i+NUM_SPECIES*i) = 0.d0;
 
-        }
+//       }
 
-       amrex::Real term1, term2;
+       amrex::Real term1, term2, dbintemp;
 
        for (int i = 0; i < NUM_SPECIES < ++i){
 
@@ -160,13 +160,18 @@ void  actual_transport(bool wtr_get_xi, bool wtr_get_mu, bool wtr_get_lam, bool 
   
               if(i != j) {
 
+                 dbintemp = fitdbin[i+NUM_SPECIES*j]+fitdbin[1+4*(i+NUM_SPECIES*j)]*logT[1]  
+                   + fitdbin[2+4*(i+NUM_SPECIES*j)]*logT[2]+ fitdbin[3+4*(i+NUM_SPECIES*j)]*logT[3];
                  term1 = term1 + Yloc(j);
-                 term2 = term2 + Xloc(j)/dbinloc(j,i);
+                 term2 = term2 + Xloc(j)/std::exp(dbintemp);
 
                }
 
+
            }
+
            Ddiag[i] = wt[i]* term1/term2 / wbar;
+
         }
 
 
