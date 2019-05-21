@@ -10,7 +10,7 @@ contains
 
     use network
     use eos_module
-    use transport_module
+    !use transport_module
 
     integer :: namlen
     integer :: name(namlen)
@@ -26,18 +26,18 @@ contains
 
     call eos_init(small_temp, small_dens)
 
-    call transport_init()
+    ! call transport_init()
 
   end subroutine extern_init
 
 
-  subroutine extern_close() bind(C, name="extern_close")
+! subroutine extern_close() bind(C, name="extern_close")
 
-    use transport_module
+!   use transport_module
 
-    call transport_close()
+!   ! call transport_close()
 
-  end subroutine extern_close
+! end subroutine extern_close
 
 
   subroutine get_num_spec(nspec_out) bind(C, name="get_num_spec")

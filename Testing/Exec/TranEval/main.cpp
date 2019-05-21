@@ -8,6 +8,7 @@
 #include <Transport_F.H>
 #include <main_F.H>
 #include <PlotFileFromMF.H>
+#include <transport.H>
 
 std::string inputs_name = "";
 
@@ -76,20 +77,27 @@ main (int   argc,
       }
 
       MultiFab D(ba,dm,num_spec+3,num_grow);
+      std::cout << "got to here" << std::endl;
+      transport_init();
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
       for (MFIter mfi(mass_frac,tilesize); mfi.isValid(); ++mfi) {
 	const Box& box = mfi.tilebox();
-	get_transport_coeffs(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
-			     BL_TO_FORTRAN_N_3D(mass_frac[mfi],0),
-			     BL_TO_FORTRAN_N_3D(temperature[mfi],0),
-			     BL_TO_FORTRAN_N_3D(density[mfi],0),
-			     BL_TO_FORTRAN_N_3D(D[mfi],0),
-			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec),
-			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec+1),
-			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec+2));
+        auto const mass_fab = mass_frac.array(mfi);
+        auto const temp_fab = temperature.array(mfi);
+        auto const den_fab = density.array(mfi);
+        auto const diff_fab = D.array(mfi);
+        get_transport_coeffs(box, mass_fab,temp_fab,den_fab,diff_fab);
+//	get_transport_coeffs(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
+//			     BL_TO_FORTRAN_N_3D(mass_frac[mfi],0),
+//			     BL_TO_FORTRAN_N_3D(temperature[mfi],0),
+//			     BL_TO_FORTRAN_N_3D(density[mfi],0),
+//			     BL_TO_FORTRAN_N_3D(D[mfi],0),
+//			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec),
+//			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec+1),
+//			     BL_TO_FORTRAN_N_3D(D[mfi],num_spec+2));
       }
 
       ParmParse ppa("amr");
@@ -97,7 +105,8 @@ main (int   argc,
       std::string outfile = amrex::Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
       PlotFileFromMF(D,outfile);
 
-      extern_close();
+//      extern_close();
+      transport_close();
 
     }
 

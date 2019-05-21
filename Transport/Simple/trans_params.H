@@ -21,7 +21,7 @@ extern AMREX_GPU_DEVICE_MANAGED amrex::Real* zrot;
 extern AMREX_GPU_DEVICE_MANAGED amrex::Real* fitmu;
 extern AMREX_GPU_DEVICE_MANAGED amrex::Real* fitlam;
 extern AMREX_GPU_DEVICE_MANAGED amrex::Real* fitdbin;
-extern AMREX_GPU_DEVICE_MANAGED amrex::intg* nlin;
+extern AMREX_GPU_DEVICE_MANAGED int* nlin;
 extern AMREX_GPU_DEVICE_MANAGED int array_size;
 extern AMREX_GPU_DEVICE_MANAGED int fit_length;
 
