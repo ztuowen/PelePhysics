@@ -88,7 +88,6 @@ contains
     use amrex_error_module
     use vode_module, only : verbose, itol, rtol, atol, vode_MF=>MF, always_new_j, &
          voderwork, vodeiwork, lvoderwork, lvodeiwork, voderpar, vodeipar
-    !use chemistry_module, only : molecular_weight
     use eos_module
 
     real(amrex_real),   intent(inout) :: rY_in(nspec+1),rY_src_in(nspec)
