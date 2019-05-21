@@ -24,8 +24,10 @@ class Mill(Stationery, Indenter):
         self._begin()
         if document:
             #self._renderDocument(document)
-            self._renderHeader_CHOP(document)
-            self._renderDocument_CHOP(document)
+            self._renderHeaderGPU(document)
+            self._renderDocumentGPU(document)
+            #self._renderHeader_CHOP(document)
+            #self._renderDocument_CHOP(document)
         self._end()
 
         return self._rep
