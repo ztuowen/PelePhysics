@@ -267,10 +267,25 @@ module fuego_chemistry
             real(amrex_real), intent(inout) :: wdot(*)
         end subroutine
 
+        subroutine ckwyr(rho,T,Y,wdot) bind(c,name='CKWYR')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(in   ) :: rho, T
+            real(amrex_real), intent(in   ) :: Y(*)
+            real(amrex_real), intent(inout) :: wdot(*)
+        end subroutine
+
         subroutine ckmmwy(y,wtm) bind(c,name='CKMMWY')
             use amrex_fort_module, only : amrex_real
             real(amrex_real), intent(in   ) :: y(*)
             real(amrex_real), intent(inout) :: wtm
+        end subroutine
+
+        subroutine dwdot(J,c,T,consP) bind(c,name='DWDOT')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(inout) :: J(*)
+            real(amrex_real), intent(in   ) :: c(*)
+            real(amrex_real), intent(in   ) :: T
+            integer,          intent(in   ) :: consP
         end subroutine
 
     end interface

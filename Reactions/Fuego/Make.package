@@ -13,8 +13,9 @@ else
     else
         ifeq ($(SDC_FORTRAN), TRUE)
             Blocs   += $(PELE_PHYSICS_HOME)/Reactions/Fuego/SDC
+            FEXE_headers   += actual_sdc_F.H
             F90EXE_sources += mod_sdc_defs.F90 mod_timers.F90 react_type.F90
-            f90EXE_sources += actual_sdc.f90 be_chem.f90 
+            F90EXE_sources += be_chem.F90 actual_sdc.F90 
         else
             F90EXE_sources += react_type.F90
             F90EXE_sources += actual_reactor.F90

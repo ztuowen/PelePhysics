@@ -1,6 +1,7 @@
 module mod_sdc_defs
 
       use amrex_fort_module, only : amrex_real
+      use fuego_chemistry 
 
       implicit none
 
