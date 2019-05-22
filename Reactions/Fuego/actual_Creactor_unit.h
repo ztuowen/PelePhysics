@@ -36,20 +36,6 @@ void reactor_unit_close();
 static int check_flag_unit(void *flagvalue, const char *funcname, int opt);
 
 static void PrintFinalStats_unit(void *cvodeMem);
-
-extern "C" {
-    void get_t_given_ey_(double * e, double * y, double * t, int *ierr); 
-    void get_t_given_hy_(double * h, double * y, double * t, int *ierr); 
-    void ckcvms_(double * T, double * cvms);
-    void ckcpms_(double * T, double * cvms);
-    void ckums_(double * T,  double * ums);
-    void ckhms_(double * T,  double * ums);
-    void ckwc_(double * T, double * C, double * wdot);
-    void ckwt_(double * wt);
-    void dwdot_(double * J, double * sc, double * Tp, int * consP);
-    void ckindx_(int * mm, int * kk, int * ii, int * nfit); 
-
-}
 /**********************************/
 /* Main Kernel fct called in solver RHS */
 void fKernelSpec_unit(realtype *dt, realtype *yvec_d, realtype *ydot_d,

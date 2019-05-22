@@ -1,5 +1,6 @@
 #include <actual_Creactor_unit.h> 
 #include <AMReX_ParmParse.H>
+#include <chemistry_file.H>
 
 /**********************************/
 
@@ -30,7 +31,7 @@ int reactor_unit_init(const int* cvode_iE){
 	int mm, ii, nfit;
 	int neq_tot;
 
-	ckindx_(&mm,&NEQ_unit,&ii,&nfit);
+	CKINDX(&mm,&NEQ_unit,&ii,&nfit);
 
         if (iverbose_u > 0) {
 	    printf("(UNIT) Nb of spec is %d \n", NEQ_unit);
@@ -225,7 +226,7 @@ void fKernelSpec_unit(realtype *dt, realtype *yvec_d, realtype *ydot_d,
       int lierr;
 
       /* MW CGS */
-      ckwt_(molecular_weight);
+      CKWT(molecular_weight);
       /* rho MKS */ 
       realtype rho = 0.0;
       for (int i = 0; i < NEQ_unit; i++){
@@ -243,15 +244,15 @@ void fKernelSpec_unit(realtype *dt, realtype *yvec_d, realtype *ydot_d,
 
       /* Fuego calls on device */
       if (iE_Creact_u == 1){
-          get_t_given_ey_(&energy, massfrac, &temp, &lierr);
-          ckums_(&temp, Xi);
-          ckcvms_(&temp, cXi);
+          GET_T_GIVEN_EY(&energy, massfrac, &temp, &lierr);
+          CKUMS(&temp, Xi);
+          CKCVMS(&temp, cXi);
       } else {
-          get_t_given_hy_(&energy, massfrac, &temp, &lierr);
-          ckhms_(&temp, Xi);
-          ckcpms_(&temp, cXi);
+          GET_T_GIVEN_HY(&energy, massfrac, &temp, &lierr);
+          CKHMS(&temp, Xi);
+          CKCPMS(&temp, cXi);
       }
-      ckwc_(&temp, activity, cdot);
+      CKWC(&temp, activity, cdot);
       int cX = 0.0;
       for (int i = 0; i < NEQ_unit; i++){
           cX = cX + massfrac[i] * cXi[i];
@@ -279,7 +280,7 @@ static int cJac_unit(realtype tn, N_Vector u, N_Vector fu, SUNMatrix J,
       realtype Jmat_tmp[(NEQ_unit+1)*(NEQ_unit+1)];
 
       /* MW CGS */
-      ckwt_(molecular_weight);
+      CKWT(molecular_weight);
       /* temp */
       temp = ydata[NEQ_unit];
       for (int i = 0; i < NEQ_unit; i++){
@@ -289,10 +290,10 @@ static int cJac_unit(realtype tn, N_Vector u, N_Vector fu, SUNMatrix J,
       int consP;
       if (iE_Creact_u == 1) {
 	  consP = 0;
-          dwdot_(Jmat_tmp, activity, &temp, &consP);
+          DWDOT(Jmat_tmp, activity, &temp, &consP);
       } else {
           consP = 1;
-          dwdot_(Jmat_tmp, activity, &temp, &consP);
+          DWDOT(Jmat_tmp, activity, &temp, &consP);
       }
       /* fill the sunMat */
       for (int k = 0; k < NEQ_unit; k++){
