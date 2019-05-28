@@ -6635,7 +6635,6 @@ class CPickler(CMill):
 
         self._write()
 
-        # k_f function
         # Mixt concentration for PD & TB
         self._write(self.line('compute the mixture concentration'))
         self._write('double mixture = 0.0;')
@@ -6644,6 +6643,19 @@ class CPickler(CMill):
         self._write('mixture += sc[i];')
         self._outdent()
         self._write('}')
+        self._write()
+
+        # Kc stuff
+        self._write(self.line('compute the Gibbs free energy'))
+        self._write('double g_RT[%d];' % (nSpecies))
+        self._write('gibbs_d(g_RT, tc);')
+
+        self._write()
+
+        self._write(self.line('reference concentration: P_atm / (RT) in inverse mol/m^3'))
+        self._write('double refC = %g / %g * invT;' % (atm.value, R.value))
+        self._write('double refCinv = 1 / refC;')
+
         self._write()
         
         # kfs
@@ -6665,6 +6677,9 @@ class CPickler(CMill):
         for i in range(nReactions):
             reaction = mechanism.reaction()[rmap[i]]
             idx = reaction.id - 1
+
+            KcExpArg = self._sortedKcExpArg(mechanism, reaction)
+            KcConv = self._KcConv(mechanism, reaction)
 
             A, beta, E = reaction.arrhenius
             dim = self._phaseSpaceUnits(reaction.reactants)
@@ -6707,9 +6722,18 @@ class CPickler(CMill):
                     self._write("F = redP / (1.0 + redP);")
                     self._write("logPred = log10(redP);")
                     self._write('logFcent = log10(')
-                    self._write('    (fabs(%.17g) > 1.e-100 ? (1.-%.17g)*exp(-tc[1] / %.17g) : 0.) ' % (troe[1],troe[0],troe[1]))
-                    self._write('    + (fabs(%.17g) > 1.e-100 ? %.17g * exp(-tc[1]/%.17g) : 0.) ' % (troe[2],troe[0],troe[2]))
-                    self._write('    + (%d == 4 ? exp(-%.17g * invT) : 0.) );' % (ntroe,troe[3]))
+                    if (abs(troe[1]) > 1.e-100):
+                        self._write('    (1.-%.17g)*exp(-tc[1] / %.17g) ' % (troe[0],troe[1]))
+                    else:
+                        self._write('     0. ' )
+                    if (abs(troe[2]) > 1.e-100):
+                        self._write('    + %.17g * exp(-tc[1]/%.17g)  ' % (troe[0],troe[2]))
+                    else:
+                        self._write('    + 0. ')
+                    if (ntroe == 4):
+                        self._write('    + exp(-%.17g * invT);' % troe[3])
+                    else:
+                        self._write('    + 0.;' )
                     self._write("troe_c = -.4 - .67 * logFcent;")
                     self._write("troe_n = .75 - 1.27 * logFcent;")
                     self._write("troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));")
@@ -6721,7 +6745,10 @@ class CPickler(CMill):
                     self._write("logPred = log10(redP);")
                     self._write("X = 1.0 / (1.0 + logPred*logPred);")
                     self._write("F_sri = exp(X * log(%.17g * exp(-%.17g*invT)" % (sri[0],sri[1]))
-                    self._write("   +  (%.17g > 1.e-100 ? exp(tc[0]/%.17g) : 0.0) )" % (sri[2],sri[2]))
+                    if (sri[2] > 1.e-100):
+                        self._write("   +  exp(tc[0]/%.17g) " % sri[2])
+                    else:
+                        self._write("   +  0. ") 
                     self._write("   *  (%d > 3 ? %.17g*exp(%.17g*tc[0]) : 1.0);" % (nsri,sri[3],sri[4]))
                     self._write("Corr = F * F_sri;")
                     self._write("qf[%d] *= Corr * k_f;" % idx)
@@ -6729,31 +6756,25 @@ class CPickler(CMill):
                     self._write("Corr = redP / (1. + redP);")
                     self._write("qf[%d] *= Corr * k_f;" % idx)
 
-        self._write()
-
-        # Kc
-        self._write(self.line('compute the Gibbs free energy'))
-        self._write('double g_RT[%d];' % (nSpecies))
-        self._write('gibbs_d(g_RT, tc);')
-
-        self._write()
-
-        self._write(self.line('reference concentration: P_atm / (RT) in inverse mol/m^3'))
-        self._write('double refC = %g / %g * invT;' % (atm.value, R.value))
-        self._write('double refCinv = 1 / refC;')
-
-        self._write()
-
-        for reaction in mechanism.reaction():
-            idx = reaction.id-1
-            KcExpArg = self._sortedKcExpArg(mechanism, reaction)
-            KcConv = self._KcConv(mechanism, reaction)
             if KcConv:
-                self._write("qr[%d] *= qf[%d] / (exp(%s) * %s);" % (idx,idx,KcExpArg,KcConv))        
+                self._write("qr[%d] *= Corr * k_f / (exp(%s) * %s);" % (idx,KcExpArg,KcConv))        
             else:
-                self._write("qr[%d] *= qf[%d] / exp(%s);" % (idx,idx,KcExpArg))
+                self._write("qr[%d] *= Corr * k_f / exp(%s);" % (idx,KcExpArg))
+
 
         self._write()
+
+
+        #for reaction in mechanism.reaction():
+        #    idx = reaction.id-1
+        #    KcExpArg = self._sortedKcExpArg(mechanism, reaction)
+        #    KcConv = self._KcConv(mechanism, reaction)
+        #    if KcConv:
+        #        self._write("qr[%d] *= qf[%d] / (exp(%s) * %s);" % (idx,idx,KcExpArg,KcConv))        
+        #    else:
+        #        self._write("qr[%d] *= qf[%d] / exp(%s);" % (idx,idx,KcExpArg))
+
+        #self._write()
         
         if nspecial > 0:
 
@@ -8510,7 +8531,7 @@ class CPickler(CMill):
             low_A, low_beta, low_E = reaction.low
             self._write('/* pressure-fall-off */')
             self._write("k_0 = %.17g * exp(%.17g * tc[0] - %.17g * %.17g * invT);"
-                        %(low_A,low_beta,aeuc / Rc / kelvin,low_A))
+                        %(low_A,low_beta,aeuc / Rc / kelvin,low_E))
             self._write('Pr = 1e-%d * alpha / k_f * k_0;' % (dim*6))
             self._write('fPr = Pr / (1.0+Pr);')
             self._write("dlnk0dT = %.17g * invT + %.17g * %.17g * invT2;"
