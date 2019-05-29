@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
-
+#include <AMReX_Gpu.H> 
 extern "C"
 {
 void egtransetEPS(double *  EPS);
@@ -128,6 +128,7 @@ void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentri
 void vcomp_wdot(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
+
 void SetAllDefaults();
 /*Transport function declarations */
 void egtransetLENIMC(int* LENIMC);
@@ -147,11 +148,13 @@ void egtransetCOFETA(double* COFETA);
 void egtransetCOFLAM(double* COFLAM);
 void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
+AMREX_GPU_HOST_DEVICE
+void get_imw(double *imw_new); 
 }
 
 namespace thermo
 {
-    extern std::vector<double> imw;
+//    extern std::vector<double> imw;
 
     extern double fwd_A[21], fwd_beta[21], fwd_Ea[21];
     extern double low_A[21], low_beta[21], low_Ea[21];

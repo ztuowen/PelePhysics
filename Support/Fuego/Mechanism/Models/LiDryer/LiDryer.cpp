@@ -4,16 +4,6 @@ namespace thermo
 {
     /* Inverse molecular weights */
 //    std::vector<double> imw;
-    static AMREX_GPU_DEVICE_MANAGED double imw[9] = {
-                1.0 / 2.015940,  /*H2 */
-                1.0 / 31.998800,  /*O2 */
-                1.0 / 18.015340,  /*H2O */
-                1.0 / 1.007970,  /*H */
-                1.0 / 15.999400,  /*O */
-                1.0 / 17.007370,  /*OH */
-                1.0 / 33.006770,  /*HO2 */
-                1.0 / 34.014740,  /*H2O2 */
-                1.0 / 28.013400};  /*N2 */
 
     double fwd_A[21], fwd_beta[21], fwd_Ea[21];
     double low_A[21], low_beta[21], low_Ea[21];
@@ -34,6 +24,18 @@ namespace thermo
     double *TB_DEF[21];
     std::vector<int> rxn_map;
 };
+
+   static AMREX_GPU_DEVICE_MANAGED double imw[9] = {
+               1.0 / 2.015940,  /*H2 */
+               1.0 / 31.998800,  /*O2 */
+               1.0 / 18.015340,  /*H2O */
+               1.0 / 1.007970,  /*H */
+               1.0 / 15.999400,  /*O */
+               1.0 / 17.007370,  /*OH */
+               1.0 / 33.006770,  /*HO2 */
+               1.0 / 34.014740,  /*H2O2 */
+               1.0 / 28.013400};  /*N2 */
+
 
 using namespace thermo;
 AMREX_GPU_HOST_DEVICE
