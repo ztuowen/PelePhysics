@@ -27,78 +27,125 @@
 
 /**********************************/
 
-typedef struct {
-  realtype **(**P), **(**Jbd);
-  sunindextype *(**pivot);
+    struct CVUserData {
 #ifdef USE_KLU 
-  int NNZ; 
-  SUNMatrix *PS;
-  realtype **Jdata = NULL;
-  int **rowVals = NULL;
-  int **colPtrs = NULL;
-  klu_common *Common;
-  klu_symbolic **Symbolic;
-  klu_numeric **Numeric;
+      int NNZ; 
+      SUNMatrix *PS;
+      realtype **Jdata = NULL;
+      int **rowVals = NULL;
+      int **colPtrs = NULL;
+      int *indx = NULL;
+      realtype *JSPSmat = NULL;
+      klu_common *Common;
+      klu_symbolic **Symbolic;
+      klu_numeric **Numeric;
+#else
+      realtype **(**Jbd);
+      realtype **(**P);
+      sunindextype *(**pivot);
 #endif
-} *UserData;
+      int NEQ;
+      int NCELLS;
+      /* NRG */
+      double *rhoX_init = NULL;
+      double *rhoXsrc_ext = NULL;
+      double *rYsrc       = NULL;
+      /* hacks */
+      bool FirstTimePrecond;
+      bool reactor_cvode_initialized;
 
+      int iDense_Creact;
+      int iJac_Creact;
+      int iE_Creact;
+    };
+    
+    typedef CVUserData *UserData;
+
+    UserData AllocUserData(int NEQ, int NCELLS, int iE, int iR, int iJ);
+
+//    /**********************************/
+//    /* Attr */
+//    void setJac(int iJac) {
+//	    iJac_Creact = iJac;
+//    }
+//
+//    void setReacType(int iR) {
+//	    iE_Creact = iR;
+//    }
+//
+//    void setIntegType(int iD) {
+//	    iDense_Creact = iD;
+//    }
+//
+//    int iJac_return() const {
+//	    return iJac_Creact;
+//    }
+//
+//    int iE_return() const {
+//	    return iE_Creact;
+//    }
+//
+//    int iDense_return() const {
+//	    return iDense_Creact;
+//    }
+    
+//protected:
+//    int iDense_Creact;
+//    int iJac_Creact;
+//    int iE_Creact;
+//};
+    
 
 /**********************************/
 /* Functions Called by the Solver */
-static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot, void *user_data);
+ int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot, void *user_data);
 
-static int cJac(realtype tn, N_Vector y, N_Vector fy, SUNMatrix J,
+ int cJac(realtype tn, N_Vector y, N_Vector fy, SUNMatrix J,
 		void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 #ifdef USE_KLU 
-static int cJac_KLU(realtype tn, N_Vector y, N_Vector fy, SUNMatrix J,
+ int cJac_KLU(realtype tn, N_Vector y, N_Vector fy, SUNMatrix J,
 		void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 #endif
 
-static int jtv(N_Vector v, N_Vector Jv, realtype t, N_Vector u,
-		N_Vector fu, void *user_data, N_Vector tmp);
-
-static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, 
+ int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, 
 		N_Vector z, realtype gamma, realtype delta, int lr, void *user_data);
 
 #ifdef USE_KLU 
-static int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, 
+ int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, 
 		N_Vector z, realtype gamma, realtype delta, int lr, void *user_data);
-static int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
+ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 		booleantype *jcurPtr, realtype gamma, void *user_data);
 #endif
 
-static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
+ int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 		booleantype *jcurPtr, realtype gamma, void *user_data);
 
 
 /**********************************/
 /* Functions Called by the Program */
-int reactor_init(const int* cvode_iE, const int* Ncells);
-
 int react(realtype *rY_in, realtype *rY_src_in, 
-		realtype *rX_in, realtype *rX_src_in, 
-		realtype *P_in, realtype *dt_react, realtype *time, int *Init);
+    		realtype *rX_in, realtype *rX_src_in, 
+    		realtype *P_in, realtype *dt_react, realtype *time,
+		const int* cvode_iE, const int* Ncells);
 
-void reactor_close();
-
-
+void react_info(const int* cvode_iE, const int* Ncells);
+    
+void reactor_close(void *cvodeMem, SUNLinearSolver LS, SUNMatrix A, void *data, N_Vector y, N_Vector tol);
+    
+    
 /**********************************/
 /* Helper functions */
-static int check_flag(void *flagvalue, const char *funcname, int opt);
+int check_flag(void *flagvalue, const char *funcname, int opt);
 
-static void PrintFinalStats(void *cvodeMem, realtype Temp);
+void PrintFinalStats(void *cvodeMem, realtype Temp, UserData data);
 
-static UserData AllocUserData(void);
-
-static void FreeUserData(UserData data);
-
-static void check_state(N_Vector yvec);
+void check_state(N_Vector yvec, int NEQ, int NCELLS,bool ok_to_int);
 
 
 /**********************************/
 /* Main Kernel fct called in solver RHS */
-void fKernelSpec(realtype *dt, realtype *yvec_d, realtype *ydot_d,
-		double *rhoX_init, double *rhoXsrc_ext, double *rYs);
+void fKernelSpec(int neq, int ncells, realtype *dt, realtype *yvec_d, realtype *ydot_d,
+    		double *rhoX_init, double *rhoXsrc_ext, double *rYs, int iE);
 
 
