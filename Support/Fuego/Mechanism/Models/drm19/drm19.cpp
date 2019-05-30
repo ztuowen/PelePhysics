@@ -8016,6 +8016,49 @@ void DWDOT_PRECOND(double *  J, double *  sc, double *  Tp, int * HP)
     return;
 }
 
+/*compute an approx to the SPS Jacobian */
+void SLJ_PRECOND_CSC(double *  Jsps, int * indx, int * len, double * sc, double * Tp, int * HP, double * gamma)
+{
+    double c[21];
+    double J[484];
+    double mwt[21];
+
+    molecularWeight(mwt);
+
+    for (int k=0; k<21; k++) {
+        c[k] = 1.e6 * sc[k];
+    }
+
+    aJacobian_precond(J, c, *Tp, *HP);
+
+    /* Change of coord */
+    /* dwdot[k]/dT */
+    /* dTdot/d[X] */
+    for (int k=0; k<21; k++) {
+        J[462+k] = 1.e-6 * J[462+k] * mwt[k];
+        J[k*22+21] = 1.e6 * J[k*22+21] / mwt[k];
+    }
+    /* dTdot/dT */
+    /* dwdot[l]/[k] */
+    for (int k=0; k<21; k++) {
+        for (int l=0; l<21; l++) {
+            /* DIAG elem */
+            if (k == l){
+                J[ 22 * k + l] =  J[ 22 * k + l] * mwt[l] / mwt[k];
+            /* NOT DIAG and not last column nor last row */
+            } else {
+                J[ 22 * k + l] =  J[ 22 * k + l] * mwt[l] / mwt[k];
+            }
+        }
+    }
+
+    for (int k=0; k<(*len); k++) {
+        Jsps[k] = J[indx[k]];
+    }
+
+    return;
+}
+
 /*compute the reaction Jacobian */
 void DWDOT(double *  J, double *  sc, double *  Tp, int * consP)
 {
@@ -8097,7 +8140,7 @@ void SPARSITY_INFO_PRECOND( int * nJdata, int * consP)
 
 
 /*compute the sparsity pattern of the simplified precond Jacobian */
-void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)
+void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * indx, int * consP)
 {
     double c[21];
     double J[484];
@@ -8114,10 +8157,12 @@ void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)
         for (int l=0; l<22; l++) {
             if (k == l) {
                 rowVals[nJdata_tmp] = l; 
+                indx[nJdata_tmp] = 22*k + l;
                 nJdata_tmp = nJdata_tmp + 1; 
             } else {
                 if(J[22*k + l] != 0.0) {
                     rowVals[nJdata_tmp] = l; 
+                    indx[nJdata_tmp] = 22*k + l;
                     nJdata_tmp = nJdata_tmp + 1; 
                 }
             }
@@ -21213,157 +21258,157 @@ void egtransetWT(double* WT ) {
 
 /*the lennard-jones potential well depth eps/kb in K */
 void egtransetEPS(double* EPS ) {
-    EPS[2] = 8.00000000E+01;
-    EPS[18] = 2.52300000E+02;
-    EPS[7] = 1.44000000E+02;
-    EPS[17] = 2.52300000E+02;
-    EPS[11] = 9.81000000E+01;
+    EPS[12] = 2.44000000E+02;
+    EPS[3] = 1.07400000E+02;
+    EPS[5] = 5.72400000E+02;
+    EPS[15] = 4.17000000E+02;
+    EPS[9] = 1.44000000E+02;
     EPS[19] = 9.75300000E+01;
     EPS[6] = 1.07400000E+02;
-    EPS[12] = 2.44000000E+02;
-    EPS[10] = 1.41400000E+02;
-    EPS[14] = 4.98000000E+02;
-    EPS[13] = 4.98000000E+02;
-    EPS[5] = 5.72400000E+02;
-    EPS[1] = 1.45000000E+02;
-    EPS[0] = 3.80000000E+01;
-    EPS[9] = 1.44000000E+02;
-    EPS[4] = 8.00000000E+01;
+    EPS[11] = 9.81000000E+01;
     EPS[16] = 2.80800000E+02;
-    EPS[15] = 4.17000000E+02;
-    EPS[3] = 1.07400000E+02;
-    EPS[20] = 1.36500000E+02;
     EPS[8] = 1.44000000E+02;
+    EPS[10] = 1.41400000E+02;
+    EPS[13] = 4.98000000E+02;
+    EPS[20] = 1.36500000E+02;
+    EPS[1] = 1.45000000E+02;
+    EPS[14] = 4.98000000E+02;
+    EPS[7] = 1.44000000E+02;
+    EPS[0] = 3.80000000E+01;
+    EPS[17] = 2.52300000E+02;
+    EPS[4] = 8.00000000E+01;
+    EPS[18] = 2.52300000E+02;
+    EPS[2] = 8.00000000E+01;
 }
 
 
 /*the lennard-jones collision diameter in Angstroms */
 void egtransetSIG(double* SIG ) {
-    SIG[2] = 2.75000000E+00;
-    SIG[18] = 4.30200000E+00;
-    SIG[7] = 3.80000000E+00;
-    SIG[17] = 4.30200000E+00;
-    SIG[11] = 3.65000000E+00;
+    SIG[12] = 3.76300000E+00;
+    SIG[3] = 3.45800000E+00;
+    SIG[5] = 2.60500000E+00;
+    SIG[15] = 3.69000000E+00;
+    SIG[9] = 3.80000000E+00;
     SIG[19] = 3.62100000E+00;
     SIG[6] = 3.45800000E+00;
-    SIG[12] = 3.76300000E+00;
-    SIG[10] = 3.74600000E+00;
-    SIG[14] = 3.59000000E+00;
-    SIG[13] = 3.59000000E+00;
-    SIG[5] = 2.60500000E+00;
-    SIG[1] = 2.05000000E+00;
-    SIG[0] = 2.92000000E+00;
-    SIG[9] = 3.80000000E+00;
-    SIG[4] = 2.75000000E+00;
+    SIG[11] = 3.65000000E+00;
     SIG[16] = 3.97100000E+00;
-    SIG[15] = 3.69000000E+00;
-    SIG[3] = 3.45800000E+00;
-    SIG[20] = 3.33000000E+00;
     SIG[8] = 3.80000000E+00;
+    SIG[10] = 3.74600000E+00;
+    SIG[13] = 3.59000000E+00;
+    SIG[20] = 3.33000000E+00;
+    SIG[1] = 2.05000000E+00;
+    SIG[14] = 3.59000000E+00;
+    SIG[7] = 3.80000000E+00;
+    SIG[0] = 2.92000000E+00;
+    SIG[17] = 4.30200000E+00;
+    SIG[4] = 2.75000000E+00;
+    SIG[18] = 4.30200000E+00;
+    SIG[2] = 2.75000000E+00;
 }
 
 
 /*the dipole moment in Debye */
 void egtransetDIP(double* DIP ) {
-    DIP[2] = 0.00000000E+00;
-    DIP[18] = 0.00000000E+00;
-    DIP[7] = 0.00000000E+00;
-    DIP[17] = 0.00000000E+00;
-    DIP[11] = 0.00000000E+00;
+    DIP[12] = 0.00000000E+00;
+    DIP[3] = 0.00000000E+00;
+    DIP[5] = 1.84400000E+00;
+    DIP[15] = 1.70000000E+00;
+    DIP[9] = 0.00000000E+00;
     DIP[19] = 0.00000000E+00;
     DIP[6] = 0.00000000E+00;
-    DIP[12] = 0.00000000E+00;
-    DIP[10] = 0.00000000E+00;
-    DIP[14] = 0.00000000E+00;
-    DIP[13] = 0.00000000E+00;
-    DIP[5] = 1.84400000E+00;
-    DIP[1] = 0.00000000E+00;
-    DIP[0] = 0.00000000E+00;
-    DIP[9] = 0.00000000E+00;
-    DIP[4] = 0.00000000E+00;
+    DIP[11] = 0.00000000E+00;
     DIP[16] = 0.00000000E+00;
-    DIP[15] = 1.70000000E+00;
-    DIP[3] = 0.00000000E+00;
-    DIP[20] = 0.00000000E+00;
     DIP[8] = 0.00000000E+00;
+    DIP[10] = 0.00000000E+00;
+    DIP[13] = 0.00000000E+00;
+    DIP[20] = 0.00000000E+00;
+    DIP[1] = 0.00000000E+00;
+    DIP[14] = 0.00000000E+00;
+    DIP[7] = 0.00000000E+00;
+    DIP[0] = 0.00000000E+00;
+    DIP[17] = 0.00000000E+00;
+    DIP[4] = 0.00000000E+00;
+    DIP[18] = 0.00000000E+00;
+    DIP[2] = 0.00000000E+00;
 }
 
 
 /*the polarizability in cubic Angstroms */
 void egtransetPOL(double* POL ) {
-    POL[2] = 0.00000000E+00;
-    POL[18] = 0.00000000E+00;
-    POL[7] = 0.00000000E+00;
-    POL[17] = 0.00000000E+00;
-    POL[11] = 1.95000000E+00;
+    POL[12] = 2.65000000E+00;
+    POL[3] = 1.60000000E+00;
+    POL[5] = 0.00000000E+00;
+    POL[15] = 0.00000000E+00;
+    POL[9] = 0.00000000E+00;
     POL[19] = 1.76000000E+00;
     POL[6] = 0.00000000E+00;
-    POL[12] = 2.65000000E+00;
-    POL[10] = 2.60000000E+00;
-    POL[14] = 0.00000000E+00;
-    POL[13] = 0.00000000E+00;
-    POL[5] = 0.00000000E+00;
-    POL[1] = 0.00000000E+00;
-    POL[0] = 7.90000000E-01;
-    POL[9] = 0.00000000E+00;
-    POL[4] = 0.00000000E+00;
+    POL[11] = 1.95000000E+00;
     POL[16] = 0.00000000E+00;
-    POL[15] = 0.00000000E+00;
-    POL[3] = 1.60000000E+00;
-    POL[20] = 0.00000000E+00;
     POL[8] = 0.00000000E+00;
+    POL[10] = 2.60000000E+00;
+    POL[13] = 0.00000000E+00;
+    POL[20] = 0.00000000E+00;
+    POL[1] = 0.00000000E+00;
+    POL[14] = 0.00000000E+00;
+    POL[7] = 0.00000000E+00;
+    POL[0] = 7.90000000E-01;
+    POL[17] = 0.00000000E+00;
+    POL[4] = 0.00000000E+00;
+    POL[18] = 0.00000000E+00;
+    POL[2] = 0.00000000E+00;
 }
 
 
 /*the rotational relaxation collision number at 298 K */
 void egtransetZROT(double* ZROT ) {
-    ZROT[2] = 0.00000000E+00;
-    ZROT[18] = 1.50000000E+00;
-    ZROT[7] = 0.00000000E+00;
-    ZROT[17] = 1.50000000E+00;
-    ZROT[11] = 1.80000000E+00;
+    ZROT[12] = 2.10000000E+00;
+    ZROT[3] = 3.80000000E+00;
+    ZROT[5] = 4.00000000E+00;
+    ZROT[15] = 2.00000000E+00;
+    ZROT[9] = 0.00000000E+00;
     ZROT[19] = 4.00000000E+00;
     ZROT[6] = 1.00000000E+00;
-    ZROT[12] = 2.10000000E+00;
-    ZROT[10] = 1.30000000E+01;
-    ZROT[14] = 2.00000000E+00;
-    ZROT[13] = 0.00000000E+00;
-    ZROT[5] = 4.00000000E+00;
-    ZROT[1] = 0.00000000E+00;
-    ZROT[0] = 2.80000000E+02;
-    ZROT[9] = 0.00000000E+00;
-    ZROT[4] = 0.00000000E+00;
+    ZROT[11] = 1.80000000E+00;
     ZROT[16] = 1.50000000E+00;
-    ZROT[15] = 2.00000000E+00;
-    ZROT[3] = 3.80000000E+00;
-    ZROT[20] = 0.00000000E+00;
     ZROT[8] = 0.00000000E+00;
+    ZROT[10] = 1.30000000E+01;
+    ZROT[13] = 0.00000000E+00;
+    ZROT[20] = 0.00000000E+00;
+    ZROT[1] = 0.00000000E+00;
+    ZROT[14] = 2.00000000E+00;
+    ZROT[7] = 0.00000000E+00;
+    ZROT[0] = 2.80000000E+02;
+    ZROT[17] = 1.50000000E+00;
+    ZROT[4] = 0.00000000E+00;
+    ZROT[18] = 1.50000000E+00;
+    ZROT[2] = 0.00000000E+00;
 }
 
 
 /*0: monoatomic, 1: linear, 2: nonlinear */
 void egtransetNLIN(int* NLIN) {
-    NLIN[2] = 0;
-    NLIN[18] = 2;
-    NLIN[7] = 1;
-    NLIN[17] = 2;
-    NLIN[11] = 1;
+    NLIN[12] = 1;
+    NLIN[3] = 1;
+    NLIN[5] = 2;
+    NLIN[15] = 2;
+    NLIN[9] = 1;
     NLIN[19] = 1;
     NLIN[6] = 2;
-    NLIN[12] = 1;
-    NLIN[10] = 2;
-    NLIN[14] = 2;
-    NLIN[13] = 2;
-    NLIN[5] = 2;
-    NLIN[1] = 0;
-    NLIN[0] = 1;
-    NLIN[9] = 1;
-    NLIN[4] = 1;
+    NLIN[11] = 1;
     NLIN[16] = 2;
-    NLIN[15] = 2;
-    NLIN[3] = 1;
-    NLIN[20] = 0;
     NLIN[8] = 1;
+    NLIN[10] = 2;
+    NLIN[13] = 2;
+    NLIN[20] = 0;
+    NLIN[1] = 0;
+    NLIN[14] = 2;
+    NLIN[7] = 1;
+    NLIN[0] = 1;
+    NLIN[17] = 2;
+    NLIN[4] = 1;
+    NLIN[18] = 2;
+    NLIN[2] = 0;
 }
 
 

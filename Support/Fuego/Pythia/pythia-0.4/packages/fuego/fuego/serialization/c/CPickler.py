@@ -588,6 +588,7 @@ class CPickler(CMill):
         self._productionRate(mechanism)
         self._vproductionRate(mechanism)
         self._DproductionRatePrecond(mechanism)
+        self._DproductionRateSPSPrecond(mechanism)
         self._DproductionRate(mechanism)
         self._sparsity(mechanism)
         self._ajac(mechanism)
@@ -986,10 +987,11 @@ class CPickler(CMill):
             'void CKEQXR'+sym+'(double *  rho, double *  T, double *  x, double *  eqcon);',
             'void DWDOT(double *  J, double *  sc, double *  T, int * consP);',
             'void DWDOT_PRECOND(double *  J, double *  sc, double *  Tp, int * HP);',
+            'void SLJ_PRECOND_CSC(double *  Jsps, int * indx, int * len, double * sc, double * Tp, int * HP, double * gamma);',
             'void SPARSITY_INFO(int * nJdata, int * consP, int NCELLS);',
             'void SPARSITY_INFO_PRECOND(int * nJdata, int * consP);',
             'void SPARSITY_PREPROC(int * rowVals, int * colPtrs, int * consP, int NCELLS);',
-            'void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP);',
+            'void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * indx, int * consP);',
             'void SPARSITY_PREPROC_PRECOND_GPU(int * rowPtr, int * colIndx, int * consP);',
             'void aJacobian(double *  J, double *  sc, double T, int consP);',
             'void aJacobian_precond(double *  J, double *  sc, double T, int HP);',
@@ -7482,6 +7484,80 @@ class CPickler(CMill):
 
         return
 
+    def _DproductionRateSPSPrecond(self, mechanism):
+
+        species_list = [x.symbol for x in mechanism.species()]
+        nSpecies = len(species_list)
+
+        self._write()
+        self._write(self.line('compute an approx to the SPS Jacobian'))
+        self._write('void SLJ_PRECOND_CSC(double *  Jsps, int * indx, int * len, double * sc, double * Tp, int * HP, double * gamma)')
+        self._write('{')
+        self._indent()
+
+        self._write('double c[%d];' % (nSpecies))
+        self._write('double J[%d];' % ((nSpecies+1) * (nSpecies+1)))
+        self._write('double mwt[%d];' % (nSpecies))
+        self._write()
+        self._write('molecularWeight(mwt);')
+        self._write()
+        self._write('for (int k=0; k<%d; k++) {' % nSpecies)
+        self._indent()
+        self._write('c[k] = 1.e6 * sc[k];')
+        self._outdent()
+        self._write('}')
+
+        self._write()
+        self._write('aJacobian_precond(J, c, *Tp, *HP);')
+
+        self._write()
+        self._write('/* Change of coord */')
+        self._write('/* dwdot[k]/dT */')
+        self._write('/* dTdot/d[X] */')
+        self._write('for (int k=0; k<%d; k++) {' % nSpecies)
+        self._indent()
+        self._write('J[%d+k] = 1.e-6 * J[%d+k] * mwt[k];' % (nSpecies*(nSpecies+1), nSpecies*(nSpecies+1)))
+        self._write('J[k*%d+%d] = 1.e6 * J[k*%d+%d] / mwt[k];' % (nSpecies+1, nSpecies, nSpecies+1, nSpecies))
+        self._outdent()
+        self._write('}')
+
+        self._write('/* dTdot/dT */')
+        self._write('/* dwdot[l]/[k] */')
+        self._write('for (int k=0; k<%d; k++) {' % nSpecies)
+        self._indent() 
+        self._write('for (int l=0; l<%d; l++) {' % nSpecies)
+        self._indent()
+        self._write('/* DIAG elem */')
+        self._write('if (k == l){')
+        self._indent()
+        self._write('J[ %d * k + l] =  J[ %d * k + l] * mwt[l] / mwt[k];' % (nSpecies+1, nSpecies+1))
+        self._outdent()
+        self._write('/* NOT DIAG and not last column nor last row */')
+        self._write('} else {')
+        self._indent()
+        self._write('J[ %d * k + l] =  J[ %d * k + l] * mwt[l] / mwt[k];' % (nSpecies+1, nSpecies+1))
+        self._outdent()
+        self._write('}')
+        self._outdent()
+        self._write('}')
+        self._outdent()
+        self._write('}')
+        self._write()
+
+        self._write('for (int k=0; k<(*len); k++) {')
+        self._indent()
+        self._write('Jsps[k] = J[indx[k]];')
+        self._outdent() 
+        self._write('}')
+
+        self._write()
+        self._write('return;')
+        self._outdent()
+
+        self._write('}')
+
+        return
+
     def _sparsity(self, mechanism):
 
         species_list = [x.symbol for x in mechanism.species()]
@@ -7589,7 +7665,7 @@ class CPickler(CMill):
 
         ####
         self._write(self.line('compute the sparsity pattern of the simplified precond Jacobian'))
-        self._write('void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * consP)')
+        self._write('void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * indx, int * consP)')
         self._write('{')
         self._indent()
 
@@ -7615,6 +7691,7 @@ class CPickler(CMill):
         self._write('if (k == l) {')
         self._indent()
         self._write('rowVals[nJdata_tmp] = l; ')
+        self._write('indx[nJdata_tmp] = %d*k + l;' % (nSpecies+1))
         self._write('nJdata_tmp = nJdata_tmp + 1; ')
         self._outdent()
         self._write('} else {')
@@ -7622,6 +7699,7 @@ class CPickler(CMill):
         self._write('if(J[%d*k + l] != 0.0) {' % (nSpecies+1))
         self._indent()
         self._write('rowVals[nJdata_tmp] = l; ')
+        self._write('indx[nJdata_tmp] = %d*k + l;' % (nSpecies+1))
         self._write('nJdata_tmp = nJdata_tmp + 1; ')
         self._outdent()
         self._write('}')
