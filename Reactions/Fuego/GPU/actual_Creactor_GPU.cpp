@@ -3,66 +3,30 @@
 #include <chemistry_file.H>
 
 /**********************************/
-/* Global Variables */
-  N_Vector y         = NULL;
-  SUNLinearSolver LS = NULL;
-  int NEQ       = 0;
-  int NCELLS    = 0;
-  int iDense_Creact = 1;
-  int iJac_Creact   = 0;
-  int iE_Creact     = 1;
-  int iverbose      = 1;
-  void *cvode_mem   = NULL;
-  double *rhoe_init = NULL;
-  double *rhoesrc_ext = NULL;
-  double *rYsrc = NULL;
-  cusparseMatDescr_t descrA;
-  cusolverSpHandle_t cusolverHandle;
-  cusparseHandle_t cusparseHandle;
-  csrqrInfo_t info;
-  void *buffer_qr = NULL;
-  size_t workspaceInBytes, internalDataInBytes;
-  cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
-  cusparseStatus_t cusparse_status = CUSPARSE_STATUS_SUCCESS;
-  cudaError_t cudaStat1 = cudaSuccess;
-
 /**********************************/
 /* Definitions */
-int reactor_init(const int* cvode_iE,const int* Ncells){ 
+int reactor_info(const int* cvode_iE,const int* Ncells){ 
 
-	int flag, neq_tot ;
-	realtype reltol, time;
-	N_Vector atol;
-	realtype *ratol;
 	int mm, ii, nfit;
+	int NEQ;
 
 	CKINDX(&mm,&NEQ,&ii,&nfit);
-        if (iverbose > 0) {
-	    printf("Nb of spec is %d \n", NEQ);
-	}
-
-	/* ParmParse from the inputs file */ 
-	amrex::ParmParse pp("ns");
-	pp.query("cvode_iJac",iJac_Creact);
-	pp.query("cvode_iDense", iDense_Creact);
+        printf("Nb of spec is %d \n", NEQ);
 
 	/* Args */
-	iE_Creact      = *cvode_iE;
-	NCELLS         = *Ncells;
-        neq_tot        = (NEQ + 1) * NCELLS;
+	printf("Ncells in one solve is %d\n",*Ncells);
+	printf("Reactor type is %d\n",*cvode_iE);
 
-        if (iverbose > 0) {
-	    printf("Ncells in one solve ? %d\n",NCELLS);
-	}
+	/* ParmParse from the inputs file */ 
+	/* Reuse dummy variables mm and ii */
+	amrex::ParmParse pp("ns");
+	pp.query("cvode_iJac",mm);
+	pp.query("cvode_iDense", ii);
 
         /* User data */
-        UserData user_data;
-        cudaMallocManaged(&user_data, sizeof(struct CVodeUserData));
-        user_data->ncells_d[0] = NCELLS;
-        user_data->neqs_per_cell[0] = NEQ;
-        user_data->flagP = iE_Creact; 
-
-        if ((iDense_Creact == 99) && (iJac_Creact == 1)) { 
+        if ((ii == 99) && (mm == 1)) { 
+            printf("Using an Iterative GMRES Solver with sparse simplified preconditionning \n");
+	    int nJdata;
             int HP;
             if (iE_Creact == 1) {
                 HP = 0;
@@ -70,72 +34,65 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
                 HP = 1;
             }
             /* Precond data */ 
-            if (iverbose > 0) {
-                printf("Alloc stuff for Precond \n");
-                // Find sparsity pattern to fill structure of sparse matrix
-                SPARSITY_INFO_PRECOND(&(user_data->NNZ),&HP);
-                printf("--> SPARSE Preconditioner -- non zero entries %d represents %f %% fill pattern.\n", user_data->NNZ, user_data->NNZ/float((NEQ+1) * (NEQ+1)) *100.0);
-            }
-            cudaMallocManaged(&(user_data->csr_row_count_d), (NEQ+2) * sizeof(int));
-            cudaMallocManaged(&(user_data->csr_col_index_d), user_data->NNZ * sizeof(int));
-            cudaMallocManaged(&(user_data->csr_jac_d), user_data->NNZ * NCELLS * sizeof(double));
-            cudaMallocManaged(&(user_data->csr_val_d), user_data->NNZ * NCELLS * sizeof(double));
+            SPARSITY_INFO_PRECOND(&nJdata,&HP);
+            printf("--> SPARSE Preconditioner -- non zero entries %d represents %f %% fill pattern.\n", nJdata, nJdata/float((NEQ+1) * (NEQ+1)) *100.0);
+            //SPARSITY_PREPROC_PRECOND_GPU(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
+            //if (iverbose > 1) {
+            //    for (int i=0; i<NEQ+1; i++) {
+            //        printf("\n row %d csr_row_count %d \n", i, user_data->csr_row_count_d[i+1]);
+            //    }
+            //}
+        } else if ((ii == 99) && (mm == 0 )) {
+            printf("\n--> Using an Iterative Solver without preconditionning \n");
+	} else {
+	    amrex::Abort("\n--> Only solver implemented is an iterative GMRES ...\n");
+	}
 
-            SPARSITY_PREPROC_PRECOND_GPU(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
-            if (iverbose > 1) {
-                for (int i=0; i<NEQ+1; i++) {
-                    printf("\n row %d csr_row_count %d \n", i, user_data->csr_row_count_d[i+1]);
-                }
-            }
+        printf(" --> DONE WITH INITIALIZATION (GPU) %d \n", iE_Creact);
 
-            // Create Sparse batch QR solver
-            // qr info and matrix descriptor
-            cusolver_status = cusolverSpCreate(&cusolverHandle);
-            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
-
-            cusparse_status = cusparseCreateMatDescr(&descrA); 
-            assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
-
-            cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
-            cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ONE);
- 
-            cusparse_status = cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ONE);
-            assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
-
-            cusolver_status = cusolverSpCreateCsrqrInfo(&info);
-            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
-
-            // symbolic analysis
-            cusolver_status = cusolverSpXcsrqrAnalysisBatched(cusolverHandle,
-                                                      NEQ+1, // size per subsystem
-                                                      NEQ+1, // size per subsystem
-                                                      user_data->NNZ,
-                                                      descrA,
-                                                      user_data->csr_row_count_d,
-                                                      user_data->csr_col_index_d,
-                                                      info);
-            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+	return(0);
+}
 
 
-            // allocate working space 
-            cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,
-                                                      NEQ+1, // size per subsystem
-                                                      NEQ+1, // size per subsystem
-                                                      user_data->NNZ,
-                                                      descrA,
-                                                      user_data->csr_val_d,
-                                                      user_data->csr_row_count_d,
-                                                      user_data->csr_col_index_d,
-                                                      NCELLS,
-                                                      info,
-                                                      &internalDataInBytes,
-                                                      &workspaceInBytes);
-            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
-            
-            cudaStat1 = cudaMalloc((void**)&buffer_qr, workspaceInBytes);
-            assert(cudaStat1 == cudaSuccess);
+/* Main routine for external looping */
+int react(realtype *rY_in, realtype *rY_src_in, 
+		realtype *rX_in, realtype *rX_src_in,
+		realtype *P_in, 
+                realtype *dt_react, realtype *time, int *Init,
+		const int* cvode_iE, const int* Ncells) {
 
-        }
+	realtype time_init, time_out ;
+	int flag;
+	realtype reltol, time;
+	N_Vector atol = NULL;
+	realtype *ratol;
+	int mm, ii, nfit;
+	int NEQ, NCELLS, neq_tot;
+	int iverbose       = 1;
+        /* FOR CVODE */
+        N_Vector y         = NULL;
+        SUNLinearSolver LS = NULL;
+	void *cvode_mem    = NULL; 
+	UserData data      = NULL; 
+        /* FOR CUSOLVER */
+        cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
+        cudaError_t cudaStat1 = cudaSuccess;
+        cusparseStatus_t cusparse_status = CUSPARSE_STATUS_SUCCESS;
+        size_t workspaceInBytes, internalDataInBytes;
+
+	/* Print initial time and expected output time */
+        time_init = *time;
+	time_out  = *time + *dt_react;
+        if (iverbose > 3) {
+	    printf("BEG : time curr is %14.6e and dt_react is %14.6e and final time should be %14.6e \n", time_init, *dt_react, time_out);
+	}
+
+	/* FIRST STEP get NEQ */
+	CKINDX(&mm,&NEQ,&ii,&nfit);
+
+	/* Args */
+	NCELLS         = *Ncells;
+        neq_tot        = (NEQ + 1) * NCELLS;
 
 	/* Definition of main vector */
 	y = N_VNew_Cuda(neq_tot);
@@ -143,22 +100,109 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 
 	/* Call CVodeCreate to create the solver memory and specify the
 	 * Backward Differentiation Formula and the use of a Newton iteration */
-	//if ((*cvode_meth == 2) && (*cvode_itmeth == 2))
-	//{
 	cvode_mem = CVodeCreate(CV_BDF);
 	if (check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
-	//} else {
-	//    amrex::Abort("\n--> Weird inputs to CVodeCreate. Viable options are CV_BDF (=2), CV_NEWTON (=2)\n");
-	//}
+
+        /* User data */
+        UserData user_data;
+        cudaMallocManaged(&user_data, sizeof(struct CVodeUserData));
+        user_data->ncells_d[0] = NCELLS;
+        user_data->neqs_per_cell[0] = NEQ;
+        user_data->flagP = *cvode_iE; 
+	user_data->iJac = 1;
+
+        if ((user_data->iJac == 1)) { 
+            int HP;
+            if (*cvode_iE == 1) {
+                HP = 0;
+            } else {
+                HP = 1;
+            }
+            /* Precond data */ 
+            SPARSITY_INFO_PRECOND(&(user_data->NNZ),&HP);
+
+            cudaMallocManaged(&(user_data->csr_row_count_d), (NEQ+2) * sizeof(int));
+            cudaMallocManaged(&(user_data->csr_col_index_d), user_data->NNZ * sizeof(int));
+            cudaMallocManaged(&(user_data->csr_jac_d), user_data->NNZ * NCELLS * sizeof(double));
+            cudaMallocManaged(&(user_data->csr_val_d), user_data->NNZ * NCELLS * sizeof(double));
+
+            SPARSITY_PREPROC_PRECOND_GPU(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
+
+            // Create Sparse batch QR solver
+            // qr info and matrix descriptor
+            cusolver_status = cusolverSpCreate(&(user_data->cusolverHandle));
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+            cusparse_status = cusparseCreateMatDescr(&(user_data->descrA)); 
+            assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
+
+            cusparseSetMatType(user_data->descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
+            cusparseSetMatIndexBase(user_data->descrA, CUSPARSE_INDEX_BASE_ONE);
+ 
+            cusparse_status = cusparseSetMatIndexBase(user_data->descrA, CUSPARSE_INDEX_BASE_ONE);
+            assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
+
+            cusolver_status = cusolverSpCreateCsrqrInfo(&(user_data->info));
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+            // symbolic analysis
+            cusolver_status = cusolverSpXcsrqrAnalysisBatched(user_data->cusolverHandle,
+                                                      NEQ+1, // size per subsystem
+                                                      NEQ+1, // size per subsystem
+                                                      user_data->NNZ,
+                                                      user_data->descrA,
+                                                      user_data->csr_row_count_d,
+                                                      user_data->csr_col_index_d,
+                                                      user_data->info);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+
+            // allocate working space 
+            cusolver_status = cusolverSpDcsrqrBufferInfoBatched(user_data->cusolverHandle,
+                                                      NEQ+1, // size per subsystem
+                                                      NEQ+1, // size per subsystem
+                                                      user_data->NNZ,
+                                                      user_data->descrA,
+                                                      user_data->csr_val_d,
+                                                      user_data->csr_row_count_d,
+                                                      user_data->csr_col_index_d,
+                                                      NCELLS,
+                                                      user_data->info,
+                                                      &internalDataInBytes,
+                                                      &workspaceInBytes);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+            
+            cudaStat1 = cudaMalloc((void**)&(user_data->buffer_qr), workspaceInBytes);
+            assert(cudaStat1 == cudaSuccess);
+
+        }
 
         flag = CVodeSetUserData(cvode_mem, static_cast<void*>(user_data));
+	if(check_flag((void *)data, "AllocUserData", 2)) return(1);
+	/* Define vectors to be used later in creact */
+	cudaMalloc(&(user_data->rhoX_init), NCELLS*sizeof(double));
+	cudaMalloc(&(user_data->rhoXsrc_ext), NCELLS*sizeof(double));
+	cudaMalloc(&(user_data->rYsrc), (NCELLS*NEQ)*sizeof(double));
+
+	/* Get Device MemCpy of in arrays */
+	/* Get Device pointer of solution vector */
+	realtype *yvec_d      = N_VGetDeviceArrayPointer_Cuda(y);
+	// rhoY,T
+	cudaMemcpy(yvec_d, rY_in, sizeof(realtype) * ((NEQ+1)*NCELLS), cudaMemcpyHostToDevice);
+	// rhoY_src_ext
+	cudaMemcpy(user_data->rYsrc, rY_src_in, (NEQ*NCELLS)*sizeof(double), cudaMemcpyHostToDevice);
+	// rhoE/rhoH
+	cudaMemcpy(user_data->rhoX_init, rX_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
+	cudaMemcpy(user_data->rhoXsrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
 
         time = 0.0e+0;
 	/* Call CVodeInit to initialize the integrator memory and specify the
 	 * user's right hand side function, the inital time, and 
 	 * initial dependent variable vector y. */
 	flag = CVodeInit(cvode_mem, cF_RHS, time, y);
-	if (check_flag(&flag, "CVodeInit", 1)) return(1);
+	if (check_flag(&flag, "CVodeInit", 1)){
+		amrex::Abort("CVode init error");
+	}
 	
 	/* Definition of tolerances: one for each species */
 	reltol = 1.0e-10;
@@ -173,59 +217,30 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 	flag = CVodeSVtolerances(cvode_mem, reltol, atol);
 	if (check_flag(&flag, "CVodeSVtolerances", 1)) return(1);
 
-	//if (iDense_Creact == 1) {
-            //cuSolver_method LinearSolverMethod = QR;
-            //flag = cv_cuSolver_SetLinearSolver(cvode_mem, LinearSolverMethod, false, 0);
-            //flag = cv_cuSolver_CSR_SetSizes(cvode_mem, NEQ+1, (NEQ+1)*(NEQ+1),NCELLS);
-            //flag = cv_cuSolver_SetJacFun(cvode_mem, &fun_csr_jac);
-            //int csr_row_count[NEQ+2];
-            //int csr_col_index[(NEQ+1)*(NEQ+1)];
-            //csr_row_count[0] = 1;
-            //for (int i=0; i<NEQ+1; i++) {
-            //    csr_row_count[i+1] = csr_row_count[i] + (NEQ+1);
-            //    printf("\n csr_row_count ? %d \n", csr_row_count[i+1]);
-            //    for (int j=0; j<NEQ+1; j++) {
-            //        csr_col_index[i*(NEQ+1) + j] = j+1 ;
-            //        printf("csr_col_index ? %d", csr_col_index[i*(NEQ+1) + j]); 
-            //    }
-            //}
-            //flag = cv_cuSolver_SystemInitialize(cvode_mem, &csr_row_count[0], &csr_col_index[0]);
-	//} else 
-	if (iDense_Creact == 99) {
-            printf("\n--> Using an Iterative Solver \n");
+	//flag = CVodeSetInitStep(cvode_mem, 1.0e-09);
+	//if (check_flag(&flag, "CVodeSetInitStep", 1)) return(1);
 
-            /* Create the linear solver object */
-            if (iJac_Creact == 0) { 
-	        LS = SUNSPGMR(y, PREC_NONE, 0);
-	        if(check_flag((void *)LS, "SUNDenseLinearSolver", 0)) return(1);
-            } else { 
-                LS = SUNSPGMR(y, PREC_LEFT, 0);
-                if(check_flag((void *)LS, "SUNDenseLinearSolver", 0)) return(1);
-            }
+        /* Create the linear solver object */
+        if (user_data->iJac == 0) { 
+	    LS = SUNSPGMR(y, PREC_NONE, 0);
+	    if(check_flag((void *)LS, "SUNDenseLinearSolver", 0)) return(1);
+        } else { 
+            LS = SUNSPGMR(y, PREC_LEFT, 0);
+            if(check_flag((void *)LS, "SUNDenseLinearSolver", 0)) return(1);
+        }
 
-	    /* Set CVSpils linear solver to LS */
-	    flag = CVSpilsSetLinearSolver(cvode_mem, LS);
-	    if(check_flag(&flag, "CVSpilsSetLinearSolver", 1)) return(1);
-	} else {
-	    amrex::Abort("\n--> Only solver implemented is iterative GMRES ...\n");
-	}
+	/* Set CVSpils linear solver to LS */
+	flag = CVSpilsSetLinearSolver(cvode_mem, LS);
+	if(check_flag(&flag, "CVSpilsSetLinearSolver", 1)) return(1);
 
-	if (iJac_Creact == 0) {
-            printf("\n--> Without Analytical J\n");
-	} else {
-            printf("\n--> With Analytical J\n");
-	    if (iDense_Creact == 99) {
-                if (iverbose > 0) {
-                    printf("\n    (99)\n");
-		}
-	        /* Set the JAcobian-times-vector function */
-	        flag = CVSpilsSetJacTimes(cvode_mem, NULL, NULL);
-	        if(check_flag(&flag, "CVSpilsSetJacTimes", 1)) return(1);
+	if (user_data->iJac == 1) {
+	    /* Set the JAcobian-times-vector function */
+	    flag = CVSpilsSetJacTimes(cvode_mem, NULL, NULL);
+	    if(check_flag(&flag, "CVSpilsSetJacTimes", 1)) return(1);
 
-	        /* Set the preconditioner solve and setup functions */
-	        flag = CVodeSetPreconditioner(cvode_mem, Precond, PSolve);
-	        if(check_flag(&flag, "CVSpilsSetPreconditioner", 1)) return(1);
-            }
+	    /* Set the preconditioner solve and setup functions */
+	    flag = CVodeSetPreconditioner(cvode_mem, Precond, PSolve);
+	    if(check_flag(&flag, "CVSpilsSetPreconditioner", 1)) return(1);
 	}
 
         /* Set the max number of time steps */ 
@@ -233,88 +248,13 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 	if(check_flag(&flag, "CVodeSetMaxNumSteps", 1)) return(1);
 
         /* Set the max order */
-        flag = CVodeSetMaxOrd(cvode_mem, 5);
-        if(check_flag(&flag, "CVodeSetMaxOrd", 1)) return(1);
+        //flag = CVodeSetMaxOrd(cvode_mem, 5);
+        //if(check_flag(&flag, "CVodeSetMaxOrd", 1)) return(1);
 
-	/* Define vectors to be used later in creact */
-	// GPU stuff: might want to rethink this and put everything in userdata
-	cudaMalloc(&rhoe_init, NCELLS*sizeof(double));
-	cudaMalloc(&rhoesrc_ext, NCELLS*sizeof(double));
-	cudaMalloc(&rYsrc, (NCELLS*NEQ)*sizeof(double));
-
-	N_VDestroy(atol);          /* Free the atol vector */
-
-	/* Ok we're done ...*/
-        if (iverbose > 0) {
-	    printf(" --> DONE WITH INITIALIZATION (GPU) %d \n", iE_Creact);
-	}
-
-	return(0);
-}
-
-/* Main routine for external looping */
-int react(realtype *rY_in, realtype *rY_src_in, 
-		realtype *rX_in, realtype *rX_src_in,
-		realtype *P_in, 
-                realtype *dt_react, realtype *time, int *Init) {
-
-	realtype time_init, time_out ;
-	int flag;
-
-	//cudaError_t cuda_status = cudaSuccess;
-
-        time_init = *time;
-	time_out  = *time + *dt_react;
-
-        if (iverbose > 3) {
-	    printf("BEG : time curr is %14.6e and dt_react is %14.6e and final time should be %14.6e \n", time_init, *dt_react, time_out);
-	}
-
-	/* Get Device MemCpy of in arrays */
-	/* Get Device pointer of solution vector */
-	realtype *yvec_d      = N_VGetDeviceArrayPointer_Cuda(y);
-	// rhoY,T
-	cudaMemcpy(yvec_d, rY_in, sizeof(realtype) * ((NEQ+1)*NCELLS), cudaMemcpyHostToDevice);
-	// rhoY_src_ext
-	cudaMemcpy(rYsrc, rY_src_in, (NEQ*NCELLS)*sizeof(double), cudaMemcpyHostToDevice);
-	// rhoE/rhoH
-	cudaMemcpy(rhoe_init, rX_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-	cudaMemcpy(rhoesrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-
-	/* Call CVODE: ReInit for convergence */
-        if (iverbose > 1) {
-            printf("\n -------------------------------------\n");
-	}
-	//if (*Init == 1) {
-            //if (iverbose > 1) {
-            //    printf("ReInit always \n");
-	    //}
-	    CVodeReInit(cvode_mem, time_init, y);
-	//} else {
-	//    // Really bad here when pseveral cells are packed together
-	//    double delta_T_max = 0.0;
-	//    int offset;
-	//    for  (int tid = 0; tid < NCELLS; tid++) {
-	//	offset = tid * (NEQ + 1);
-	//        temp_old[tid] = fabs(rY_in[offset + NEQ] - temp_old[tid]);
-	//	if (delta_T_max < temp_old[tid]) {
-	//	    delta_T_max = temp_old[tid];
-	//	}
-	//    }
-        //    if (delta_T_max > 50.0) {
-        //        if (iverbose > 1) {
-	//            printf("ReInit delta_T = %f \n", delta_T_max);
-	//	}
-	//        CVodeReInit(cvode_mem, time_init, y);
-	//    } else {
-        //        if (iverbose > 1) {
-	//            printf("ReInit Partial delta_T = %f \n", delta_T_max);
-	//	}
-	//        CVodeReInitPartial(cvode_mem, time_init, y);
-	//    }
-        //}
 	flag = CVode(cvode_mem, time_out, y, &time_init, CV_NORMAL);
-	if (check_flag(&flag, "CVode", 1)) return(1);
+	if (check_flag(&flag, "CVode", 1)){
+		amrex::Abort("CVode integration error");
+	}
 
 	/* Pack data to return in main routine external */
 	cudaMemcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost);
@@ -322,52 +262,52 @@ int react(realtype *rY_in, realtype *rY_src_in,
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
 	}
 
-	//if (*Init != 1) {
-	//    int offset;
-	//    for  (int tid = 0; tid < NCELLS; tid++) {
-	//	offset = tid * (NEQ + 1);
-	//        temp_old[tid] = rY_in[offset + NEQ];
-	//    }
-	//}
-
 	/* If in debug mode: print stats */
-        if (iverbose > 1) {
-           int ierr;
-	   double htmp;
-           printf("\n......cvode done:\n");
-           ierr = CVodeGetLastStep(cvode_mem, &htmp);
-           printf(" -- last successful step size = %4.8e \n",htmp);
-           ierr = CVodeGetCurrentStep(cvode_mem, &htmp);
-           printf(" -- next step to try = %4.8e \n",htmp);
-           ierr = CVodeGetCurrentTime(cvode_mem, &htmp);
-           printf(" -- integrated time reached = %4.8e \n",htmp);
-	   long int itmp, itmp2; 
-           ierr = CVodeGetNumSteps(cvode_mem, &itmp);
-           printf(" -- number of time steps (nst) = %-6ld \n",itmp);
-           ierr = CVodeGetNumRhsEvals(cvode_mem, &itmp);
-           ierr = CVSpilsGetNumRhsEvals(cvode_mem, &itmp2);
-           itmp = itmp + itmp2;
-           printf(" -- number of fRHS EVAL (nfe+nfels) = %-6ld \n", itmp);
-           ierr = CVDlsGetNumJacEvals(cvode_mem, &itmp);
-           printf(" -- number of Jac EVAL = %-6ld \n", itmp);
-	   int itmp3; 
-           ierr = CVodeGetLastOrder(cvode_mem, &itmp3);
-           printf(" -- method order last used = %d \n", itmp3);
-           ierr = CVodeGetCurrentOrder(cvode_mem, &itmp3);
-           printf(" -- method order to be used = %d \n", itmp3);
-           if (iDense_Creact == 99){
-               ierr = CVSpilsGetNumPrecSolves(cvode_mem, &itmp);
-	       printf(" -- number of Precond Solves %-6ld \n", itmp);
-           }
-           ierr = CVodeGetNumNonlinSolvIters(cvode_mem, &itmp);
-           printf(" -- number of Newton iterations (nni) %-6ld \n", itmp);
-           ierr = CVodeGetNumNonlinSolvConvFails(cvode_mem, &itmp);
-	   printf(" -- number of Newton failures %-6ld \n", itmp);
-           printf(" -------------------------------------\n");
-	}
-
+        //if (iverbose > 1) {
+        //   int ierr;
+	//   double htmp;
+        //   printf("\n......cvode done:\n");
+        //   ierr = CVodeGetLastStep(cvode_mem, &htmp);
+        //   printf(" -- last successful step size = %4.8e \n",htmp);
+        //   ierr = CVodeGetCurrentStep(cvode_mem, &htmp);
+        //   printf(" -- next step to try = %4.8e \n",htmp);
+        //   ierr = CVodeGetCurrentTime(cvode_mem, &htmp);
+        //   printf(" -- integrated time reached = %4.8e \n",htmp);
+	//   long int itmp, itmp2; 
+        //   ierr = CVodeGetNumSteps(cvode_mem, &itmp);
+        //   printf(" -- number of time steps (nst) = %-6ld \n",itmp);
+        //   ierr = CVodeGetNumRhsEvals(cvode_mem, &itmp);
+        //   ierr = CVSpilsGetNumRhsEvals(cvode_mem, &itmp2);
+        //   itmp = itmp + itmp2;
+        //   printf(" -- number of fRHS EVAL (nfe+nfels) = %-6ld \n", itmp);
+        //   ierr = CVDlsGetNumJacEvals(cvode_mem, &itmp);
+        //   printf(" -- number of Jac EVAL = %-6ld \n", itmp);
+	//   int itmp3; 
+        //   ierr = CVodeGetLastOrder(cvode_mem, &itmp3);
+        //   printf(" -- method order last used = %d \n", itmp3);
+        //   ierr = CVodeGetCurrentOrder(cvode_mem, &itmp3);
+        //   printf(" -- method order to be used = %d \n", itmp3);
+        //   if (iDense_Creact == 99){
+        //       ierr = CVSpilsGetNumPrecSolves(cvode_mem, &itmp);
+	//       printf(" -- number of Precond Solves %-6ld \n", itmp);
+        //   }
+        //   ierr = CVodeGetNumNonlinSolvIters(cvode_mem, &itmp);
+        //   printf(" -- number of Newton iterations (nni) %-6ld \n", itmp);
+        //   ierr = CVodeGetNumNonlinSolvConvFails(cvode_mem, &itmp);
+	//   printf(" -- number of Newton failures %-6ld \n", itmp);
+        //   printf(" -------------------------------------\n");
+	//}
+	
         long int nfe;
 	flag = CVodeGetNumRhsEvals(cvode_mem, &nfe);
+	
+	SUNLinSolFree(LS);
+	N_VDestroy(y);          /* Free the y vector */
+	CVodeFree(&cvode_mem);
+	cudaFree(udata->rhoX_init);
+        cudaFree(udata->rhoXsrc_ext);
+	cudaFree(udata->rYsrc);
+
 	return nfe;
 }
 
@@ -375,8 +315,6 @@ int react(realtype *rY_in, realtype *rY_src_in,
 static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in, 
 		void *user_data){
 
-        //std::chrono::time_point<std::chrono::system_clock> start, end;		
-	//start = std::chrono::system_clock::now();
 	//cudaError_t cuda_status = cudaSuccess;
 
 	/* Get Device pointers for Kernel call */
@@ -390,15 +328,12 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
 	// UV/HP
 	/* GPU tests */
 	unsigned block = 32;
-	unsigned grid = NCELLS/32 + 1;
+	unsigned grid = udata->ncells_d[0]/32 + 1;
 	fKernelSpec<<<grid,block>>>(user_data, 
 	    	    yvec_d, ydot_d, 
-	    	    rhoe_init, rhoesrc_ext, rYsrc);
+	    	    udata->rhoX_init, udata->rhoXsrc_ext, udata->rYsrc);
 	//cuda_status = cudaDeviceSynchronize();
 	//assert(cuda_status == cudaSuccess);
-	//end = std::chrono::system_clock::now();
-	//std::chrono::duration<double> elapsed_seconds = end - start;
-	//std::cout << " RHS duration " << elapsed_seconds.count() << std::endl;
 	return(0);
 }
 
@@ -406,6 +341,8 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
                booleantype *jcurPtr, realtype gamma, void *user_data) {
 
         cudaError_t cuda_status = cudaSuccess;
+        cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
+        size_t workspaceInBytes, internalDataInBytes;
 
         /* Get Device pointers for Kernel call */
         realtype *u_d      = N_VGetDeviceArrayPointer_Cuda(u);
@@ -418,7 +355,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         if (jok) {
             //printf(" jok is OK \n");
 	    unsigned block = 32;
-	    unsigned grid = NCELLS/32 + 1;
+	    unsigned grid = udata->ncells_d[0]/32 + 1;
 	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,udata->csr_val_d);
             cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
@@ -427,7 +364,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         } else {
             //printf(" jok is NOT OK \n");
 	    unsigned block = 32;
-	    unsigned grid = NCELLS/32 + 1;
+	    unsigned grid = udata->ncells_d[0]/32 + 1;
 	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,udata->csr_val_d);
             cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
@@ -440,14 +377,14 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         //     printf(" FIRST CELL csr_val_d[ %d ] = %14.6e \n", i, udata->csr_val_d[i]); //, csr_val[i]);
         //}
 
-        cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,NEQ+1,NEQ+1, 
+        cusolver_status = cusolverSpDcsrqrBufferInfoBatched(udata->cusolverHandle,NEQ+1,NEQ+1, 
                                 (udata->NNZ),
-                                descrA,
+                                udata->descrA,
                                 udata->csr_val_d,
                                 udata->csr_row_count_d,
                                 udata->csr_col_index_d,
-                                NCELLS,
-                                info,
+                                udata->ncells_d[0],
+                                udata->info,
                                 &internalDataInBytes,
                                 &workspaceInBytes);
 
@@ -461,6 +398,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 {
 
         cudaError_t cuda_status = cudaSuccess;
+        cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
 
         UserData udata = static_cast<CVodeUserData*>(user_data);
 
@@ -471,17 +409,17 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
         realtype *z_d      = N_VGetDeviceArrayPointer_Cuda(z);
         realtype *r_d      = N_VGetDeviceArrayPointer_Cuda(r);
 
-        cusolver_status = cusolverSpDcsrqrsvBatched(cusolverHandle,NEQ+1,NEQ+1,
+        cusolver_status = cusolverSpDcsrqrsvBatched(udata->cusolverHandle,NEQ+1,NEQ+1,
                                (udata->NNZ),
-                               descrA,
+                               udata->descrA,
                                udata->csr_val_d,
                                udata->csr_row_count_d,
                                udata->csr_col_index_d,
                                r_d, 
                                z_d,
-                               NCELLS,
-                               info,
-                               buffer_qr);
+                               udata->ncells_d[0],
+                               udata->info,
+                               udata->buffer_qr);
 
 
         /* Checks */
@@ -492,7 +430,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
         realtype *r_h      = N_VGetHostArrayPointer_Cuda(r);
 
         if (iverbose > 4) {
-            for(int batchId = 0 ; batchId < NCELLS; batchId++){
+            for(int batchId = 0 ; batchId < udata->ncells_d[0]; batchId++){
                 // measure |bj - Aj*xj|
                 double *csrValAj = (udata->csr_val_d) + batchId * (udata->NNZ);
                 double *xj       = z_h + batchId * (NEQ+1);
@@ -719,17 +657,6 @@ __global__ void fKernelJacCSR(realtype t, void *user_data,
     }
 }
 
-
- /* Free and destroy memory */
-void reactor_close(){
-
-	SUNLinSolFree(LS);
-	N_VDestroy(y);          /* Free the y vector */
-	CVodeFree(&cvode_mem);
-	cudaFree(rhoe_init);
-        cudaFree(rhoesrc_ext);
-	cudaFree(rYsrc);
-}
 
 /* Get and print some final statistics */
 static void PrintFinalStats(void *cvodeMem)

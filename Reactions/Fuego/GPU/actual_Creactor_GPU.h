@@ -37,6 +37,10 @@ typedef struct CVodeUserData {
     int ncells_d[1]; 
     int neqs_per_cell[1];
     int flagP;
+    int iJac;
+    double *rhoX_init = NULL;
+    double *rhoXsrc_ext = NULL;
+    double *rYsrc       = NULL;
     // Precond sparse stuff
     // Device
     int NNZ; 
@@ -44,6 +48,12 @@ typedef struct CVodeUserData {
     int* csr_col_index_d;
     double* csr_val_d;
     double* csr_jac_d;
+    // Sparse
+    // CUDA
+    cusparseMatDescr_t descrA;
+    csrqrInfo_t info;
+    cusolverSpHandle_t cusolverHandle;
+    void *buffer_qr = NULL;
 }* UserData;
 
 /* Functions Called by the Solver */
@@ -57,7 +67,8 @@ int reactor_init(const int* cvode_iE, const int* Ncells);
 int react(realtype *rY_in, realtype *rY_src_in, 
 		realtype *rX_in, realtype *rX_src_in, 
 		realtype *P_in, 
-		realtype *dt_react, realtype *time, int *Init);
+		realtype *dt_react, realtype *time, int *Init,
+		const int* cvode_iE, const int* Ncells);
 
 static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 		booleantype *jcurPtr, realtype gamma, void *user_data);
