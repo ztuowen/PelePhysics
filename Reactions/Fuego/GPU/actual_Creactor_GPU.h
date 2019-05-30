@@ -32,17 +32,11 @@
 
 /**********************************/
 typedef struct CVodeUserData {
+    double gamma_d;
+    double dt_save;
     int ncells_d[1]; 
     int neqs_per_cell[1];
     int flagP;
-    double fwd_A[84], fwd_beta[84], fwd_Ea[84];
-    double low_A[84], low_beta[84], low_Ea[84];
-    double rev_A[84], rev_beta[84], rev_Ea[84];
-    double troe_a[84],troe_Ts[84], troe_Tss[84], troe_Tsss[84];
-    double sri_a[84], sri_b[84], sri_c[84], sri_d[84], sri_e[84];
-    double activation_units[84], prefactor_units[84], phase_units[84];
-    int is_PD[84], troe_len[84], sri_len[84], nTB[84], *TBid[84];
-    double *TB[84];
     // Precond sparse stuff
     // Device
     int NNZ; 
@@ -75,7 +69,7 @@ void reactor_close();
 
 /**********************************/
 /* Additional useful functions */
-static void initialize_chemistry_device(UserData user_data);
+//static void initialize_chemistry_device(UserData user_data);
 
 static int check_flag(void *flagvalue, const char *funcname, int opt);
 
@@ -85,7 +79,7 @@ static void PrintFinalStats(void *cvode_mem);
 /* Device crap               */
 
 /* Main Kernel fct called in solver RHS */
-__global__ void fKernelSpec(realtype *dt, void *user_data, 
+__global__ void fKernelSpec(void *user_data, 
 		            realtype *yvec_d, realtype *ydot_d,  
 		            double *rhoX_init, double *rhoXsrc_ext, double *rYs);
 
@@ -96,7 +90,7 @@ __global__ void fKernelJacCSR(realtype t, void *user_data,
                                           const int size, const int nnz, 
                                           const int nbatched);
 
-__global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_d, realtype *gamma_d, realtype *csr_val);
+__global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
 
 __global__ void fKernelFillJB(void *user_data, realtype *gamma);
 
@@ -133,15 +127,14 @@ __device__ void ckhbms_d(double * T, double * y_wk, double * hbms);
 /*get mean internal energy in mass units */
 __device__ void ckubms_d(double * T, double * y_wk, double * ubms);
 /*compute the production rate for each species */
-__device__ void ckwc_d(double * T, double * C, double * wdot, void *user_data);
+__device__ void ckwc_d(double * T, double * C, double * wdot);
 /*compute the production rate for each species */
-__device__ void productionRate_d(double * wdot, double * sc, double T, void *user_data);
+__device__ void productionRate_d(double * wdot, double * sc, double T);
+__device__ void comp_qfqr_d(double *  qf, double * qr, double * sc, double * tc, double invT);
+/*compute the production rate for each species */
+__device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP);
 /*compute the reaction Jacobian */
-__device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP, void *user_data);
-__device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *user_data);
-__device__ void comp_k_f_d(double * tc, double invT, double * k_f, double * Corr, double * sc, void *user_data);
-__device__ void comp_Kc_d(double * tc, double invT, double * Kc);
-__device__ void comp_qfqr_d(double *  qf, double * qr, double * sc, double * tc, double invT, void *user_data);
+__device__ void ajacobian_d(double * J, double * sc, double T, int consP);
 /*compute the g/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
 __device__ void gibbs_d(double * species, double *  tc);
@@ -153,7 +146,7 @@ __device__ void cv_R_d(double * species, double *  tc);
 __device__ void cp_R_d(double * species, double *  tc);
 /*compute d(Cp/R)/dT and d(Cv/R)/dT at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-__device__ void dcvpRdT_d(double * species, double * tc);
+__device__ void dcvpRdT_d(double * species, double *  tc);
 /*compute the e/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
 __device__ void speciesInternalEnergy_d(double * species, double *  tc);

@@ -14,13 +14,8 @@
   int iverbose      = 1;
   void *cvode_mem   = NULL;
   double *rhoe_init = NULL;
-  double *rhoh_init = NULL;
   double *rhoesrc_ext = NULL;
-  double *rhohsrc_ext = NULL;
   double *rYsrc = NULL;
-  double *dt_save;
-  double *gamma_d;
-  double *temp_old = NULL;
   cusparseMatDescr_t descrA;
   cusolverSpHandle_t cusolverHandle;
   cusparseHandle_t cusparseHandle;
@@ -30,7 +25,6 @@
   cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
   cusparseStatus_t cusparse_status = CUSPARSE_STATUS_SUCCESS;
   cudaError_t cudaStat1 = cudaSuccess;
-  //UserData user_data;
 
 /**********************************/
 /* Definitions */
@@ -143,9 +137,6 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 
         }
 
-	/* Initialize chemistry onto the device */
-        initialize_chemistry_device(user_data);
-
 	/* Definition of main vector */
 	y = N_VNew_Cuda(neq_tot);
 	if(check_flag((void*)y, "N_VNew_Cuda", 0)) return(1);
@@ -232,7 +223,6 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 	        if(check_flag(&flag, "CVSpilsSetJacTimes", 1)) return(1);
 
 	        /* Set the preconditioner solve and setup functions */
-	        //flag = CVSpilsSetPreconditioner(cvode_mem, Precond, PSolve);
 	        flag = CVodeSetPreconditioner(cvode_mem, Precond, PSolve);
 	        if(check_flag(&flag, "CVSpilsSetPreconditioner", 1)) return(1);
             }
@@ -248,21 +238,9 @@ int reactor_init(const int* cvode_iE,const int* Ncells){
 
 	/* Define vectors to be used later in creact */
 	// GPU stuff: might want to rethink this and put everything in userdata
-	cudaMallocManaged(&dt_save, 1*sizeof(double));
-	cudaMallocManaged(&gamma_d, 1*sizeof(double));
-	if (iE_Creact == 1) { 
-	    cudaMallocManaged(&rhoe_init, NCELLS*sizeof(double));
-	    cudaMallocManaged(&rhoesrc_ext, NCELLS*sizeof(double));
-	} else {
-	    cudaMallocManaged(&rhoh_init, NCELLS*sizeof(double));
-	    cudaMallocManaged(&rhohsrc_ext, NCELLS*sizeof(double));
-	}
-	cudaMallocManaged(&rYsrc, (NCELLS*NEQ)*sizeof(double));
-	// ReInit stuff
-	cudaMallocManaged(&temp_old, NCELLS*sizeof(double));
-	for  (int i = 0; i < NCELLS; i++) {
-		temp_old[i] = 0.0;
-	}
+	cudaMalloc(&rhoe_init, NCELLS*sizeof(double));
+	cudaMalloc(&rhoesrc_ext, NCELLS*sizeof(double));
+	cudaMalloc(&rYsrc, (NCELLS*NEQ)*sizeof(double));
 
 	N_VDestroy(atol);          /* Free the atol vector */
 
@@ -300,13 +278,8 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	// rhoY_src_ext
 	cudaMemcpy(rYsrc, rY_src_in, (NEQ*NCELLS)*sizeof(double), cudaMemcpyHostToDevice);
 	// rhoE/rhoH
-	if (iE_Creact == 1) { 
-	    cudaMemcpy(rhoe_init, rX_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-	    cudaMemcpy(rhoesrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-	} else {
-	    cudaMemcpy(rhoh_init, rX_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-	    cudaMemcpy(rhohsrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
-	}
+	cudaMemcpy(rhoe_init, rX_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
+	cudaMemcpy(rhoesrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
 
 	/* Call CVODE: ReInit for convergence */
         if (iverbose > 1) {
@@ -404,34 +377,25 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
 
         //std::chrono::time_point<std::chrono::system_clock> start, end;		
 	//start = std::chrono::system_clock::now();
-	cudaError_t cuda_status = cudaSuccess;
+	//cudaError_t cuda_status = cudaSuccess;
 
 	/* Get Device pointers for Kernel call */
 	realtype *yvec_d      = N_VGetDeviceArrayPointer_Cuda(y_in);
 	realtype *ydot_d      = N_VGetDeviceArrayPointer_Cuda(ydot_in);
-	// UV/HP
-	cudaMemcpy(dt_save, &t, sizeof(double), cudaMemcpyHostToDevice);
+	
+        // allocate working space 
+        UserData udata = static_cast<CVodeUserData*>(user_data);
+        udata->dt_save = t;
 
-        if (iE_Creact == 1) {
-	    /* GPU tests */
-	    unsigned block = 32;
-	    unsigned grid = NCELLS/32 + 1;
-	    fKernelSpec<<<grid,block>>>(dt_save, user_data, 
-			    yvec_d, ydot_d, 
-			    rhoe_init, rhoesrc_ext, rYsrc);
-	    cuda_status = cudaDeviceSynchronize();
-	    //std::cout << "In fun_rhs, got cudaDeviceSynchronize error of: " << cudaGetErrorString(cuda_status) << std::endl;
-	    assert(cuda_status == cudaSuccess);
-	} else {
-	    unsigned block = 32;
-	    unsigned grid = NCELLS/32 + 1;
-	    fKernelSpec<<<grid,block>>>(dt_save, user_data,
-			    yvec_d, ydot_d, 
-			    rhoh_init, rhohsrc_ext, rYsrc);
-	    cuda_status = cudaDeviceSynchronize();
-	    //std::cout << "In fun_rhs, got cudaDeviceSynchronize error of: " << cudaGetErrorString(cuda_status) << std::endl;
-	    assert(cuda_status == cudaSuccess);
-	}
+	// UV/HP
+	/* GPU tests */
+	unsigned block = 32;
+	unsigned grid = NCELLS/32 + 1;
+	fKernelSpec<<<grid,block>>>(user_data, 
+	    	    yvec_d, ydot_d, 
+	    	    rhoe_init, rhoesrc_ext, rYsrc);
+	//cuda_status = cudaDeviceSynchronize();
+	//assert(cuda_status == cudaSuccess);
 	//end = std::chrono::system_clock::now();
 	//std::chrono::duration<double> elapsed_seconds = end - start;
 	//std::cout << " RHS duration " << elapsed_seconds.count() << std::endl;
@@ -441,24 +405,21 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
 static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
                booleantype *jcurPtr, realtype gamma, void *user_data) {
 
-        // allocate working space 
-        UserData udata = static_cast<CVodeUserData*>(user_data);
-
         cudaError_t cuda_status = cudaSuccess;
 
         /* Get Device pointers for Kernel call */
         realtype *u_d      = N_VGetDeviceArrayPointer_Cuda(u);
         realtype *udot_d   = N_VGetDeviceArrayPointer_Cuda(fu);
 
-	cudaMemcpy(dt_save, &tn, sizeof(double), cudaMemcpyHostToDevice);
-
-	cudaMemcpy(gamma_d, &gamma, sizeof(double), cudaMemcpyHostToDevice);
+        // allocate working space 
+        UserData udata = static_cast<CVodeUserData*>(user_data);
+        udata->gamma_d = gamma;
 
         if (jok) {
             //printf(" jok is OK \n");
 	    unsigned block = 32;
 	    unsigned grid = NCELLS/32 + 1;
-	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,gamma_d, udata->csr_val_d);
+	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,udata->csr_val_d);
             cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
 
@@ -467,7 +428,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
             //printf(" jok is NOT OK \n");
 	    unsigned block = 32;
 	    unsigned grid = NCELLS/32 + 1;
-	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,gamma_d, udata->csr_val_d);
+	    fKernelComputeAJ<<<grid,block>>>(user_data, u_d, udot_d,udata->csr_val_d);
             cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
 
@@ -564,41 +525,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 /*
  * CUDA kernels
  */
-//__global__ void fKernelCompute(void *user_data, realtype *u_d, realtype *udot_d, double *gamma)
-//{
-//  UserData udata = static_cast<CVodeUserData*>(user_data);
-//
-//  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-//
-//  if (tid < udata->ncells_d[0]) {
-//      /* offsets */
-//      int u_offset = tid * (udata->neqs_per_cell[0] + 1); 
-//      int jac_offset = tid * udata->NNZ;
-//      realtype* u_curr = u_d + u_offset;
-//      realtype* csr_jac_cell = udata->csr_jac_d + jac_offset;
-//
-//      /* Fill the Sps Mat */
-//      int nbVals;
-//      for (int i = 1; i < udata->neqs_per_cell[0]+2; i++) {
-//          nbVals = udata->csr_row_count_d[i]-udata->csr_row_count_d[i-1];
-//          printf("Row %d : we have %d nonzero values \n", i-1, nbVals);
-//          for (int j = 0; j < nbVals; j++) {
-//    	      int idx = udata->csr_col_index_d[ udata->csr_row_count_d[i-1] + j ];
-//              /* Scale by -gamma */
-//              /* Add identity matrix */
-//    	      if (idx == (i-1)) {
-//                  udata->csr_jac_cell[ udata->csr_row_count_d[i-1] + j ] = 1.0 - gamma * Jmat[ idx ][ idx ]; 
-//    	      } else {
-//                  udata->csr_jac_cell[ udata->csr_row_count_d[i-1] + j ] = - gamma * Jmat[ idx ][ i-1 ]; 
-//    	      }
-//          }
-//      }
-//
-//  }
-//
-//}
-
-__global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_d, double * gamma, double * csr_val_arg)
+__global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
 {
   UserData udata = static_cast<CVodeUserData*>(user_data);
 
@@ -633,10 +560,10 @@ __global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_
        * recompute temp ...      */
       if (udata->flagP == 1){
           int consP = 0 ;
-          dwdot_d(Jmat, activity, &temp, &consP, user_data);
+          dwdot_d(Jmat, activity, &temp, &consP);
       } else {
           int consP = 1 ;
-          dwdot_d(Jmat, activity, &temp, &consP, user_data);
+          dwdot_d(Jmat, activity, &temp, &consP);
       }
       /* renorm the DenseMat */
       for (int i = 0; i < udata->neqs_per_cell[0]; i++){
@@ -655,10 +582,10 @@ __global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_
               /* Scale by -gamma */
               /* Add identity matrix */
     	      if (idx == (i-1)) {
-                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = 1.0 - (*gamma) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = 1.0 - (udata->gamma_d) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
                   csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
     	      } else {
-                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (*gamma) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (udata->gamma_d) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
                   csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
     	      }
           }
@@ -668,9 +595,9 @@ __global__ void fKernelComputeAJ(void *user_data, realtype *u_d, realtype *udot_
 
 }
 
-__global__ void fKernelSpec(realtype *dt, void *user_data, 
+__global__ void fKernelSpec(void *user_data, 
 		            realtype *yvec_d, realtype *ydot_d,  
-		            double *rhoX_init, double *rhoXsrc_ext, double *rYs)
+		            double *rhoe_init, double *rhoesrc_ext, double *rYs)
 {
   int tid;
   UserData udata = static_cast<CVodeUserData*>(user_data);
@@ -705,7 +632,7 @@ __global__ void fKernelSpec(realtype *dt, void *user_data,
       }
 
       /* NRG CGS */
-      energy = (rhoX_init[tid] + rhoXsrc_ext[tid]*(*dt)) /rho;
+      energy = (rhoe_init[tid] + rhoesrc_ext[tid]*(udata->dt_save)) /rho;
 
       /* Fuego calls on device */
       if (udata->flagP == 1){
@@ -717,14 +644,14 @@ __global__ void fKernelSpec(realtype *dt, void *user_data,
           ckhms_d(&temp, Xi);
           ckcpms_d(&temp, cXi);
       }
-      ckwc_d(&temp, activity, cdot, user_data);
+      ckwc_d(&temp, activity, cdot);
       int cX = 0.0;
       for (int i = 0; i < udata->neqs_per_cell[0]; i++){
           cX = cX + massfrac[i] * cXi[i];
       }
 
       /* Fill ydot vect */
-      ydot_d[offset + udata->neqs_per_cell[0]] = rhoXsrc_ext[tid];
+      ydot_d[offset + udata->neqs_per_cell[0]] = rhoesrc_ext[tid];
       for (int i = 0; i < udata->neqs_per_cell[0]; i++){
           ydot_d[offset + i] = cdot[i] * molecular_weight[i] + rYs[tid * (udata->neqs_per_cell[0]) + i];
           ydot_d[offset + udata->neqs_per_cell[0]] = ydot_d[offset + udata->neqs_per_cell[0]]  - ydot_d[offset + i] * Xi[i];
@@ -774,10 +701,10 @@ __global__ void fKernelJacCSR(realtype t, void *user_data,
          * recompute temp ...      */
         if (udata->flagP == 1){
             int consP = 0 ;
-            dwdot_d(Jmat, activity, &temp, &consP, user_data);
+            dwdot_d(Jmat, activity, &temp, &consP);
         } else {
             int consP = 1 ;
-            dwdot_d(Jmat, activity, &temp, &consP, user_data);
+            dwdot_d(Jmat, activity, &temp, &consP);
         }
         /* fill the sunMat */
         for (int k = 0; k < udata->neqs_per_cell[0]; k++){
@@ -799,13 +726,8 @@ void reactor_close(){
 	SUNLinSolFree(LS);
 	N_VDestroy(y);          /* Free the y vector */
 	CVodeFree(&cvode_mem);
-	if (iE_Creact == 1) { 
-	    cudaFree(rhoe_init);
-	    cudaFree(rhoesrc_ext);
-	} else {
-	    cudaFree(rhoh_init);
-	    cudaFree(rhohsrc_ext);
-	}
+	cudaFree(rhoe_init);
+        cudaFree(rhoesrc_ext);
 	cudaFree(rYsrc);
 }
 
@@ -1241,7 +1163,7 @@ __device__ void ckubms_d(double * T, double * y_wk, double * ubms)
 
 
 /*compute the production rate for each species */
-__device__ void ckwc_d(double * T, double * C, double * wdot, void *user_data)
+__device__ void ckwc_d(double * T, double * C, double * wdot)
 {
     int id; /*loop counter */
 
@@ -1251,7 +1173,7 @@ __device__ void ckwc_d(double * T, double * C, double * wdot, void *user_data)
     }
 
     /*convert to chemkin units */
-    productionRate_d(wdot, C, *T, user_data);
+    productionRate_d(wdot, C, *T);
 
     /*convert to chemkin units */
     for (id = 0; id < 21; ++id) {
@@ -1261,13 +1183,13 @@ __device__ void ckwc_d(double * T, double * C, double * wdot, void *user_data)
 }
 
 /*compute the production rate for each species */
-__device__ void productionRate_d(double * wdot, double * sc, double T, void *user_data)
+__device__ void productionRate_d(double * wdot, double * sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
 
     double qdot, q_f[84], q_r[84];
-    comp_qfqr_d(q_f, q_r, sc, tc, invT, user_data);
+    comp_qfqr_d(q_f, q_r, sc, tc, invT);
 
     for (int i = 0; i < 21; ++i) {
         wdot[i] = 0.0;
@@ -1763,196 +1685,7 @@ __device__ void productionRate_d(double * wdot, double * sc, double T, void *use
     return;
 }
 
-__device__ void comp_k_f_d(double * tc, double invT, double * k_f, double * Corr, double * sc, void *user_data)
-{
-
-    UserData udata = static_cast<CVodeUserData*>(user_data);
-
-    for (int i=0; i<84; ++i) {
-        k_f[i] = udata->prefactor_units[i] * udata->fwd_A[i]
-                    * exp(udata->fwd_beta[i] * tc[0] - udata->activation_units[i] * udata->fwd_Ea[i] * invT);
-    }
-    /*compute the mixture concentration */
-    double mixture = 0.0;
-    for (int i = 0; i < 21; ++i) {
-        mixture += sc[i];
-    }
-
-    /* troe */
-    {
-        double alpha[8];
-        alpha[0] = mixture + (udata->TB[0][0] - 1)*sc[0] + (udata->TB[0][1] - 1)*sc[5] + (udata->TB[0][2] - 1)*sc[10] + (udata->TB[0][3] - 1)*sc[11] + (udata->TB[0][4] - 1)*sc[12] + (udata->TB[0][5] - 1)*sc[18] + (udata->TB[0][6] - 1)*sc[20];
-        alpha[1] = mixture + (udata->TB[1][0] - 1)*sc[0] + (udata->TB[1][1] - 1)*sc[5] + (udata->TB[1][2] - 1)*sc[10] + (udata->TB[1][3] - 1)*sc[11] + (udata->TB[1][4] - 1)*sc[12] + (udata->TB[1][5] - 1)*sc[18] + (udata->TB[1][6] - 1)*sc[20];
-        alpha[2] = mixture + (udata->TB[2][0] - 1)*sc[0] + (udata->TB[2][1] - 1)*sc[5] + (udata->TB[2][2] - 1)*sc[10] + (udata->TB[2][3] - 1)*sc[11] + (udata->TB[2][4] - 1)*sc[12] + (udata->TB[2][5] - 1)*sc[18] + (udata->TB[2][6] - 1)*sc[20];
-        alpha[3] = mixture + (udata->TB[3][0] - 1)*sc[0] + (udata->TB[3][1] - 1)*sc[5] + (udata->TB[3][2] - 1)*sc[10] + (udata->TB[3][3] - 1)*sc[11] + (udata->TB[3][4] - 1)*sc[12] + (udata->TB[3][5] - 1)*sc[18];
-        alpha[4] = mixture + (udata->TB[4][0] - 1)*sc[0] + (udata->TB[4][1] - 1)*sc[5] + (udata->TB[4][2] - 1)*sc[10] + (udata->TB[4][3] - 1)*sc[11] + (udata->TB[4][4] - 1)*sc[12] + (udata->TB[4][5] - 1)*sc[18] + (udata->TB[4][6] - 1)*sc[20];
-        alpha[5] = mixture + (udata->TB[5][0] - 1)*sc[0] + (udata->TB[5][1] - 1)*sc[5] + (udata->TB[5][2] - 1)*sc[10] + (udata->TB[5][3] - 1)*sc[11] + (udata->TB[5][4] - 1)*sc[12] + (udata->TB[5][5] - 1)*sc[18] + (udata->TB[5][6] - 1)*sc[20];
-        alpha[6] = mixture + (udata->TB[6][0] - 1)*sc[0] + (udata->TB[6][1] - 1)*sc[5] + (udata->TB[6][2] - 1)*sc[10] + (udata->TB[6][3] - 1)*sc[11] + (udata->TB[6][4] - 1)*sc[12] + (udata->TB[6][5] - 1)*sc[18] + (udata->TB[6][6] - 1)*sc[20];
-        alpha[7] = mixture + (udata->TB[7][0] - 1)*sc[0] + (udata->TB[7][1] - 1)*sc[5] + (udata->TB[7][2] - 1)*sc[10] + (udata->TB[7][3] - 1)*sc[11] + (udata->TB[7][4] - 1)*sc[12] + (udata->TB[7][5] - 1)*sc[18] + (udata->TB[7][6] - 1)*sc[20];
-        for (int i=0; i<8; i++)
-        {
-            double redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe;
-            redP = alpha[i-0] / k_f[i] * udata->phase_units[i] * udata->low_A[i] * exp(udata->low_beta[i] * tc[0] - udata->activation_units[i] * udata->low_Ea[i] *invT);
-            F = redP / (1.0 + redP);
-            logPred = log10(redP);
-            logFcent = log10(
-                (fabs(udata->troe_Tsss[i]) > 1.e-100 ? (1.-udata->troe_a[i])*exp(-tc[1]/udata->troe_Tsss[i]) : 0.) 
-                + (fabs(udata->troe_Ts[i]) > 1.e-100 ? udata->troe_a[i] * exp(-tc[1]/udata->troe_Ts[i]) : 0.) 
-                + (udata->troe_len[i] == 4 ? exp(-udata->troe_Tss[i] * invT) : 0.) );
-            troe_c = -.4 - .67 * logFcent;
-            troe_n = .75 - 1.27 * logFcent;
-            troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
-            F_troe = pow(10., logFcent / (1.0 + troe*troe));
-            Corr[i] = F * F_troe;
-        }
-    }
-
-    /* simple three-body correction */
-    {
-        double alpha;
-        alpha = mixture + (udata->TB[8][0] - 1)*sc[0] + (udata->TB[8][1] - 1)*sc[5] + (udata->TB[8][2] - 1)*sc[10] + (udata->TB[8][3] - 1)*sc[11] + (udata->TB[8][4] - 1)*sc[12] + (udata->TB[8][5] - 1)*sc[18] + (udata->TB[8][6] - 1)*sc[20];
-        Corr[8] = alpha;
-        alpha = mixture + (udata->TB[9][0] - 1)*sc[0] + (udata->TB[9][1] - 1)*sc[3] + (udata->TB[9][2] - 1)*sc[5] + (udata->TB[9][3] - 1)*sc[10] + (udata->TB[9][4] - 1)*sc[11] + (udata->TB[9][5] - 1)*sc[12] + (udata->TB[9][6] - 1)*sc[18] + (udata->TB[9][7] - 1)*sc[20];
-        Corr[9] = alpha;
-        alpha = mixture + (udata->TB[10][0] - 1)*sc[3] + (udata->TB[10][1] - 1)*sc[5] + (udata->TB[10][2] - 1)*sc[11] + (udata->TB[10][3] - 1)*sc[12] + (udata->TB[10][4] - 1)*sc[18] + (udata->TB[10][5] - 1)*sc[19] + (udata->TB[10][6] - 1)*sc[20];
-        Corr[10] = alpha;
-        alpha = mixture + (udata->TB[11][0] - 1)*sc[0] + (udata->TB[11][1] - 1)*sc[5] + (udata->TB[11][2] - 1)*sc[10] + (udata->TB[11][3] - 1)*sc[12] + (udata->TB[11][4] - 1)*sc[18] + (udata->TB[11][5] - 1)*sc[20];
-        Corr[11] = alpha;
-        alpha = mixture + (udata->TB[12][0] - 1)*sc[0] + (udata->TB[12][1] - 1)*sc[5] + (udata->TB[12][2] - 1)*sc[10] + (udata->TB[12][3] - 1)*sc[18] + (udata->TB[12][4] - 1)*sc[20];
-        Corr[12] = alpha;
-        alpha = mixture + (udata->TB[13][0] - 1)*sc[0] + (udata->TB[13][1] - 1)*sc[5] + (udata->TB[13][2] - 1)*sc[10] + (udata->TB[13][3] - 1)*sc[11] + (udata->TB[13][4] - 1)*sc[12] + (udata->TB[13][5] - 1)*sc[18];
-        Corr[13] = alpha;
-    }
-    return;
-}
-
-__device__ void comp_Kc_d(double * tc, double invT, double * Kc)
-{
-    /*compute the Gibbs free energy */
-    double g_RT[21];
-    gibbs_d(g_RT, tc);
-
-    Kc[0] = g_RT[1] + g_RT[7] - g_RT[9];
-    Kc[1] = g_RT[1] + g_RT[9] - g_RT[10];
-    Kc[2] = g_RT[1] + g_RT[13] - g_RT[14];
-    Kc[3] = g_RT[1] + g_RT[14] - g_RT[15];
-    Kc[4] = g_RT[1] + g_RT[16] - g_RT[17];
-    Kc[5] = g_RT[1] + g_RT[17] - g_RT[18];
-    Kc[6] = g_RT[0] + g_RT[11] - g_RT[14];
-    Kc[7] = 2*g_RT[9] - g_RT[18];
-    Kc[8] = g_RT[1] + g_RT[2] - g_RT[4];
-    Kc[9] = g_RT[2] + g_RT[11] - g_RT[12];
-    Kc[10] = g_RT[1] + g_RT[3] - g_RT[6];
-    Kc[11] = -g_RT[0] + 2*g_RT[1];
-    Kc[12] = g_RT[1] + g_RT[4] - g_RT[5];
-    Kc[13] = -g_RT[1] - g_RT[11] + g_RT[13];
-    Kc[14] = g_RT[0] - g_RT[1] + g_RT[2] - g_RT[4];
-    Kc[15] = g_RT[2] - g_RT[3] - g_RT[4] + g_RT[6];
-    Kc[16] = -g_RT[1] + g_RT[2] + g_RT[7] - g_RT[13];
-    Kc[17] = -g_RT[1] + g_RT[2] + g_RT[8] - g_RT[13];
-    Kc[18] = -g_RT[1] + g_RT[2] + g_RT[9] - g_RT[14];
-    Kc[19] = g_RT[2] - g_RT[4] - g_RT[9] + g_RT[10];
-    Kc[20] = g_RT[2] - g_RT[4] - g_RT[11] + g_RT[13];
-    Kc[21] = -g_RT[1] + g_RT[2] - g_RT[12] + g_RT[13];
-    Kc[22] = g_RT[2] - g_RT[4] - g_RT[13] + g_RT[14];
-    Kc[23] = g_RT[2] - g_RT[9] - g_RT[13] + g_RT[16];
-    Kc[24] = g_RT[2] - g_RT[9] - g_RT[14] + g_RT[17];
-    Kc[25] = g_RT[2] - g_RT[4] - g_RT[17] + g_RT[18];
-    Kc[26] = -g_RT[2] + g_RT[3] + g_RT[11] - g_RT[12];
-    Kc[27] = g_RT[3] - g_RT[6] - g_RT[13] + g_RT[14];
-    Kc[28] = g_RT[1] + 2*g_RT[3] - g_RT[3] - g_RT[6];
-    Kc[29] = g_RT[1] + g_RT[3] + g_RT[5] - g_RT[5] - g_RT[6];
-    Kc[30] = g_RT[1] + g_RT[3] - g_RT[6] + g_RT[19] - g_RT[19];
-    Kc[31] = g_RT[1] + g_RT[3] - g_RT[6] + g_RT[20] - g_RT[20];
-    Kc[32] = g_RT[1] - g_RT[2] + g_RT[3] - g_RT[4];
-    Kc[33] = g_RT[0] - 2*g_RT[0] + 2*g_RT[1];
-    Kc[34] = -g_RT[0] + 2*g_RT[1] + g_RT[5] - g_RT[5];
-    Kc[35] = -g_RT[0] + 2*g_RT[1] + g_RT[12] - g_RT[12];
-    Kc[36] = -g_RT[0] + g_RT[1] - g_RT[3] + g_RT[6];
-    Kc[37] = g_RT[1] - 2*g_RT[4] + g_RT[6];
-    Kc[38] = -g_RT[0] + g_RT[1] - g_RT[9] + g_RT[10];
-    Kc[39] = -g_RT[0] + g_RT[1] - g_RT[11] + g_RT[13];
-    Kc[40] = -g_RT[0] + g_RT[1] - g_RT[13] + g_RT[14];
-    Kc[41] = g_RT[1] - g_RT[4] - g_RT[9] + g_RT[15];
-    Kc[42] = -g_RT[0] + g_RT[1] - g_RT[17] + g_RT[18];
-    Kc[43] = g_RT[0] - g_RT[1] + g_RT[4] - g_RT[5];
-    Kc[44] = -g_RT[2] + 2*g_RT[4] - g_RT[5];
-    Kc[45] = -g_RT[3] + g_RT[4] - g_RT[5] + g_RT[6];
-    Kc[46] = -g_RT[1] + g_RT[4] + g_RT[7] - g_RT[14];
-    Kc[47] = -g_RT[1] + g_RT[4] + g_RT[8] - g_RT[14];
-    Kc[48] = g_RT[4] - g_RT[5] - g_RT[7] + g_RT[9];
-    Kc[49] = g_RT[4] - g_RT[5] - g_RT[8] + g_RT[9];
-    Kc[50] = g_RT[4] - g_RT[5] - g_RT[9] + g_RT[10];
-    Kc[51] = -g_RT[1] + g_RT[4] + g_RT[11] - g_RT[12];
-    Kc[52] = g_RT[4] - g_RT[5] - g_RT[11] + g_RT[13];
-    Kc[53] = g_RT[4] - g_RT[5] - g_RT[13] + g_RT[14];
-    Kc[54] = g_RT[4] - g_RT[5] - g_RT[17] + g_RT[18];
-    Kc[55] = -g_RT[4] + g_RT[6] + g_RT[7] - g_RT[14];
-    Kc[56] = -g_RT[3] + g_RT[6] + g_RT[9] - g_RT[10];
-    Kc[57] = -g_RT[4] + g_RT[6] + g_RT[9] - g_RT[15];
-    Kc[58] = -g_RT[4] + g_RT[6] + g_RT[11] - g_RT[12];
-    Kc[59] = g_RT[3] - g_RT[4] + g_RT[7] - g_RT[13];
-    Kc[60] = g_RT[0] - g_RT[1] + g_RT[7] - g_RT[9];
-    Kc[61] = -g_RT[1] + g_RT[7] + g_RT[9] - g_RT[16];
-    Kc[62] = g_RT[7] - 2*g_RT[9] + g_RT[10];
-    Kc[63] = -g_RT[7] + g_RT[8] + g_RT[19] - g_RT[19];
-    Kc[64] = -g_RT[7] + g_RT[8] + g_RT[20] - g_RT[20];
-    Kc[65] = -g_RT[1] + g_RT[3] - g_RT[4] + g_RT[8] - g_RT[11];
-    Kc[66] = g_RT[3] - g_RT[5] + g_RT[8] - g_RT[11];
-    Kc[67] = g_RT[0] - g_RT[1] + g_RT[8] - g_RT[9];
-    Kc[68] = g_RT[5] - g_RT[5] - g_RT[7] + g_RT[8];
-    Kc[69] = -g_RT[1] + g_RT[8] + g_RT[9] - g_RT[16];
-    Kc[70] = g_RT[8] - 2*g_RT[9] + g_RT[10];
-    Kc[71] = -g_RT[7] + g_RT[8] + g_RT[11] - g_RT[11];
-    Kc[72] = -g_RT[7] + g_RT[8] + g_RT[12] - g_RT[12];
-    Kc[73] = g_RT[8] - g_RT[11] + g_RT[12] - g_RT[14];
-    Kc[74] = -g_RT[2] + g_RT[3] + g_RT[9] - g_RT[15];
-    Kc[75] = g_RT[3] - g_RT[4] + g_RT[9] - g_RT[14];
-    Kc[76] = -g_RT[1] + 2*g_RT[9] - g_RT[17];
-    Kc[77] = g_RT[9] - g_RT[10] - g_RT[11] + g_RT[13];
-    Kc[78] = g_RT[9] - g_RT[10] - g_RT[13] + g_RT[14];
-    Kc[79] = g_RT[9] - g_RT[10] - g_RT[17] + g_RT[18];
-    Kc[80] = -g_RT[1] + g_RT[5] - g_RT[5] - g_RT[11] + g_RT[13];
-    Kc[81] = g_RT[3] - g_RT[6] - g_RT[11] + g_RT[13];
-    Kc[82] = g_RT[3] - g_RT[6] - g_RT[14] + g_RT[15];
-    Kc[83] = g_RT[3] - g_RT[6] - g_RT[16] + g_RT[17];
-
-    for (int i=0; i<84; ++i) {
-        Kc[i] = exp(Kc[i]);
-    };
-
-    /*reference concentration: P_atm / (RT) in inverse mol/m^3 */
-    double refC = 101325 / 8.31451 * invT;
-    double refCinv = 1 / refC;
-
-    Kc[0] *= refCinv;
-    Kc[1] *= refCinv;
-    Kc[2] *= refCinv;
-    Kc[3] *= refCinv;
-    Kc[4] *= refCinv;
-    Kc[5] *= refCinv;
-    Kc[6] *= refCinv;
-    Kc[7] *= refCinv;
-    Kc[8] *= refCinv;
-    Kc[9] *= refCinv;
-    Kc[10] *= refCinv;
-    Kc[11] *= refCinv;
-    Kc[12] *= refCinv;
-    Kc[13] *= refC;
-    Kc[28] *= refCinv;
-    Kc[29] *= refCinv;
-    Kc[30] *= refCinv;
-    Kc[31] *= refCinv;
-    Kc[33] *= refCinv;
-    Kc[34] *= refCinv;
-    Kc[35] *= refCinv;
-    Kc[65] *= refC;
-    Kc[80] *= refC;
-
-    return;
-}
-
-__device__ void comp_qfqr_d(double *  qf, double * qr, double * sc, double * tc, double invT, void *user_data)
+__device__ void comp_qfqr_d(double *  qf, double * qr, double * sc, double * tc, double invT)
 {
 
     /*reaction 1: H + CH2 (+M) <=> CH3 (+M) */
@@ -2291,28 +2024,639 @@ __device__ void comp_qfqr_d(double *  qf, double * qr, double * sc, double * tc,
     qf[83] = sc[3]*sc[17];
     qr[83] = sc[6]*sc[16];
 
-    double T = tc[1];
-    double Corr[84];
-    for (int i = 0; i < 84; ++i) {
-        Corr[i] = 1.0;
+    /*compute the mixture concentration */
+    double mixture = 0.0;
+    for (int i = 0; i < 21; ++i) {
+        mixture += sc[i];
     }
-    double k_f_save[84];
-    double Kc_save[84];
-    comp_k_f_d(tc,invT,k_f_save,Corr,sc,user_data);
-    comp_Kc_d(tc,invT,Kc_save);
 
+    /*compute the Gibbs free energy */
+    double g_RT[21];
+    gibbs_d(g_RT, tc);
 
-    for (int i=0; i<84; i++)
-    {
-        qf[i] *= Corr[i] * k_f_save[i];
-        qr[i] *= Corr[i] * k_f_save[i] / Kc_save[i];
-    }
+    /*reference concentration: P_atm / (RT) in inverse mol/m^3 */
+    double refC = 101325 / 8.31451 * invT;
+    double refCinv = 1 / refC;
+
+    /* Evaluate the kfs */
+    double k_f, Corr;
+    double redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe;
+
+    // (0):  H + CH2 (+M) <=> CH3 (+M)
+    k_f = 1.0000000000000002e-06 * 25000000000000000 
+               * exp(-0.80000000000000004 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 3.2000000000000002e+27 
+               * exp(-3.1400000000000001  * tc[0] - 0.50321666580471969  * 1230 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.68000000000000005)*exp(-tc[1] / 78) 
+        + 0.68000000000000005 * exp(-tc[1]/1995)  
+        + exp(-5590 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[0] *= Corr * k_f;
+    qr[0] *= Corr * k_f / (exp(g_RT[1] + g_RT[7] - g_RT[9]) * refCinv);
+    // (1):  H + CH3 (+M) <=> CH4 (+M)
+    k_f = 1.0000000000000002e-06 * 12700000000000000 
+               * exp(-0.63 * tc[0] - 0.50321666580471969 * 383 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 2.4769999999999999e+33 
+               * exp(-4.7599999999999998  * tc[0] - 0.50321666580471969  * 2440 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.78300000000000003)*exp(-tc[1] / 74) 
+        + 0.78300000000000003 * exp(-tc[1]/2941)  
+        + exp(-6964 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[1] *= Corr * k_f;
+    qr[1] *= Corr * k_f / (exp(g_RT[1] + g_RT[9] - g_RT[10]) * refCinv);
+    // (2):  H + HCO (+M) <=> CH2O (+M)
+    k_f = 1.0000000000000002e-06 * 1090000000000 
+               * exp(0.47999999999999998 * tc[0] - 0.50321666580471969 * -260 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 1.35e+24 
+               * exp(-2.5699999999999998  * tc[0] - 0.50321666580471969  * 1425 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.78239999999999998)*exp(-tc[1] / 271) 
+        + 0.78239999999999998 * exp(-tc[1]/2755)  
+        + exp(-6570 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[2] *= Corr * k_f;
+    qr[2] *= Corr * k_f / (exp(g_RT[1] + g_RT[13] - g_RT[14]) * refCinv);
+    // (3):  H + CH2O (+M) <=> CH3O (+M)
+    k_f = 1.0000000000000002e-06 * 540000000000 
+               * exp(0.45400000000000001 * tc[0] - 0.50321666580471969 * 2600 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18];
+    redP = Corr / k_f * 1e-12 * 2.2e+30 
+               * exp(-4.7999999999999998  * tc[0] - 0.50321666580471969  * 5560 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.75800000000000001)*exp(-tc[1] / 94) 
+        + 0.75800000000000001 * exp(-tc[1]/1555)  
+        + exp(-4200 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[3] *= Corr * k_f;
+    qr[3] *= Corr * k_f / (exp(g_RT[1] + g_RT[14] - g_RT[15]) * refCinv);
+    // (4):  H + C2H4 (+M) <=> C2H5 (+M)
+    k_f = 1.0000000000000002e-06 * 1080000000000 
+               * exp(0.45400000000000001 * tc[0] - 0.50321666580471969 * 1820 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 1.1999999999999999e+42 
+               * exp(-7.6200000000000001  * tc[0] - 0.50321666580471969  * 6970 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.97529999999999994)*exp(-tc[1] / 210) 
+        + 0.97529999999999994 * exp(-tc[1]/984)  
+        + exp(-4374 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[4] *= Corr * k_f;
+    qr[4] *= Corr * k_f / (exp(g_RT[1] + g_RT[16] - g_RT[17]) * refCinv);
+    // (5):  H + C2H5 (+M) <=> C2H6 (+M)
+    k_f = 1.0000000000000002e-06 * 5.21e+17 
+               * exp(-0.98999999999999999 * tc[0] - 0.50321666580471969 * 1580 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 1.9900000000000001e+41 
+               * exp(-7.0800000000000001  * tc[0] - 0.50321666580471969  * 6685 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.84219999999999995)*exp(-tc[1] / 125) 
+        + 0.84219999999999995 * exp(-tc[1]/2219)  
+        + exp(-6882 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[5] *= Corr * k_f;
+    qr[5] *= Corr * k_f / (exp(g_RT[1] + g_RT[17] - g_RT[18]) * refCinv);
+    // (6):  H2 + CO (+M) <=> CH2O (+M)
+    k_f = 1.0000000000000002e-06 * 43000000 
+               * exp(1.5 * tc[0] - 0.50321666580471969 * 79600 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 5.0699999999999998e+27 
+               * exp(-3.4199999999999999  * tc[0] - 0.50321666580471969  * 84350 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.93200000000000005)*exp(-tc[1] / 197) 
+        + 0.93200000000000005 * exp(-tc[1]/1540)  
+        + exp(-10300 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[6] *= Corr * k_f;
+    qr[6] *= Corr * k_f / (exp(g_RT[0] + g_RT[11] - g_RT[14]) * refCinv);
+    // (7):  2 CH3 (+M) <=> C2H6 (+M)
+    k_f = 1.0000000000000002e-06 * 21200000000000000 
+               * exp(-0.96999999999999997 * tc[0] - 0.50321666580471969 * 620 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    redP = Corr / k_f * 1e-12 * 1.7700000000000001e+50 
+               * exp(-9.6699999999999999  * tc[0] - 0.50321666580471969  * 6220 *invT);
+    F = redP / (1.0 + redP);
+    logPred = log10(redP);
+    logFcent = log10(
+        (1.-0.53249999999999997)*exp(-tc[1] / 151) 
+        + 0.53249999999999997 * exp(-tc[1]/1038)  
+        + exp(-4970 * invT));
+    troe_c = -.4 - .67 * logFcent;
+    troe_n = .75 - 1.27 * logFcent;
+    troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+    F_troe = pow(10., logFcent / (1.0 + troe*troe));
+    Corr = F * F_troe;
+    qf[7] *= Corr * k_f;
+    qr[7] *= Corr * k_f / (exp(2*g_RT[9] - g_RT[18]) * refCinv);
+    // (8):  O + H + M <=> OH + M
+    k_f = 1.0000000000000002e-12 * 5e+17 
+               * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
+    qf[8] *= Corr * k_f;
+    qr[8] *= Corr * k_f / (exp(g_RT[1] + g_RT[2] - g_RT[4]) * refCinv);
+    // (9):  O + CO + M <=> CO2 + M
+    k_f = 1.0000000000000002e-12 * 602000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 3000 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[3] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 3.5 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.5 - 1)*sc[20];
+    qf[9] *= Corr * k_f;
+    qr[9] *= Corr * k_f / (exp(g_RT[2] + g_RT[11] - g_RT[12]) * refCinv);
+    // (10):  H + O2 + M <=> HO2 + M
+    k_f = 1.0000000000000002e-12 * 2.8e+18 
+               * exp(-0.85999999999999999 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = mixture + ( 0 - 1)*sc[3] + ( 0 - 1)*sc[5] + ( 0.75 - 1)*sc[11] + ( 1.5 - 1)*sc[12] + ( 1.5 - 1)*sc[18] + ( 0 - 1)*sc[19] + ( 0 - 1)*sc[20];
+    qf[10] *= Corr * k_f;
+    qr[10] *= Corr * k_f / (exp(g_RT[1] + g_RT[3] - g_RT[6]) * refCinv);
+    // (11):  2 H + M <=> H2 + M
+    k_f = 1.0000000000000002e-12 * 1e+18 
+               * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = mixture + ( 0 - 1)*sc[0] + ( 0 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 0 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.63 - 1)*sc[20];
+    qf[11] *= Corr * k_f;
+    qr[11] *= Corr * k_f / (exp(-g_RT[0] + 2*g_RT[1]) * refCinv);
+    // (12):  H + OH + M <=> H2O + M
+    k_f = 1.0000000000000002e-12 * 2.2e+22 
+               * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = mixture + ( 0.72999999999999998 - 1)*sc[0] + ( 3.6499999999999999 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 3 - 1)*sc[18] + ( 0.38 - 1)*sc[20];
+    qf[12] *= Corr * k_f;
+    qr[12] *= Corr * k_f / (exp(g_RT[1] + g_RT[4] - g_RT[5]) * refCinv);
+    // (13):  HCO + M <=> H + CO + M
+    k_f = 1.0000000000000002e-06 * 1.87e+17 
+               * exp(-1 * tc[0] - 0.50321666580471969 * 17000 * invT);
+    Corr  = mixture + ( 2 - 1)*sc[0] + ( 0 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18];
+    qf[13] *= Corr * k_f;
+    qr[13] *= Corr * k_f / (exp(-g_RT[1] - g_RT[11] + g_RT[13]) * refC);
+    // (14):  O + H2 <=> H + OH
+    k_f = 1.0000000000000002e-06 * 50000 
+               * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * 6290 * invT);
+    Corr  = 1.0;
+    qf[14] *= Corr * k_f;
+    qr[14] *= Corr * k_f / exp(g_RT[0] - g_RT[1] + g_RT[2] - g_RT[4]);
+    // (15):  O + HO2 <=> OH + O2
+    k_f = 1.0000000000000002e-06 * 20000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[15] *= Corr * k_f;
+    qr[15] *= Corr * k_f / exp(g_RT[2] - g_RT[3] - g_RT[4] + g_RT[6]);
+    // (16):  O + CH2 <=> H + HCO
+    k_f = 1.0000000000000002e-06 * 80000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[16] *= Corr * k_f;
+    qr[16] *= Corr * k_f / exp(-g_RT[1] + g_RT[2] + g_RT[7] - g_RT[13]);
+    // (17):  O + CH2(S) <=> H + HCO
+    k_f = 1.0000000000000002e-06 * 15000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[17] *= Corr * k_f;
+    qr[17] *= Corr * k_f / exp(-g_RT[1] + g_RT[2] + g_RT[8] - g_RT[13]);
+    // (18):  O + CH3 <=> H + CH2O
+    k_f = 1.0000000000000002e-06 * 84300000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[18] *= Corr * k_f;
+    qr[18] *= Corr * k_f / exp(-g_RT[1] + g_RT[2] + g_RT[9] - g_RT[14]);
+    // (19):  O + CH4 <=> OH + CH3
+    k_f = 1.0000000000000002e-06 * 1020000000 
+               * exp(1.5 * tc[0] - 0.50321666580471969 * 8600 * invT);
+    Corr  = 1.0;
+    qf[19] *= Corr * k_f;
+    qr[19] *= Corr * k_f / exp(g_RT[2] - g_RT[4] - g_RT[9] + g_RT[10]);
+    // (20):  O + HCO <=> OH + CO
+    k_f = 1.0000000000000002e-06 * 30000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[20] *= Corr * k_f;
+    qr[20] *= Corr * k_f / exp(g_RT[2] - g_RT[4] - g_RT[11] + g_RT[13]);
+    // (21):  O + HCO <=> H + CO2
+    k_f = 1.0000000000000002e-06 * 30000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[21] *= Corr * k_f;
+    qr[21] *= Corr * k_f / exp(-g_RT[1] + g_RT[2] - g_RT[12] + g_RT[13]);
+    // (22):  O + CH2O <=> OH + HCO
+    k_f = 1.0000000000000002e-06 * 39000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 3540 * invT);
+    Corr  = 1.0;
+    qf[22] *= Corr * k_f;
+    qr[22] *= Corr * k_f / exp(g_RT[2] - g_RT[4] - g_RT[13] + g_RT[14]);
+    // (23):  O + C2H4 <=> CH3 + HCO
+    k_f = 1.0000000000000002e-06 * 19200000 
+               * exp(1.8300000000000001 * tc[0] - 0.50321666580471969 * 220 * invT);
+    Corr  = 1.0;
+    qf[23] *= Corr * k_f;
+    qr[23] *= Corr * k_f / exp(g_RT[2] - g_RT[9] - g_RT[13] + g_RT[16]);
+    // (24):  O + C2H5 <=> CH3 + CH2O
+    k_f = 1.0000000000000002e-06 * 132000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[24] *= Corr * k_f;
+    qr[24] *= Corr * k_f / exp(g_RT[2] - g_RT[9] - g_RT[14] + g_RT[17]);
+    // (25):  O + C2H6 <=> OH + C2H5
+    k_f = 1.0000000000000002e-06 * 89800000 
+               * exp(1.9199999999999999 * tc[0] - 0.50321666580471969 * 5690 * invT);
+    Corr  = 1.0;
+    qf[25] *= Corr * k_f;
+    qr[25] *= Corr * k_f / exp(g_RT[2] - g_RT[4] - g_RT[17] + g_RT[18]);
+    // (26):  O2 + CO <=> O + CO2
+    k_f = 1.0000000000000002e-06 * 2500000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 47800 * invT);
+    Corr  = 1.0;
+    qf[26] *= Corr * k_f;
+    qr[26] *= Corr * k_f / exp(-g_RT[2] + g_RT[3] + g_RT[11] - g_RT[12]);
+    // (27):  O2 + CH2O <=> HO2 + HCO
+    k_f = 1.0000000000000002e-06 * 100000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 40000 * invT);
+    Corr  = 1.0;
+    qf[27] *= Corr * k_f;
+    qr[27] *= Corr * k_f / exp(g_RT[3] - g_RT[6] - g_RT[13] + g_RT[14]);
+    // (28):  H + 2 O2 <=> HO2 + O2
+    k_f = 1.0000000000000002e-12 * 3e+20 
+               * exp(-1.72 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[28] *= Corr * k_f;
+    qr[28] *= Corr * k_f / (exp(g_RT[1] + 2*g_RT[3] - g_RT[3] - g_RT[6]) * refCinv);
+    // (29):  H + O2 + H2O <=> HO2 + H2O
+    k_f = 1.0000000000000002e-12 * 9.38e+18 
+               * exp(-0.76000000000000001 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[29] *= Corr * k_f;
+    qr[29] *= Corr * k_f / (exp(g_RT[1] + g_RT[3] + g_RT[5] - g_RT[5] - g_RT[6]) * refCinv);
+    // (30):  H + O2 + N2 <=> HO2 + N2
+    k_f = 1.0000000000000002e-12 * 3.75e+20 
+               * exp(-1.72 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[30] *= Corr * k_f;
+    qr[30] *= Corr * k_f / (exp(g_RT[1] + g_RT[3] - g_RT[6] + g_RT[19] - g_RT[19]) * refCinv);
+    // (31):  H + O2 + AR <=> HO2 + AR
+    k_f = 1.0000000000000002e-12 * 7e+17 
+               * exp(-0.80000000000000004 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[31] *= Corr * k_f;
+    qr[31] *= Corr * k_f / (exp(g_RT[1] + g_RT[3] - g_RT[6] + g_RT[20] - g_RT[20]) * refCinv);
+    // (32):  H + O2 <=> O + OH
+    k_f = 1.0000000000000002e-06 * 83000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 14413 * invT);
+    Corr  = 1.0;
+    qf[32] *= Corr * k_f;
+    qr[32] *= Corr * k_f / exp(g_RT[1] - g_RT[2] + g_RT[3] - g_RT[4]);
+    // (33):  2 H + H2 <=> 2 H2
+    k_f = 1.0000000000000002e-12 * 90000000000000000 
+               * exp(-0.59999999999999998 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[33] *= Corr * k_f;
+    qr[33] *= Corr * k_f / (exp(g_RT[0] - 2*g_RT[0] + 2*g_RT[1]) * refCinv);
+    // (34):  2 H + H2O <=> H2 + H2O
+    k_f = 1.0000000000000002e-12 * 6e+19 
+               * exp(-1.25 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[34] *= Corr * k_f;
+    qr[34] *= Corr * k_f / (exp(-g_RT[0] + 2*g_RT[1] + g_RT[5] - g_RT[5]) * refCinv);
+    // (35):  2 H + CO2 <=> H2 + CO2
+    k_f = 1.0000000000000002e-12 * 5.5e+20 
+               * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[35] *= Corr * k_f;
+    qr[35] *= Corr * k_f / (exp(-g_RT[0] + 2*g_RT[1] + g_RT[12] - g_RT[12]) * refCinv);
+    // (36):  H + HO2 <=> O2 + H2
+    k_f = 1.0000000000000002e-06 * 28000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 1068 * invT);
+    Corr  = 1.0;
+    qf[36] *= Corr * k_f;
+    qr[36] *= Corr * k_f / exp(-g_RT[0] + g_RT[1] - g_RT[3] + g_RT[6]);
+    // (37):  H + HO2 <=> 2 OH
+    k_f = 1.0000000000000002e-06 * 134000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 635 * invT);
+    Corr  = 1.0;
+    qf[37] *= Corr * k_f;
+    qr[37] *= Corr * k_f / exp(g_RT[1] - 2*g_RT[4] + g_RT[6]);
+    // (38):  H + CH4 <=> CH3 + H2
+    k_f = 1.0000000000000002e-06 * 660000000 
+               * exp(1.6200000000000001 * tc[0] - 0.50321666580471969 * 10840 * invT);
+    Corr  = 1.0;
+    qf[38] *= Corr * k_f;
+    qr[38] *= Corr * k_f / exp(-g_RT[0] + g_RT[1] - g_RT[9] + g_RT[10]);
+    // (39):  H + HCO <=> H2 + CO
+    k_f = 1.0000000000000002e-06 * 73400000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[39] *= Corr * k_f;
+    qr[39] *= Corr * k_f / exp(-g_RT[0] + g_RT[1] - g_RT[11] + g_RT[13]);
+    // (40):  H + CH2O <=> HCO + H2
+    k_f = 1.0000000000000002e-06 * 23000000000 
+               * exp(1.05 * tc[0] - 0.50321666580471969 * 3275 * invT);
+    Corr  = 1.0;
+    qf[40] *= Corr * k_f;
+    qr[40] *= Corr * k_f / exp(-g_RT[0] + g_RT[1] - g_RT[13] + g_RT[14]);
+    // (41):  H + CH3O <=> OH + CH3
+    k_f = 1.0000000000000002e-06 * 32000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[41] *= Corr * k_f;
+    qr[41] *= Corr * k_f / exp(g_RT[1] - g_RT[4] - g_RT[9] + g_RT[15]);
+    // (42):  H + C2H6 <=> C2H5 + H2
+    k_f = 1.0000000000000002e-06 * 115000000 
+               * exp(1.8999999999999999 * tc[0] - 0.50321666580471969 * 7530 * invT);
+    Corr  = 1.0;
+    qf[42] *= Corr * k_f;
+    qr[42] *= Corr * k_f / exp(-g_RT[0] + g_RT[1] - g_RT[17] + g_RT[18]);
+    // (43):  OH + H2 <=> H + H2O
+    k_f = 1.0000000000000002e-06 * 216000000 
+               * exp(1.51 * tc[0] - 0.50321666580471969 * 3430 * invT);
+    Corr  = 1.0;
+    qf[43] *= Corr * k_f;
+    qr[43] *= Corr * k_f / exp(g_RT[0] - g_RT[1] + g_RT[4] - g_RT[5]);
+    // (44):  2 OH <=> O + H2O
+    k_f = 1.0000000000000002e-06 * 35700 
+               * exp(2.3999999999999999 * tc[0] - 0.50321666580471969 * -2110 * invT);
+    Corr  = 1.0;
+    qf[44] *= Corr * k_f;
+    qr[44] *= Corr * k_f / exp(-g_RT[2] + 2*g_RT[4] - g_RT[5]);
+    // (45):  OH + HO2 <=> O2 + H2O
+    k_f = 1.0000000000000002e-06 * 29000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * -500 * invT);
+    Corr  = 1.0;
+    qf[45] *= Corr * k_f;
+    qr[45] *= Corr * k_f / exp(-g_RT[3] + g_RT[4] - g_RT[5] + g_RT[6]);
+    // (46):  OH + CH2 <=> H + CH2O
+    k_f = 1.0000000000000002e-06 * 20000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[46] *= Corr * k_f;
+    qr[46] *= Corr * k_f / exp(-g_RT[1] + g_RT[4] + g_RT[7] - g_RT[14]);
+    // (47):  OH + CH2(S) <=> H + CH2O
+    k_f = 1.0000000000000002e-06 * 30000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[47] *= Corr * k_f;
+    qr[47] *= Corr * k_f / exp(-g_RT[1] + g_RT[4] + g_RT[8] - g_RT[14]);
+    // (48):  OH + CH3 <=> CH2 + H2O
+    k_f = 1.0000000000000002e-06 * 56000000 
+               * exp(1.6000000000000001 * tc[0] - 0.50321666580471969 * 5420 * invT);
+    Corr  = 1.0;
+    qf[48] *= Corr * k_f;
+    qr[48] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[7] + g_RT[9]);
+    // (49):  OH + CH3 <=> CH2(S) + H2O
+    k_f = 1.0000000000000002e-06 * 25010000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[49] *= Corr * k_f;
+    qr[49] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[8] + g_RT[9]);
+    // (50):  OH + CH4 <=> CH3 + H2O
+    k_f = 1.0000000000000002e-06 * 100000000 
+               * exp(1.6000000000000001 * tc[0] - 0.50321666580471969 * 3120 * invT);
+    Corr  = 1.0;
+    qf[50] *= Corr * k_f;
+    qr[50] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[9] + g_RT[10]);
+    // (51):  OH + CO <=> H + CO2
+    k_f = 1.0000000000000002e-06 * 47600000 
+               * exp(1.228 * tc[0] - 0.50321666580471969 * 70 * invT);
+    Corr  = 1.0;
+    qf[51] *= Corr * k_f;
+    qr[51] *= Corr * k_f / exp(-g_RT[1] + g_RT[4] + g_RT[11] - g_RT[12]);
+    // (52):  OH + HCO <=> H2O + CO
+    k_f = 1.0000000000000002e-06 * 50000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[52] *= Corr * k_f;
+    qr[52] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[11] + g_RT[13]);
+    // (53):  OH + CH2O <=> HCO + H2O
+    k_f = 1.0000000000000002e-06 * 3430000000 
+               * exp(1.1799999999999999 * tc[0] - 0.50321666580471969 * -447 * invT);
+    Corr  = 1.0;
+    qf[53] *= Corr * k_f;
+    qr[53] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[13] + g_RT[14]);
+    // (54):  OH + C2H6 <=> C2H5 + H2O
+    k_f = 1.0000000000000002e-06 * 3540000 
+               * exp(2.1200000000000001 * tc[0] - 0.50321666580471969 * 870 * invT);
+    Corr  = 1.0;
+    qf[54] *= Corr * k_f;
+    qr[54] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[17] + g_RT[18]);
+    // (55):  HO2 + CH2 <=> OH + CH2O
+    k_f = 1.0000000000000002e-06 * 20000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[55] *= Corr * k_f;
+    qr[55] *= Corr * k_f / exp(-g_RT[4] + g_RT[6] + g_RT[7] - g_RT[14]);
+    // (56):  HO2 + CH3 <=> O2 + CH4
+    k_f = 1.0000000000000002e-06 * 1000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[56] *= Corr * k_f;
+    qr[56] *= Corr * k_f / exp(-g_RT[3] + g_RT[6] + g_RT[9] - g_RT[10]);
+    // (57):  HO2 + CH3 <=> OH + CH3O
+    k_f = 1.0000000000000002e-06 * 20000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[57] *= Corr * k_f;
+    qr[57] *= Corr * k_f / exp(-g_RT[4] + g_RT[6] + g_RT[9] - g_RT[15]);
+    // (58):  HO2 + CO <=> OH + CO2
+    k_f = 1.0000000000000002e-06 * 150000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 23600 * invT);
+    Corr  = 1.0;
+    qf[58] *= Corr * k_f;
+    qr[58] *= Corr * k_f / exp(-g_RT[4] + g_RT[6] + g_RT[11] - g_RT[12]);
+    // (59):  CH2 + O2 <=> OH + HCO
+    k_f = 1.0000000000000002e-06 * 13200000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 1500 * invT);
+    Corr  = 1.0;
+    qf[59] *= Corr * k_f;
+    qr[59] *= Corr * k_f / exp(g_RT[3] - g_RT[4] + g_RT[7] - g_RT[13]);
+    // (60):  CH2 + H2 <=> H + CH3
+    k_f = 1.0000000000000002e-06 * 500000 
+               * exp(2 * tc[0] - 0.50321666580471969 * 7230 * invT);
+    Corr  = 1.0;
+    qf[60] *= Corr * k_f;
+    qr[60] *= Corr * k_f / exp(g_RT[0] - g_RT[1] + g_RT[7] - g_RT[9]);
+    // (61):  CH2 + CH3 <=> H + C2H4
+    k_f = 1.0000000000000002e-06 * 40000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[61] *= Corr * k_f;
+    qr[61] *= Corr * k_f / exp(-g_RT[1] + g_RT[7] + g_RT[9] - g_RT[16]);
+    // (62):  CH2 + CH4 <=> 2 CH3
+    k_f = 1.0000000000000002e-06 * 2460000 
+               * exp(2 * tc[0] - 0.50321666580471969 * 8270 * invT);
+    Corr  = 1.0;
+    qf[62] *= Corr * k_f;
+    qr[62] *= Corr * k_f / exp(g_RT[7] - 2*g_RT[9] + g_RT[10]);
+    // (63):  CH2(S) + N2 <=> CH2 + N2
+    k_f = 1.0000000000000002e-06 * 15000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 600 * invT);
+    Corr  = 1.0;
+    qf[63] *= Corr * k_f;
+    qr[63] *= Corr * k_f / exp(-g_RT[7] + g_RT[8] + g_RT[19] - g_RT[19]);
+    // (64):  CH2(S) + AR <=> CH2 + AR
+    k_f = 1.0000000000000002e-06 * 9000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 600 * invT);
+    Corr  = 1.0;
+    qf[64] *= Corr * k_f;
+    qr[64] *= Corr * k_f / exp(-g_RT[7] + g_RT[8] + g_RT[20] - g_RT[20]);
+    // (65):  CH2(S) + O2 <=> H + OH + CO
+    k_f = 1.0000000000000002e-06 * 28000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[65] *= Corr * k_f;
+    qr[65] *= Corr * k_f / (exp(-g_RT[1] + g_RT[3] - g_RT[4] + g_RT[8] - g_RT[11]) * refC);
+    // (66):  CH2(S) + O2 <=> CO + H2O
+    k_f = 1.0000000000000002e-06 * 12000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[66] *= Corr * k_f;
+    qr[66] *= Corr * k_f / exp(g_RT[3] - g_RT[5] + g_RT[8] - g_RT[11]);
+    // (67):  CH2(S) + H2 <=> CH3 + H
+    k_f = 1.0000000000000002e-06 * 70000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[67] *= Corr * k_f;
+    qr[67] *= Corr * k_f / exp(g_RT[0] - g_RT[1] + g_RT[8] - g_RT[9]);
+    // (68):  CH2(S) + H2O <=> CH2 + H2O
+    k_f = 1.0000000000000002e-06 * 30000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[68] *= Corr * k_f;
+    qr[68] *= Corr * k_f / exp(g_RT[5] - g_RT[5] - g_RT[7] + g_RT[8]);
+    // (69):  CH2(S) + CH3 <=> H + C2H4
+    k_f = 1.0000000000000002e-06 * 12000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * -570 * invT);
+    Corr  = 1.0;
+    qf[69] *= Corr * k_f;
+    qr[69] *= Corr * k_f / exp(-g_RT[1] + g_RT[8] + g_RT[9] - g_RT[16]);
+    // (70):  CH2(S) + CH4 <=> 2 CH3
+    k_f = 1.0000000000000002e-06 * 16000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * -570 * invT);
+    Corr  = 1.0;
+    qf[70] *= Corr * k_f;
+    qr[70] *= Corr * k_f / exp(g_RT[8] - 2*g_RT[9] + g_RT[10]);
+    // (71):  CH2(S) + CO <=> CH2 + CO
+    k_f = 1.0000000000000002e-06 * 9000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[71] *= Corr * k_f;
+    qr[71] *= Corr * k_f / exp(-g_RT[7] + g_RT[8] + g_RT[11] - g_RT[11]);
+    // (72):  CH2(S) + CO2 <=> CH2 + CO2
+    k_f = 1.0000000000000002e-06 * 7000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[72] *= Corr * k_f;
+    qr[72] *= Corr * k_f / exp(-g_RT[7] + g_RT[8] + g_RT[12] - g_RT[12]);
+    // (73):  CH2(S) + CO2 <=> CO + CH2O
+    k_f = 1.0000000000000002e-06 * 14000000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[73] *= Corr * k_f;
+    qr[73] *= Corr * k_f / exp(g_RT[8] - g_RT[11] + g_RT[12] - g_RT[14]);
+    // (74):  CH3 + O2 <=> O + CH3O
+    k_f = 1.0000000000000002e-06 * 26750000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 28800 * invT);
+    Corr  = 1.0;
+    qf[74] *= Corr * k_f;
+    qr[74] *= Corr * k_f / exp(-g_RT[2] + g_RT[3] + g_RT[9] - g_RT[15]);
+    // (75):  CH3 + O2 <=> OH + CH2O
+    k_f = 1.0000000000000002e-06 * 36000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 8940 * invT);
+    Corr  = 1.0;
+    qf[75] *= Corr * k_f;
+    qr[75] *= Corr * k_f / exp(g_RT[3] - g_RT[4] + g_RT[9] - g_RT[14]);
+    // (76):  2 CH3 <=> H + C2H5
+    k_f = 1.0000000000000002e-06 * 4990000000000 
+               * exp(0.10000000000000001 * tc[0] - 0.50321666580471969 * 10600 * invT);
+    Corr  = 1.0;
+    qf[76] *= Corr * k_f;
+    qr[76] *= Corr * k_f / exp(-g_RT[1] + 2*g_RT[9] - g_RT[17]);
+    // (77):  CH3 + HCO <=> CH4 + CO
+    k_f = 1.0000000000000002e-06 * 26480000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    Corr  = 1.0;
+    qf[77] *= Corr * k_f;
+    qr[77] *= Corr * k_f / exp(g_RT[9] - g_RT[10] - g_RT[11] + g_RT[13]);
+    // (78):  CH3 + CH2O <=> HCO + CH4
+    k_f = 1.0000000000000002e-06 * 3320 
+               * exp(2.8100000000000001 * tc[0] - 0.50321666580471969 * 5860 * invT);
+    Corr  = 1.0;
+    qf[78] *= Corr * k_f;
+    qr[78] *= Corr * k_f / exp(g_RT[9] - g_RT[10] - g_RT[13] + g_RT[14]);
+    // (79):  CH3 + C2H6 <=> C2H5 + CH4
+    k_f = 1.0000000000000002e-06 * 6140000 
+               * exp(1.74 * tc[0] - 0.50321666580471969 * 10450 * invT);
+    Corr  = 1.0;
+    qf[79] *= Corr * k_f;
+    qr[79] *= Corr * k_f / exp(g_RT[9] - g_RT[10] - g_RT[17] + g_RT[18]);
+    // (80):  HCO + H2O <=> H + CO + H2O
+    k_f = 1.0000000000000002e-06 * 2.244e+18 
+               * exp(-1 * tc[0] - 0.50321666580471969 * 17000 * invT);
+    Corr  = 1.0;
+    qf[80] *= Corr * k_f;
+    qr[80] *= Corr * k_f / (exp(-g_RT[1] + g_RT[5] - g_RT[5] - g_RT[11] + g_RT[13]) * refC);
+    // (81):  HCO + O2 <=> HO2 + CO
+    k_f = 1.0000000000000002e-06 * 7600000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 400 * invT);
+    Corr  = 1.0;
+    qf[81] *= Corr * k_f;
+    qr[81] *= Corr * k_f / exp(g_RT[3] - g_RT[6] - g_RT[11] + g_RT[13]);
+    // (82):  CH3O + O2 <=> HO2 + CH2O
+    k_f = 1.0000000000000002e-06 * 4.2799999999999999e-13 
+               * exp(7.5999999999999996 * tc[0] - 0.50321666580471969 * -3530 * invT);
+    Corr  = 1.0;
+    qf[82] *= Corr * k_f;
+    qr[82] *= Corr * k_f / exp(g_RT[3] - g_RT[6] - g_RT[14] + g_RT[15]);
+    // (83):  C2H5 + O2 <=> HO2 + C2H4
+    k_f = 1.0000000000000002e-06 * 840000000000 
+               * exp(0 * tc[0] - 0.50321666580471969 * 3875 * invT);
+    Corr  = 1.0;
+    qf[83] *= Corr * k_f;
+    qr[83] *= Corr * k_f / exp(g_RT[3] - g_RT[6] - g_RT[16] + g_RT[17]);
+
 
     return;
 }
 
 /*compute the reaction Jacobian */
-__device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP, void *user_data)
+__device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP)
 {
     double c[21];
 
@@ -2320,7 +2664,7 @@ __device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP, void 
         c[k] = 1.e6 * sc[k];
     }
 
-    ajacobian_d(J, c, *Tp, *consP, user_data);
+    ajacobian_d(J, c, *Tp, *consP);
 
     /* dwdot[k]/dT */
     /* dTdot/d[X] */
@@ -2331,1051 +2675,6 @@ __device__ void dwdot_d(double * J, double * sc, double * Tp, int * consP, void 
 
     return;
 }
-
-void initialize_chemistry_device(UserData user_data)
-{
-    // (0):  H + CH2 (+M) <=> CH3 (+M)
-    user_data->fwd_A[0]     = 25000000000000000;
-    user_data->fwd_beta[0]  = -0.80000000000000004;
-    user_data->fwd_Ea[0]    = 0;
-    user_data->low_A[0]     = 3.2000000000000002e+27;
-    user_data->low_beta[0]  = -3.1400000000000001;
-    user_data->low_Ea[0]    = 1230;
-    user_data->troe_a[0]    = 0.68000000000000005;
-    user_data->troe_Tsss[0] = 78;
-    user_data->troe_Ts[0]   = 1995;
-    user_data->troe_Tss[0]  = 5590;
-    user_data->troe_len[0]  = 4;
-    user_data->prefactor_units[0]  = 1.0000000000000002e-06;
-    user_data->activation_units[0] = 0.50321666580471969;
-    user_data->phase_units[0]      = 1e-12;
-    user_data->is_PD[0] = 1;
-    user_data->nTB[0] = 7;
-    cudaMallocManaged(&user_data->TB[0], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[0], 7 * sizeof(int));
-    user_data->TBid[0][0] = 0; user_data->TB[0][0] = 2; // H2
-    user_data->TBid[0][1] = 5; user_data->TB[0][1] = 6; // H2O
-    user_data->TBid[0][2] = 10; user_data->TB[0][2] = 2; // CH4
-    user_data->TBid[0][3] = 11; user_data->TB[0][3] = 1.5; // CO
-    user_data->TBid[0][4] = 12; user_data->TB[0][4] = 2; // CO2
-    user_data->TBid[0][5] = 18; user_data->TB[0][5] = 3; // C2H6
-    user_data->TBid[0][6] = 20; user_data->TB[0][6] = 0.69999999999999996; // AR
-
-    // (1):  H + CH3 (+M) <=> CH4 (+M)
-    user_data->fwd_A[1]     = 12700000000000000;
-    user_data->fwd_beta[1]  = -0.63;
-    user_data->fwd_Ea[1]    = 383;
-    user_data->low_A[1]     = 2.4769999999999999e+33;
-    user_data->low_beta[1]  = -4.7599999999999998;
-    user_data->low_Ea[1]    = 2440;
-    user_data->troe_a[1]    = 0.78300000000000003;
-    user_data->troe_Tsss[1] = 74;
-    user_data->troe_Ts[1]   = 2941;
-    user_data->troe_Tss[1]  = 6964;
-    user_data->troe_len[1]  = 4;
-    user_data->prefactor_units[1]  = 1.0000000000000002e-06;
-    user_data->activation_units[1] = 0.50321666580471969;
-    user_data->phase_units[1]      = 1e-12;
-    user_data->is_PD[1] = 1;
-    user_data->nTB[1] = 7;
-    cudaMallocManaged(&user_data->TB[1], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[1], 7 * sizeof(int));
-    user_data->TBid[1][0] = 0; user_data->TB[1][0] = 2; // H2
-    user_data->TBid[1][1] = 5; user_data->TB[1][1] = 6; // H2O
-    user_data->TBid[1][2] = 10; user_data->TB[1][2] = 2; // CH4
-    user_data->TBid[1][3] = 11; user_data->TB[1][3] = 1.5; // CO
-    user_data->TBid[1][4] = 12; user_data->TB[1][4] = 2; // CO2
-    user_data->TBid[1][5] = 18; user_data->TB[1][5] = 3; // C2H6
-    user_data->TBid[1][6] = 20; user_data->TB[1][6] = 0.69999999999999996; // AR
-
-    // (2):  H + HCO (+M) <=> CH2O (+M)
-    user_data->fwd_A[2]     = 1090000000000;
-    user_data->fwd_beta[2]  = 0.47999999999999998;
-    user_data->fwd_Ea[2]    = -260;
-    user_data->low_A[2]     = 1.35e+24;
-    user_data->low_beta[2]  = -2.5699999999999998;
-    user_data->low_Ea[2]    = 1425;
-    user_data->troe_a[2]    = 0.78239999999999998;
-    user_data->troe_Tsss[2] = 271;
-    user_data->troe_Ts[2]   = 2755;
-    user_data->troe_Tss[2]  = 6570;
-    user_data->troe_len[2]  = 4;
-    user_data->prefactor_units[2]  = 1.0000000000000002e-06;
-    user_data->activation_units[2] = 0.50321666580471969;
-    user_data->phase_units[2]      = 1e-12;
-    user_data->is_PD[2] = 1;
-    user_data->nTB[2] = 7;
-    cudaMallocManaged(&user_data->TB[2], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[2], 7 * sizeof(int));
-    user_data->TBid[2][0] = 0; user_data->TB[2][0] = 2; // H2
-    user_data->TBid[2][1] = 5; user_data->TB[2][1] = 6; // H2O
-    user_data->TBid[2][2] = 10; user_data->TB[2][2] = 2; // CH4
-    user_data->TBid[2][3] = 11; user_data->TB[2][3] = 1.5; // CO
-    user_data->TBid[2][4] = 12; user_data->TB[2][4] = 2; // CO2
-    user_data->TBid[2][5] = 18; user_data->TB[2][5] = 3; // C2H6
-    user_data->TBid[2][6] = 20; user_data->TB[2][6] = 0.69999999999999996; // AR
-
-    // (3):  H + CH2O (+M) <=> CH3O (+M)
-    user_data->fwd_A[3]     = 540000000000;
-    user_data->fwd_beta[3]  = 0.45400000000000001;
-    user_data->fwd_Ea[3]    = 2600;
-    user_data->low_A[3]     = 2.2e+30;
-    user_data->low_beta[3]  = -4.7999999999999998;
-    user_data->low_Ea[3]    = 5560;
-    user_data->troe_a[3]    = 0.75800000000000001;
-    user_data->troe_Tsss[3] = 94;
-    user_data->troe_Ts[3]   = 1555;
-    user_data->troe_Tss[3]  = 4200;
-    user_data->troe_len[3]  = 4;
-    user_data->prefactor_units[3]  = 1.0000000000000002e-06;
-    user_data->activation_units[3] = 0.50321666580471969;
-    user_data->phase_units[3]      = 1e-12;
-    user_data->is_PD[3] = 1;
-    user_data->nTB[3] = 6;
-    cudaMallocManaged(&user_data->TB[3], 6 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[3], 6 * sizeof(int));
-    user_data->TBid[3][0] = 0; user_data->TB[3][0] = 2; // H2
-    user_data->TBid[3][1] = 5; user_data->TB[3][1] = 6; // H2O
-    user_data->TBid[3][2] = 10; user_data->TB[3][2] = 2; // CH4
-    user_data->TBid[3][3] = 11; user_data->TB[3][3] = 1.5; // CO
-    user_data->TBid[3][4] = 12; user_data->TB[3][4] = 2; // CO2
-    user_data->TBid[3][5] = 18; user_data->TB[3][5] = 3; // C2H6
-
-    // (4):  H + C2H4 (+M) <=> C2H5 (+M)
-    user_data->fwd_A[4]     = 1080000000000;
-    user_data->fwd_beta[4]  = 0.45400000000000001;
-    user_data->fwd_Ea[4]    = 1820;
-    user_data->low_A[4]     = 1.1999999999999999e+42;
-    user_data->low_beta[4]  = -7.6200000000000001;
-    user_data->low_Ea[4]    = 6970;
-    user_data->troe_a[4]    = 0.97529999999999994;
-    user_data->troe_Tsss[4] = 210;
-    user_data->troe_Ts[4]   = 984;
-    user_data->troe_Tss[4]  = 4374;
-    user_data->troe_len[4]  = 4;
-    user_data->prefactor_units[4]  = 1.0000000000000002e-06;
-    user_data->activation_units[4] = 0.50321666580471969;
-    user_data->phase_units[4]      = 1e-12;
-    user_data->is_PD[4] = 1;
-    user_data->nTB[4] = 7;
-    cudaMallocManaged(&user_data->TB[4], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[4], 7 * sizeof(int));
-    user_data->TBid[4][0] = 0; user_data->TB[4][0] = 2; // H2
-    user_data->TBid[4][1] = 5; user_data->TB[4][1] = 6; // H2O
-    user_data->TBid[4][2] = 10; user_data->TB[4][2] = 2; // CH4
-    user_data->TBid[4][3] = 11; user_data->TB[4][3] = 1.5; // CO
-    user_data->TBid[4][4] = 12; user_data->TB[4][4] = 2; // CO2
-    user_data->TBid[4][5] = 18; user_data->TB[4][5] = 3; // C2H6
-    user_data->TBid[4][6] = 20; user_data->TB[4][6] = 0.69999999999999996; // AR
-
-    // (5):  H + C2H5 (+M) <=> C2H6 (+M)
-    user_data->fwd_A[5]     = 5.21e+17;
-    user_data->fwd_beta[5]  = -0.98999999999999999;
-    user_data->fwd_Ea[5]    = 1580;
-    user_data->low_A[5]     = 1.9900000000000001e+41;
-    user_data->low_beta[5]  = -7.0800000000000001;
-    user_data->low_Ea[5]    = 6685;
-    user_data->troe_a[5]    = 0.84219999999999995;
-    user_data->troe_Tsss[5] = 125;
-    user_data->troe_Ts[5]   = 2219;
-    user_data->troe_Tss[5]  = 6882;
-    user_data->troe_len[5]  = 4;
-    user_data->prefactor_units[5]  = 1.0000000000000002e-06;
-    user_data->activation_units[5] = 0.50321666580471969;
-    user_data->phase_units[5]      = 1e-12;
-    user_data->is_PD[5] = 1;
-    user_data->nTB[5] = 7;
-    cudaMallocManaged(&user_data->TB[5], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[5], 7 * sizeof(int));
-    user_data->TBid[5][0] = 0; user_data->TB[5][0] = 2; // H2
-    user_data->TBid[5][1] = 5; user_data->TB[5][1] = 6; // H2O
-    user_data->TBid[5][2] = 10; user_data->TB[5][2] = 2; // CH4
-    user_data->TBid[5][3] = 11; user_data->TB[5][3] = 1.5; // CO
-    user_data->TBid[5][4] = 12; user_data->TB[5][4] = 2; // CO2
-    user_data->TBid[5][5] = 18; user_data->TB[5][5] = 3; // C2H6
-    user_data->TBid[5][6] = 20; user_data->TB[5][6] = 0.69999999999999996; // AR
-
-    // (6):  H2 + CO (+M) <=> CH2O (+M)
-    user_data->fwd_A[6]     = 43000000;
-    user_data->fwd_beta[6]  = 1.5;
-    user_data->fwd_Ea[6]    = 79600;
-    user_data->low_A[6]     = 5.0699999999999998e+27;
-    user_data->low_beta[6]  = -3.4199999999999999;
-    user_data->low_Ea[6]    = 84350;
-    user_data->troe_a[6]    = 0.93200000000000005;
-    user_data->troe_Tsss[6] = 197;
-    user_data->troe_Ts[6]   = 1540;
-    user_data->troe_Tss[6]  = 10300;
-    user_data->troe_len[6]  = 4;
-    user_data->prefactor_units[6]  = 1.0000000000000002e-06;
-    user_data->activation_units[6] = 0.50321666580471969;
-    user_data->phase_units[6]      = 1e-12;
-    user_data->is_PD[6] = 1;
-    user_data->nTB[6] = 7;
-    cudaMallocManaged(&user_data->TB[6], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[6], 7 * sizeof(int));
-    user_data->TBid[6][0] = 0; user_data->TB[6][0] = 2; // H2
-    user_data->TBid[6][1] = 5; user_data->TB[6][1] = 6; // H2O
-    user_data->TBid[6][2] = 10; user_data->TB[6][2] = 2; // CH4
-    user_data->TBid[6][3] = 11; user_data->TB[6][3] = 1.5; // CO
-    user_data->TBid[6][4] = 12; user_data->TB[6][4] = 2; // CO2
-    user_data->TBid[6][5] = 18; user_data->TB[6][5] = 3; // C2H6
-    user_data->TBid[6][6] = 20; user_data->TB[6][6] = 0.69999999999999996; // AR
-
-    // (7):  2 CH3 (+M) <=> C2H6 (+M)
-    user_data->fwd_A[7]     = 21200000000000000;
-    user_data->fwd_beta[7]  = -0.96999999999999997;
-    user_data->fwd_Ea[7]    = 620;
-    user_data->low_A[7]     = 1.7700000000000001e+50;
-    user_data->low_beta[7]  = -9.6699999999999999;
-    user_data->low_Ea[7]    = 6220;
-    user_data->troe_a[7]    = 0.53249999999999997;
-    user_data->troe_Tsss[7] = 151;
-    user_data->troe_Ts[7]   = 1038;
-    user_data->troe_Tss[7]  = 4970;
-    user_data->troe_len[7]  = 4;
-    user_data->prefactor_units[7]  = 1.0000000000000002e-06;
-    user_data->activation_units[7] = 0.50321666580471969;
-    user_data->phase_units[7]      = 1e-12;
-    user_data->is_PD[7] = 1;
-    user_data->nTB[7] = 7;
-    cudaMallocManaged(&user_data->TB[7], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[7], 7 * sizeof(int));
-    user_data->TBid[7][0] = 0; user_data->TB[7][0] = 2; // H2
-    user_data->TBid[7][1] = 5; user_data->TB[7][1] = 6; // H2O
-    user_data->TBid[7][2] = 10; user_data->TB[7][2] = 2; // CH4
-    user_data->TBid[7][3] = 11; user_data->TB[7][3] = 1.5; // CO
-    user_data->TBid[7][4] = 12; user_data->TB[7][4] = 2; // CO2
-    user_data->TBid[7][5] = 18; user_data->TB[7][5] = 3; // C2H6
-    user_data->TBid[7][6] = 20; user_data->TB[7][6] = 0.69999999999999996; // AR
-
-    // (8):  O + H + M <=> OH + M
-    user_data->fwd_A[8]     = 5e+17;
-    user_data->fwd_beta[8]  = -1;
-    user_data->fwd_Ea[8]    = 0;
-    user_data->prefactor_units[8]  = 1.0000000000000002e-12;
-    user_data->activation_units[8] = 0.50321666580471969;
-    user_data->phase_units[8]      = 1e-12;
-    user_data->is_PD[8] = 0;
-    user_data->nTB[8] = 7;
-    cudaMallocManaged(&user_data->TB[8], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[8], 7 * sizeof(int));
-    user_data->TBid[8][0] = 0; user_data->TB[8][0] = 2; // H2
-    user_data->TBid[8][1] = 5; user_data->TB[8][1] = 6; // H2O
-    user_data->TBid[8][2] = 10; user_data->TB[8][2] = 2; // CH4
-    user_data->TBid[8][3] = 11; user_data->TB[8][3] = 1.5; // CO
-    user_data->TBid[8][4] = 12; user_data->TB[8][4] = 2; // CO2
-    user_data->TBid[8][5] = 18; user_data->TB[8][5] = 3; // C2H6
-    user_data->TBid[8][6] = 20; user_data->TB[8][6] = 0.69999999999999996; // AR
-
-    // (9):  O + CO + M <=> CO2 + M
-    user_data->fwd_A[9]     = 602000000000000;
-    user_data->fwd_beta[9]  = 0;
-    user_data->fwd_Ea[9]    = 3000;
-    user_data->prefactor_units[9]  = 1.0000000000000002e-12;
-    user_data->activation_units[9] = 0.50321666580471969;
-    user_data->phase_units[9]      = 1e-12;
-    user_data->is_PD[9] = 0;
-    user_data->nTB[9] = 8;
-    cudaMallocManaged(&user_data->TB[9], 8 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[9], 8 * sizeof(int));
-    user_data->TBid[9][0] = 0; user_data->TB[9][0] = 2; // H2
-    user_data->TBid[9][1] = 3; user_data->TB[9][1] = 6; // O2
-    user_data->TBid[9][2] = 5; user_data->TB[9][2] = 6; // H2O
-    user_data->TBid[9][3] = 10; user_data->TB[9][3] = 2; // CH4
-    user_data->TBid[9][4] = 11; user_data->TB[9][4] = 1.5; // CO
-    user_data->TBid[9][5] = 12; user_data->TB[9][5] = 3.5; // CO2
-    user_data->TBid[9][6] = 18; user_data->TB[9][6] = 3; // C2H6
-    user_data->TBid[9][7] = 20; user_data->TB[9][7] = 0.5; // AR
-
-    // (10):  H + O2 + M <=> HO2 + M
-    user_data->fwd_A[10]     = 2.8e+18;
-    user_data->fwd_beta[10]  = -0.85999999999999999;
-    user_data->fwd_Ea[10]    = 0;
-    user_data->prefactor_units[10]  = 1.0000000000000002e-12;
-    user_data->activation_units[10] = 0.50321666580471969;
-    user_data->phase_units[10]      = 1e-12;
-    user_data->is_PD[10] = 0;
-    user_data->nTB[10] = 7;
-    cudaMallocManaged(&user_data->TB[10], 7 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[10], 7 * sizeof(int));
-    user_data->TBid[10][0] = 3; user_data->TB[10][0] = 0; // O2
-    user_data->TBid[10][1] = 5; user_data->TB[10][1] = 0; // H2O
-    user_data->TBid[10][2] = 11; user_data->TB[10][2] = 0.75; // CO
-    user_data->TBid[10][3] = 12; user_data->TB[10][3] = 1.5; // CO2
-    user_data->TBid[10][4] = 18; user_data->TB[10][4] = 1.5; // C2H6
-    user_data->TBid[10][5] = 19; user_data->TB[10][5] = 0; // N2
-    user_data->TBid[10][6] = 20; user_data->TB[10][6] = 0; // AR
-
-    // (11):  2 H + M <=> H2 + M
-    user_data->fwd_A[11]     = 1e+18;
-    user_data->fwd_beta[11]  = -1;
-    user_data->fwd_Ea[11]    = 0;
-    user_data->prefactor_units[11]  = 1.0000000000000002e-12;
-    user_data->activation_units[11] = 0.50321666580471969;
-    user_data->phase_units[11]      = 1e-12;
-    user_data->is_PD[11] = 0;
-    user_data->nTB[11] = 6;
-    cudaMallocManaged(&user_data->TB[11], 6 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[11], 6 * sizeof(int));
-    user_data->TBid[11][0] = 0; user_data->TB[11][0] = 0; // H2
-    user_data->TBid[11][1] = 5; user_data->TB[11][1] = 0; // H2O
-    user_data->TBid[11][2] = 10; user_data->TB[11][2] = 2; // CH4
-    user_data->TBid[11][3] = 12; user_data->TB[11][3] = 0; // CO2
-    user_data->TBid[11][4] = 18; user_data->TB[11][4] = 3; // C2H6
-    user_data->TBid[11][5] = 20; user_data->TB[11][5] = 0.63; // AR
-
-    // (12):  H + OH + M <=> H2O + M
-    user_data->fwd_A[12]     = 2.2e+22;
-    user_data->fwd_beta[12]  = -2;
-    user_data->fwd_Ea[12]    = 0;
-    user_data->prefactor_units[12]  = 1.0000000000000002e-12;
-    user_data->activation_units[12] = 0.50321666580471969;
-    user_data->phase_units[12]      = 1e-12;
-    user_data->is_PD[12] = 0;
-    user_data->nTB[12] = 5;
-    cudaMallocManaged(&user_data->TB[12], 5 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[12], 5 * sizeof(int));
-    user_data->TBid[12][0] = 0; user_data->TB[12][0] = 0.72999999999999998; // H2
-    user_data->TBid[12][1] = 5; user_data->TB[12][1] = 3.6499999999999999; // H2O
-    user_data->TBid[12][2] = 10; user_data->TB[12][2] = 2; // CH4
-    user_data->TBid[12][3] = 18; user_data->TB[12][3] = 3; // C2H6
-    user_data->TBid[12][4] = 20; user_data->TB[12][4] = 0.38; // AR
-
-    // (13):  HCO + M <=> H + CO + M
-    user_data->fwd_A[13]     = 1.87e+17;
-    user_data->fwd_beta[13]  = -1;
-    user_data->fwd_Ea[13]    = 17000;
-    user_data->prefactor_units[13]  = 1.0000000000000002e-06;
-    user_data->activation_units[13] = 0.50321666580471969;
-    user_data->phase_units[13]      = 1e-6;
-    user_data->is_PD[13] = 0;
-    user_data->nTB[13] = 6;
-    cudaMallocManaged(&user_data->TB[13], 6 * sizeof(double));
-    cudaMallocManaged(&user_data->TBid[13], 6 * sizeof(int));
-    user_data->TBid[13][0] = 0; user_data->TB[13][0] = 2; // H2
-    user_data->TBid[13][1] = 5; user_data->TB[13][1] = 0; // H2O
-    user_data->TBid[13][2] = 10; user_data->TB[13][2] = 2; // CH4
-    user_data->TBid[13][3] = 11; user_data->TB[13][3] = 1.5; // CO
-    user_data->TBid[13][4] = 12; user_data->TB[13][4] = 2; // CO2
-    user_data->TBid[13][5] = 18; user_data->TB[13][5] = 3; // C2H6
-
-    // (14):  O + H2 <=> H + OH
-    user_data->fwd_A[14]     = 50000;
-    user_data->fwd_beta[14]  = 2.6699999999999999;
-    user_data->fwd_Ea[14]    = 6290;
-    user_data->prefactor_units[14]  = 1.0000000000000002e-06;
-    user_data->activation_units[14] = 0.50321666580471969;
-    user_data->phase_units[14]      = 1e-12;
-    user_data->is_PD[14] = 0;
-    user_data->nTB[14] = 0;
-
-    // (15):  O + HO2 <=> OH + O2
-    user_data->fwd_A[15]     = 20000000000000;
-    user_data->fwd_beta[15]  = 0;
-    user_data->fwd_Ea[15]    = 0;
-    user_data->prefactor_units[15]  = 1.0000000000000002e-06;
-    user_data->activation_units[15] = 0.50321666580471969;
-    user_data->phase_units[15]      = 1e-12;
-    user_data->is_PD[15] = 0;
-    user_data->nTB[15] = 0;
-
-    // (16):  O + CH2 <=> H + HCO
-    user_data->fwd_A[16]     = 80000000000000;
-    user_data->fwd_beta[16]  = 0;
-    user_data->fwd_Ea[16]    = 0;
-    user_data->prefactor_units[16]  = 1.0000000000000002e-06;
-    user_data->activation_units[16] = 0.50321666580471969;
-    user_data->phase_units[16]      = 1e-12;
-    user_data->is_PD[16] = 0;
-    user_data->nTB[16] = 0;
-
-    // (17):  O + CH2(S) <=> H + HCO
-    user_data->fwd_A[17]     = 15000000000000;
-    user_data->fwd_beta[17]  = 0;
-    user_data->fwd_Ea[17]    = 0;
-    user_data->prefactor_units[17]  = 1.0000000000000002e-06;
-    user_data->activation_units[17] = 0.50321666580471969;
-    user_data->phase_units[17]      = 1e-12;
-    user_data->is_PD[17] = 0;
-    user_data->nTB[17] = 0;
-
-    // (18):  O + CH3 <=> H + CH2O
-    user_data->fwd_A[18]     = 84300000000000;
-    user_data->fwd_beta[18]  = 0;
-    user_data->fwd_Ea[18]    = 0;
-    user_data->prefactor_units[18]  = 1.0000000000000002e-06;
-    user_data->activation_units[18] = 0.50321666580471969;
-    user_data->phase_units[18]      = 1e-12;
-    user_data->is_PD[18] = 0;
-    user_data->nTB[18] = 0;
-
-    // (19):  O + CH4 <=> OH + CH3
-    user_data->fwd_A[19]     = 1020000000;
-    user_data->fwd_beta[19]  = 1.5;
-    user_data->fwd_Ea[19]    = 8600;
-    user_data->prefactor_units[19]  = 1.0000000000000002e-06;
-    user_data->activation_units[19] = 0.50321666580471969;
-    user_data->phase_units[19]      = 1e-12;
-    user_data->is_PD[19] = 0;
-    user_data->nTB[19] = 0;
-
-    // (20):  O + HCO <=> OH + CO
-    user_data->fwd_A[20]     = 30000000000000;
-    user_data->fwd_beta[20]  = 0;
-    user_data->fwd_Ea[20]    = 0;
-    user_data->prefactor_units[20]  = 1.0000000000000002e-06;
-    user_data->activation_units[20] = 0.50321666580471969;
-    user_data->phase_units[20]      = 1e-12;
-    user_data->is_PD[20] = 0;
-    user_data->nTB[20] = 0;
-
-    // (21):  O + HCO <=> H + CO2
-    user_data->fwd_A[21]     = 30000000000000;
-    user_data->fwd_beta[21]  = 0;
-    user_data->fwd_Ea[21]    = 0;
-    user_data->prefactor_units[21]  = 1.0000000000000002e-06;
-    user_data->activation_units[21] = 0.50321666580471969;
-    user_data->phase_units[21]      = 1e-12;
-    user_data->is_PD[21] = 0;
-    user_data->nTB[21] = 0;
-
-    // (22):  O + CH2O <=> OH + HCO
-    user_data->fwd_A[22]     = 39000000000000;
-    user_data->fwd_beta[22]  = 0;
-    user_data->fwd_Ea[22]    = 3540;
-    user_data->prefactor_units[22]  = 1.0000000000000002e-06;
-    user_data->activation_units[22] = 0.50321666580471969;
-    user_data->phase_units[22]      = 1e-12;
-    user_data->is_PD[22] = 0;
-    user_data->nTB[22] = 0;
-
-    // (23):  O + C2H4 <=> CH3 + HCO
-    user_data->fwd_A[23]     = 19200000;
-    user_data->fwd_beta[23]  = 1.8300000000000001;
-    user_data->fwd_Ea[23]    = 220;
-    user_data->prefactor_units[23]  = 1.0000000000000002e-06;
-    user_data->activation_units[23] = 0.50321666580471969;
-    user_data->phase_units[23]      = 1e-12;
-    user_data->is_PD[23] = 0;
-    user_data->nTB[23] = 0;
-
-    // (24):  O + C2H5 <=> CH3 + CH2O
-    user_data->fwd_A[24]     = 132000000000000;
-    user_data->fwd_beta[24]  = 0;
-    user_data->fwd_Ea[24]    = 0;
-    user_data->prefactor_units[24]  = 1.0000000000000002e-06;
-    user_data->activation_units[24] = 0.50321666580471969;
-    user_data->phase_units[24]      = 1e-12;
-    user_data->is_PD[24] = 0;
-    user_data->nTB[24] = 0;
-
-    // (25):  O + C2H6 <=> OH + C2H5
-    user_data->fwd_A[25]     = 89800000;
-    user_data->fwd_beta[25]  = 1.9199999999999999;
-    user_data->fwd_Ea[25]    = 5690;
-    user_data->prefactor_units[25]  = 1.0000000000000002e-06;
-    user_data->activation_units[25] = 0.50321666580471969;
-    user_data->phase_units[25]      = 1e-12;
-    user_data->is_PD[25] = 0;
-    user_data->nTB[25] = 0;
-
-    // (26):  O2 + CO <=> O + CO2
-    user_data->fwd_A[26]     = 2500000000000;
-    user_data->fwd_beta[26]  = 0;
-    user_data->fwd_Ea[26]    = 47800;
-    user_data->prefactor_units[26]  = 1.0000000000000002e-06;
-    user_data->activation_units[26] = 0.50321666580471969;
-    user_data->phase_units[26]      = 1e-12;
-    user_data->is_PD[26] = 0;
-    user_data->nTB[26] = 0;
-
-    // (27):  O2 + CH2O <=> HO2 + HCO
-    user_data->fwd_A[27]     = 100000000000000;
-    user_data->fwd_beta[27]  = 0;
-    user_data->fwd_Ea[27]    = 40000;
-    user_data->prefactor_units[27]  = 1.0000000000000002e-06;
-    user_data->activation_units[27] = 0.50321666580471969;
-    user_data->phase_units[27]      = 1e-12;
-    user_data->is_PD[27] = 0;
-    user_data->nTB[27] = 0;
-
-    // (28):  H + 2 O2 <=> HO2 + O2
-    user_data->fwd_A[28]     = 3e+20;
-    user_data->fwd_beta[28]  = -1.72;
-    user_data->fwd_Ea[28]    = 0;
-    user_data->prefactor_units[28]  = 1.0000000000000002e-12;
-    user_data->activation_units[28] = 0.50321666580471969;
-    user_data->phase_units[28]      = 1e-18;
-    user_data->is_PD[28] = 0;
-    user_data->nTB[28] = 0;
-
-    // (29):  H + O2 + H2O <=> HO2 + H2O
-    user_data->fwd_A[29]     = 9.38e+18;
-    user_data->fwd_beta[29]  = -0.76000000000000001;
-    user_data->fwd_Ea[29]    = 0;
-    user_data->prefactor_units[29]  = 1.0000000000000002e-12;
-    user_data->activation_units[29] = 0.50321666580471969;
-    user_data->phase_units[29]      = 1e-18;
-    user_data->is_PD[29] = 0;
-    user_data->nTB[29] = 0;
-
-    // (30):  H + O2 + N2 <=> HO2 + N2
-    user_data->fwd_A[30]     = 3.75e+20;
-    user_data->fwd_beta[30]  = -1.72;
-    user_data->fwd_Ea[30]    = 0;
-    user_data->prefactor_units[30]  = 1.0000000000000002e-12;
-    user_data->activation_units[30] = 0.50321666580471969;
-    user_data->phase_units[30]      = 1e-18;
-    user_data->is_PD[30] = 0;
-    user_data->nTB[30] = 0;
-
-    // (31):  H + O2 + AR <=> HO2 + AR
-    user_data->fwd_A[31]     = 7e+17;
-    user_data->fwd_beta[31]  = -0.80000000000000004;
-    user_data->fwd_Ea[31]    = 0;
-    user_data->prefactor_units[31]  = 1.0000000000000002e-12;
-    user_data->activation_units[31] = 0.50321666580471969;
-    user_data->phase_units[31]      = 1e-18;
-    user_data->is_PD[31] = 0;
-    user_data->nTB[31] = 0;
-
-    // (32):  H + O2 <=> O + OH
-    user_data->fwd_A[32]     = 83000000000000;
-    user_data->fwd_beta[32]  = 0;
-    user_data->fwd_Ea[32]    = 14413;
-    user_data->prefactor_units[32]  = 1.0000000000000002e-06;
-    user_data->activation_units[32] = 0.50321666580471969;
-    user_data->phase_units[32]      = 1e-12;
-    user_data->is_PD[32] = 0;
-    user_data->nTB[32] = 0;
-
-    // (33):  2 H + H2 <=> 2 H2
-    user_data->fwd_A[33]     = 90000000000000000;
-    user_data->fwd_beta[33]  = -0.59999999999999998;
-    user_data->fwd_Ea[33]    = 0;
-    user_data->prefactor_units[33]  = 1.0000000000000002e-12;
-    user_data->activation_units[33] = 0.50321666580471969;
-    user_data->phase_units[33]      = 1e-18;
-    user_data->is_PD[33] = 0;
-    user_data->nTB[33] = 0;
-
-    // (34):  2 H + H2O <=> H2 + H2O
-    user_data->fwd_A[34]     = 6e+19;
-    user_data->fwd_beta[34]  = -1.25;
-    user_data->fwd_Ea[34]    = 0;
-    user_data->prefactor_units[34]  = 1.0000000000000002e-12;
-    user_data->activation_units[34] = 0.50321666580471969;
-    user_data->phase_units[34]      = 1e-18;
-    user_data->is_PD[34] = 0;
-    user_data->nTB[34] = 0;
-
-    // (35):  2 H + CO2 <=> H2 + CO2
-    user_data->fwd_A[35]     = 5.5e+20;
-    user_data->fwd_beta[35]  = -2;
-    user_data->fwd_Ea[35]    = 0;
-    user_data->prefactor_units[35]  = 1.0000000000000002e-12;
-    user_data->activation_units[35] = 0.50321666580471969;
-    user_data->phase_units[35]      = 1e-18;
-    user_data->is_PD[35] = 0;
-    user_data->nTB[35] = 0;
-
-    // (36):  H + HO2 <=> O2 + H2
-    user_data->fwd_A[36]     = 28000000000000;
-    user_data->fwd_beta[36]  = 0;
-    user_data->fwd_Ea[36]    = 1068;
-    user_data->prefactor_units[36]  = 1.0000000000000002e-06;
-    user_data->activation_units[36] = 0.50321666580471969;
-    user_data->phase_units[36]      = 1e-12;
-    user_data->is_PD[36] = 0;
-    user_data->nTB[36] = 0;
-
-    // (37):  H + HO2 <=> 2 OH
-    user_data->fwd_A[37]     = 134000000000000;
-    user_data->fwd_beta[37]  = 0;
-    user_data->fwd_Ea[37]    = 635;
-    user_data->prefactor_units[37]  = 1.0000000000000002e-06;
-    user_data->activation_units[37] = 0.50321666580471969;
-    user_data->phase_units[37]      = 1e-12;
-    user_data->is_PD[37] = 0;
-    user_data->nTB[37] = 0;
-
-    // (38):  H + CH4 <=> CH3 + H2
-    user_data->fwd_A[38]     = 660000000;
-    user_data->fwd_beta[38]  = 1.6200000000000001;
-    user_data->fwd_Ea[38]    = 10840;
-    user_data->prefactor_units[38]  = 1.0000000000000002e-06;
-    user_data->activation_units[38] = 0.50321666580471969;
-    user_data->phase_units[38]      = 1e-12;
-    user_data->is_PD[38] = 0;
-    user_data->nTB[38] = 0;
-
-    // (39):  H + HCO <=> H2 + CO
-    user_data->fwd_A[39]     = 73400000000000;
-    user_data->fwd_beta[39]  = 0;
-    user_data->fwd_Ea[39]    = 0;
-    user_data->prefactor_units[39]  = 1.0000000000000002e-06;
-    user_data->activation_units[39] = 0.50321666580471969;
-    user_data->phase_units[39]      = 1e-12;
-    user_data->is_PD[39] = 0;
-    user_data->nTB[39] = 0;
-
-    // (40):  H + CH2O <=> HCO + H2
-    user_data->fwd_A[40]     = 23000000000;
-    user_data->fwd_beta[40]  = 1.05;
-    user_data->fwd_Ea[40]    = 3275;
-    user_data->prefactor_units[40]  = 1.0000000000000002e-06;
-    user_data->activation_units[40] = 0.50321666580471969;
-    user_data->phase_units[40]      = 1e-12;
-    user_data->is_PD[40] = 0;
-    user_data->nTB[40] = 0;
-
-    // (41):  H + CH3O <=> OH + CH3
-    user_data->fwd_A[41]     = 32000000000000;
-    user_data->fwd_beta[41]  = 0;
-    user_data->fwd_Ea[41]    = 0;
-    user_data->prefactor_units[41]  = 1.0000000000000002e-06;
-    user_data->activation_units[41] = 0.50321666580471969;
-    user_data->phase_units[41]      = 1e-12;
-    user_data->is_PD[41] = 0;
-    user_data->nTB[41] = 0;
-
-    // (42):  H + C2H6 <=> C2H5 + H2
-    user_data->fwd_A[42]     = 115000000;
-    user_data->fwd_beta[42]  = 1.8999999999999999;
-    user_data->fwd_Ea[42]    = 7530;
-    user_data->prefactor_units[42]  = 1.0000000000000002e-06;
-    user_data->activation_units[42] = 0.50321666580471969;
-    user_data->phase_units[42]      = 1e-12;
-    user_data->is_PD[42] = 0;
-    user_data->nTB[42] = 0;
-
-    // (43):  OH + H2 <=> H + H2O
-    user_data->fwd_A[43]     = 216000000;
-    user_data->fwd_beta[43]  = 1.51;
-    user_data->fwd_Ea[43]    = 3430;
-    user_data->prefactor_units[43]  = 1.0000000000000002e-06;
-    user_data->activation_units[43] = 0.50321666580471969;
-    user_data->phase_units[43]      = 1e-12;
-    user_data->is_PD[43] = 0;
-    user_data->nTB[43] = 0;
-
-    // (44):  2 OH <=> O + H2O
-    user_data->fwd_A[44]     = 35700;
-    user_data->fwd_beta[44]  = 2.3999999999999999;
-    user_data->fwd_Ea[44]    = -2110;
-    user_data->prefactor_units[44]  = 1.0000000000000002e-06;
-    user_data->activation_units[44] = 0.50321666580471969;
-    user_data->phase_units[44]      = 1e-12;
-    user_data->is_PD[44] = 0;
-    user_data->nTB[44] = 0;
-
-    // (45):  OH + HO2 <=> O2 + H2O
-    user_data->fwd_A[45]     = 29000000000000;
-    user_data->fwd_beta[45]  = 0;
-    user_data->fwd_Ea[45]    = -500;
-    user_data->prefactor_units[45]  = 1.0000000000000002e-06;
-    user_data->activation_units[45] = 0.50321666580471969;
-    user_data->phase_units[45]      = 1e-12;
-    user_data->is_PD[45] = 0;
-    user_data->nTB[45] = 0;
-
-    // (46):  OH + CH2 <=> H + CH2O
-    user_data->fwd_A[46]     = 20000000000000;
-    user_data->fwd_beta[46]  = 0;
-    user_data->fwd_Ea[46]    = 0;
-    user_data->prefactor_units[46]  = 1.0000000000000002e-06;
-    user_data->activation_units[46] = 0.50321666580471969;
-    user_data->phase_units[46]      = 1e-12;
-    user_data->is_PD[46] = 0;
-    user_data->nTB[46] = 0;
-
-    // (47):  OH + CH2(S) <=> H + CH2O
-    user_data->fwd_A[47]     = 30000000000000;
-    user_data->fwd_beta[47]  = 0;
-    user_data->fwd_Ea[47]    = 0;
-    user_data->prefactor_units[47]  = 1.0000000000000002e-06;
-    user_data->activation_units[47] = 0.50321666580471969;
-    user_data->phase_units[47]      = 1e-12;
-    user_data->is_PD[47] = 0;
-    user_data->nTB[47] = 0;
-
-    // (48):  OH + CH3 <=> CH2 + H2O
-    user_data->fwd_A[48]     = 56000000;
-    user_data->fwd_beta[48]  = 1.6000000000000001;
-    user_data->fwd_Ea[48]    = 5420;
-    user_data->prefactor_units[48]  = 1.0000000000000002e-06;
-    user_data->activation_units[48] = 0.50321666580471969;
-    user_data->phase_units[48]      = 1e-12;
-    user_data->is_PD[48] = 0;
-    user_data->nTB[48] = 0;
-
-    // (49):  OH + CH3 <=> CH2(S) + H2O
-    user_data->fwd_A[49]     = 25010000000000;
-    user_data->fwd_beta[49]  = 0;
-    user_data->fwd_Ea[49]    = 0;
-    user_data->prefactor_units[49]  = 1.0000000000000002e-06;
-    user_data->activation_units[49] = 0.50321666580471969;
-    user_data->phase_units[49]      = 1e-12;
-    user_data->is_PD[49] = 0;
-    user_data->nTB[49] = 0;
-
-    // (50):  OH + CH4 <=> CH3 + H2O
-    user_data->fwd_A[50]     = 100000000;
-    user_data->fwd_beta[50]  = 1.6000000000000001;
-    user_data->fwd_Ea[50]    = 3120;
-    user_data->prefactor_units[50]  = 1.0000000000000002e-06;
-    user_data->activation_units[50] = 0.50321666580471969;
-    user_data->phase_units[50]      = 1e-12;
-    user_data->is_PD[50] = 0;
-    user_data->nTB[50] = 0;
-
-    // (51):  OH + CO <=> H + CO2
-    user_data->fwd_A[51]     = 47600000;
-    user_data->fwd_beta[51]  = 1.228;
-    user_data->fwd_Ea[51]    = 70;
-    user_data->prefactor_units[51]  = 1.0000000000000002e-06;
-    user_data->activation_units[51] = 0.50321666580471969;
-    user_data->phase_units[51]      = 1e-12;
-    user_data->is_PD[51] = 0;
-    user_data->nTB[51] = 0;
-
-    // (52):  OH + HCO <=> H2O + CO
-    user_data->fwd_A[52]     = 50000000000000;
-    user_data->fwd_beta[52]  = 0;
-    user_data->fwd_Ea[52]    = 0;
-    user_data->prefactor_units[52]  = 1.0000000000000002e-06;
-    user_data->activation_units[52] = 0.50321666580471969;
-    user_data->phase_units[52]      = 1e-12;
-    user_data->is_PD[52] = 0;
-    user_data->nTB[52] = 0;
-
-    // (53):  OH + CH2O <=> HCO + H2O
-    user_data->fwd_A[53]     = 3430000000;
-    user_data->fwd_beta[53]  = 1.1799999999999999;
-    user_data->fwd_Ea[53]    = -447;
-    user_data->prefactor_units[53]  = 1.0000000000000002e-06;
-    user_data->activation_units[53] = 0.50321666580471969;
-    user_data->phase_units[53]      = 1e-12;
-    user_data->is_PD[53] = 0;
-    user_data->nTB[53] = 0;
-
-    // (54):  OH + C2H6 <=> C2H5 + H2O
-    user_data->fwd_A[54]     = 3540000;
-    user_data->fwd_beta[54]  = 2.1200000000000001;
-    user_data->fwd_Ea[54]    = 870;
-    user_data->prefactor_units[54]  = 1.0000000000000002e-06;
-    user_data->activation_units[54] = 0.50321666580471969;
-    user_data->phase_units[54]      = 1e-12;
-    user_data->is_PD[54] = 0;
-    user_data->nTB[54] = 0;
-
-    // (55):  HO2 + CH2 <=> OH + CH2O
-    user_data->fwd_A[55]     = 20000000000000;
-    user_data->fwd_beta[55]  = 0;
-    user_data->fwd_Ea[55]    = 0;
-    user_data->prefactor_units[55]  = 1.0000000000000002e-06;
-    user_data->activation_units[55] = 0.50321666580471969;
-    user_data->phase_units[55]      = 1e-12;
-    user_data->is_PD[55] = 0;
-    user_data->nTB[55] = 0;
-
-    // (56):  HO2 + CH3 <=> O2 + CH4
-    user_data->fwd_A[56]     = 1000000000000;
-    user_data->fwd_beta[56]  = 0;
-    user_data->fwd_Ea[56]    = 0;
-    user_data->prefactor_units[56]  = 1.0000000000000002e-06;
-    user_data->activation_units[56] = 0.50321666580471969;
-    user_data->phase_units[56]      = 1e-12;
-    user_data->is_PD[56] = 0;
-    user_data->nTB[56] = 0;
-
-    // (57):  HO2 + CH3 <=> OH + CH3O
-    user_data->fwd_A[57]     = 20000000000000;
-    user_data->fwd_beta[57]  = 0;
-    user_data->fwd_Ea[57]    = 0;
-    user_data->prefactor_units[57]  = 1.0000000000000002e-06;
-    user_data->activation_units[57] = 0.50321666580471969;
-    user_data->phase_units[57]      = 1e-12;
-    user_data->is_PD[57] = 0;
-    user_data->nTB[57] = 0;
-
-    // (58):  HO2 + CO <=> OH + CO2
-    user_data->fwd_A[58]     = 150000000000000;
-    user_data->fwd_beta[58]  = 0;
-    user_data->fwd_Ea[58]    = 23600;
-    user_data->prefactor_units[58]  = 1.0000000000000002e-06;
-    user_data->activation_units[58] = 0.50321666580471969;
-    user_data->phase_units[58]      = 1e-12;
-    user_data->is_PD[58] = 0;
-    user_data->nTB[58] = 0;
-
-    // (59):  CH2 + O2 <=> OH + HCO
-    user_data->fwd_A[59]     = 13200000000000;
-    user_data->fwd_beta[59]  = 0;
-    user_data->fwd_Ea[59]    = 1500;
-    user_data->prefactor_units[59]  = 1.0000000000000002e-06;
-    user_data->activation_units[59] = 0.50321666580471969;
-    user_data->phase_units[59]      = 1e-12;
-    user_data->is_PD[59] = 0;
-    user_data->nTB[59] = 0;
-
-    // (60):  CH2 + H2 <=> H + CH3
-    user_data->fwd_A[60]     = 500000;
-    user_data->fwd_beta[60]  = 2;
-    user_data->fwd_Ea[60]    = 7230;
-    user_data->prefactor_units[60]  = 1.0000000000000002e-06;
-    user_data->activation_units[60] = 0.50321666580471969;
-    user_data->phase_units[60]      = 1e-12;
-    user_data->is_PD[60] = 0;
-    user_data->nTB[60] = 0;
-
-    // (61):  CH2 + CH3 <=> H + C2H4
-    user_data->fwd_A[61]     = 40000000000000;
-    user_data->fwd_beta[61]  = 0;
-    user_data->fwd_Ea[61]    = 0;
-    user_data->prefactor_units[61]  = 1.0000000000000002e-06;
-    user_data->activation_units[61] = 0.50321666580471969;
-    user_data->phase_units[61]      = 1e-12;
-    user_data->is_PD[61] = 0;
-    user_data->nTB[61] = 0;
-
-    // (62):  CH2 + CH4 <=> 2 CH3
-    user_data->fwd_A[62]     = 2460000;
-    user_data->fwd_beta[62]  = 2;
-    user_data->fwd_Ea[62]    = 8270;
-    user_data->prefactor_units[62]  = 1.0000000000000002e-06;
-    user_data->activation_units[62] = 0.50321666580471969;
-    user_data->phase_units[62]      = 1e-12;
-    user_data->is_PD[62] = 0;
-    user_data->nTB[62] = 0;
-
-    // (63):  CH2(S) + N2 <=> CH2 + N2
-    user_data->fwd_A[63]     = 15000000000000;
-    user_data->fwd_beta[63]  = 0;
-    user_data->fwd_Ea[63]    = 600;
-    user_data->prefactor_units[63]  = 1.0000000000000002e-06;
-    user_data->activation_units[63] = 0.50321666580471969;
-    user_data->phase_units[63]      = 1e-12;
-    user_data->is_PD[63] = 0;
-    user_data->nTB[63] = 0;
-
-    // (64):  CH2(S) + AR <=> CH2 + AR
-    user_data->fwd_A[64]     = 9000000000000;
-    user_data->fwd_beta[64]  = 0;
-    user_data->fwd_Ea[64]    = 600;
-    user_data->prefactor_units[64]  = 1.0000000000000002e-06;
-    user_data->activation_units[64] = 0.50321666580471969;
-    user_data->phase_units[64]      = 1e-12;
-    user_data->is_PD[64] = 0;
-    user_data->nTB[64] = 0;
-
-    // (65):  CH2(S) + O2 <=> H + OH + CO
-    user_data->fwd_A[65]     = 28000000000000;
-    user_data->fwd_beta[65]  = 0;
-    user_data->fwd_Ea[65]    = 0;
-    user_data->prefactor_units[65]  = 1.0000000000000002e-06;
-    user_data->activation_units[65] = 0.50321666580471969;
-    user_data->phase_units[65]      = 1e-12;
-    user_data->is_PD[65] = 0;
-    user_data->nTB[65] = 0;
-
-    // (66):  CH2(S) + O2 <=> CO + H2O
-    user_data->fwd_A[66]     = 12000000000000;
-    user_data->fwd_beta[66]  = 0;
-    user_data->fwd_Ea[66]    = 0;
-    user_data->prefactor_units[66]  = 1.0000000000000002e-06;
-    user_data->activation_units[66] = 0.50321666580471969;
-    user_data->phase_units[66]      = 1e-12;
-    user_data->is_PD[66] = 0;
-    user_data->nTB[66] = 0;
-
-    // (67):  CH2(S) + H2 <=> CH3 + H
-    user_data->fwd_A[67]     = 70000000000000;
-    user_data->fwd_beta[67]  = 0;
-    user_data->fwd_Ea[67]    = 0;
-    user_data->prefactor_units[67]  = 1.0000000000000002e-06;
-    user_data->activation_units[67] = 0.50321666580471969;
-    user_data->phase_units[67]      = 1e-12;
-    user_data->is_PD[67] = 0;
-    user_data->nTB[67] = 0;
-
-    // (68):  CH2(S) + H2O <=> CH2 + H2O
-    user_data->fwd_A[68]     = 30000000000000;
-    user_data->fwd_beta[68]  = 0;
-    user_data->fwd_Ea[68]    = 0;
-    user_data->prefactor_units[68]  = 1.0000000000000002e-06;
-    user_data->activation_units[68] = 0.50321666580471969;
-    user_data->phase_units[68]      = 1e-12;
-    user_data->is_PD[68] = 0;
-    user_data->nTB[68] = 0;
-
-    // (69):  CH2(S) + CH3 <=> H + C2H4
-    user_data->fwd_A[69]     = 12000000000000;
-    user_data->fwd_beta[69]  = 0;
-    user_data->fwd_Ea[69]    = -570;
-    user_data->prefactor_units[69]  = 1.0000000000000002e-06;
-    user_data->activation_units[69] = 0.50321666580471969;
-    user_data->phase_units[69]      = 1e-12;
-    user_data->is_PD[69] = 0;
-    user_data->nTB[69] = 0;
-
-    // (70):  CH2(S) + CH4 <=> 2 CH3
-    user_data->fwd_A[70]     = 16000000000000;
-    user_data->fwd_beta[70]  = 0;
-    user_data->fwd_Ea[70]    = -570;
-    user_data->prefactor_units[70]  = 1.0000000000000002e-06;
-    user_data->activation_units[70] = 0.50321666580471969;
-    user_data->phase_units[70]      = 1e-12;
-    user_data->is_PD[70] = 0;
-    user_data->nTB[70] = 0;
-
-    // (71):  CH2(S) + CO <=> CH2 + CO
-    user_data->fwd_A[71]     = 9000000000000;
-    user_data->fwd_beta[71]  = 0;
-    user_data->fwd_Ea[71]    = 0;
-    user_data->prefactor_units[71]  = 1.0000000000000002e-06;
-    user_data->activation_units[71] = 0.50321666580471969;
-    user_data->phase_units[71]      = 1e-12;
-    user_data->is_PD[71] = 0;
-    user_data->nTB[71] = 0;
-
-    // (72):  CH2(S) + CO2 <=> CH2 + CO2
-    user_data->fwd_A[72]     = 7000000000000;
-    user_data->fwd_beta[72]  = 0;
-    user_data->fwd_Ea[72]    = 0;
-    user_data->prefactor_units[72]  = 1.0000000000000002e-06;
-    user_data->activation_units[72] = 0.50321666580471969;
-    user_data->phase_units[72]      = 1e-12;
-    user_data->is_PD[72] = 0;
-    user_data->nTB[72] = 0;
-
-    // (73):  CH2(S) + CO2 <=> CO + CH2O
-    user_data->fwd_A[73]     = 14000000000000;
-    user_data->fwd_beta[73]  = 0;
-    user_data->fwd_Ea[73]    = 0;
-    user_data->prefactor_units[73]  = 1.0000000000000002e-06;
-    user_data->activation_units[73] = 0.50321666580471969;
-    user_data->phase_units[73]      = 1e-12;
-    user_data->is_PD[73] = 0;
-    user_data->nTB[73] = 0;
-
-    // (74):  CH3 + O2 <=> O + CH3O
-    user_data->fwd_A[74]     = 26750000000000;
-    user_data->fwd_beta[74]  = 0;
-    user_data->fwd_Ea[74]    = 28800;
-    user_data->prefactor_units[74]  = 1.0000000000000002e-06;
-    user_data->activation_units[74] = 0.50321666580471969;
-    user_data->phase_units[74]      = 1e-12;
-    user_data->is_PD[74] = 0;
-    user_data->nTB[74] = 0;
-
-    // (75):  CH3 + O2 <=> OH + CH2O
-    user_data->fwd_A[75]     = 36000000000;
-    user_data->fwd_beta[75]  = 0;
-    user_data->fwd_Ea[75]    = 8940;
-    user_data->prefactor_units[75]  = 1.0000000000000002e-06;
-    user_data->activation_units[75] = 0.50321666580471969;
-    user_data->phase_units[75]      = 1e-12;
-    user_data->is_PD[75] = 0;
-    user_data->nTB[75] = 0;
-
-    // (76):  2 CH3 <=> H + C2H5
-    user_data->fwd_A[76]     = 4990000000000;
-    user_data->fwd_beta[76]  = 0.10000000000000001;
-    user_data->fwd_Ea[76]    = 10600;
-    user_data->prefactor_units[76]  = 1.0000000000000002e-06;
-    user_data->activation_units[76] = 0.50321666580471969;
-    user_data->phase_units[76]      = 1e-12;
-    user_data->is_PD[76] = 0;
-    user_data->nTB[76] = 0;
-
-    // (77):  CH3 + HCO <=> CH4 + CO
-    user_data->fwd_A[77]     = 26480000000000;
-    user_data->fwd_beta[77]  = 0;
-    user_data->fwd_Ea[77]    = 0;
-    user_data->prefactor_units[77]  = 1.0000000000000002e-06;
-    user_data->activation_units[77] = 0.50321666580471969;
-    user_data->phase_units[77]      = 1e-12;
-    user_data->is_PD[77] = 0;
-    user_data->nTB[77] = 0;
-
-    // (78):  CH3 + CH2O <=> HCO + CH4
-    user_data->fwd_A[78]     = 3320;
-    user_data->fwd_beta[78]  = 2.8100000000000001;
-    user_data->fwd_Ea[78]    = 5860;
-    user_data->prefactor_units[78]  = 1.0000000000000002e-06;
-    user_data->activation_units[78] = 0.50321666580471969;
-    user_data->phase_units[78]      = 1e-12;
-    user_data->is_PD[78] = 0;
-    user_data->nTB[78] = 0;
-
-    // (79):  CH3 + C2H6 <=> C2H5 + CH4
-    user_data->fwd_A[79]     = 6140000;
-    user_data->fwd_beta[79]  = 1.74;
-    user_data->fwd_Ea[79]    = 10450;
-    user_data->prefactor_units[79]  = 1.0000000000000002e-06;
-    user_data->activation_units[79] = 0.50321666580471969;
-    user_data->phase_units[79]      = 1e-12;
-    user_data->is_PD[79] = 0;
-    user_data->nTB[79] = 0;
-
-    // (80):  HCO + H2O <=> H + CO + H2O
-    user_data->fwd_A[80]     = 2.244e+18;
-    user_data->fwd_beta[80]  = -1;
-    user_data->fwd_Ea[80]    = 17000;
-    user_data->prefactor_units[80]  = 1.0000000000000002e-06;
-    user_data->activation_units[80] = 0.50321666580471969;
-    user_data->phase_units[80]      = 1e-12;
-    user_data->is_PD[80] = 0;
-    user_data->nTB[80] = 0;
-
-    // (81):  HCO + O2 <=> HO2 + CO
-    user_data->fwd_A[81]     = 7600000000000;
-    user_data->fwd_beta[81]  = 0;
-    user_data->fwd_Ea[81]    = 400;
-    user_data->prefactor_units[81]  = 1.0000000000000002e-06;
-    user_data->activation_units[81] = 0.50321666580471969;
-    user_data->phase_units[81]      = 1e-12;
-    user_data->is_PD[81] = 0;
-    user_data->nTB[81] = 0;
-
-    // (82):  CH3O + O2 <=> HO2 + CH2O
-    user_data->fwd_A[82]     = 4.2799999999999999e-13;
-    user_data->fwd_beta[82]  = 7.5999999999999996;
-    user_data->fwd_Ea[82]    = -3530;
-    user_data->prefactor_units[82]  = 1.0000000000000002e-06;
-    user_data->activation_units[82] = 0.50321666580471969;
-    user_data->phase_units[82]      = 1e-12;
-    user_data->is_PD[82] = 0;
-    user_data->nTB[82] = 0;
-
-    // (83):  C2H5 + O2 <=> HO2 + C2H4
-    user_data->fwd_A[83]     = 840000000000;
-    user_data->fwd_beta[83]  = 0;
-    user_data->fwd_Ea[83]    = 3875;
-    user_data->prefactor_units[83]  = 1.0000000000000002e-06;
-    user_data->activation_units[83] = 0.50321666580471969;
-    user_data->phase_units[83]      = 1e-12;
-    user_data->is_PD[83] = 0;
-    user_data->nTB[83] = 0;
-
-    return;
-}
-//void finalize_chemistry_device(void *user_data)
-//{
-
-    //UserData udata = static_cast<CVodeUserData*>(user_data);
-
-    //for (int i=0; i<84; i++) {
-    //    if (nTB[i] != 0) {
-    //        nTB[i] = 0;
-    //        free(TB[i]);
-    //        free(TBid[i]);
-    //    }
-    //}
-    //return;
-//}
 
 
 /*compute the g/(RT) at the given temperature */
@@ -5487,10 +4786,9 @@ __device__ void get_t_given_hy_d_(double * h, double * y_wk, double * t, int * i
 
 
 /*compute the reaction Jacobian */
-__device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *user_data)
+__device__ void ajacobian_d(double * J, double * sc, double T, int consP)
 {
 
-    UserData udata = static_cast<CVodeUserData*>(user_data);
 
     for (int i=0; i<484; i++) {
         J[i] = 0.0;
@@ -5537,24 +4835,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[0][0] - 1)*sc[0] + (udata->TB[0][1] - 1)*sc[5] + (udata->TB[0][2] - 1)*sc[10] + (udata->TB[0][3] - 1)*sc[11] + (udata->TB[0][4] - 1)*sc[12] + (udata->TB[0][5] - 1)*sc[18] + (udata->TB[0][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[7];
-    k_f = udata->prefactor_units[0] * udata->fwd_A[0]
-                * exp(udata->fwd_beta[0] * tc[0] - udata->activation_units[0] * udata->fwd_Ea[0] * invT);
-    dlnkfdT = udata->fwd_beta[0] * invT + udata->activation_units[0] * udata->fwd_Ea[0] * invT2;
+    k_f = 1.0000000000000002e-06 * 25000000000000000
+                * exp(-0.80000000000000004 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -0.80000000000000004 * invT + 0.50321666580471969 *  0  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[0] * exp(udata->low_beta[0] * tc[0] - udata->activation_units[0] * udata->low_Ea[0] * invT);
-    Pr = udata->phase_units[0] * alpha / k_f * k_0;
+    k_0 = 3.2000000000000002e+27 * exp(-3.1400000000000001 * tc[0] - 0.50321666580471969 * 1230 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[0] * invT + udata->activation_units[0] * udata->low_Ea[0] * invT2;
+    dlnk0dT = -3.1400000000000001 * invT + 0.50321666580471969 * 1230 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[0]) > 1.e-100 ? (1.-udata->troe_a[0])*exp(-T/udata->troe_Tsss[0]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[0]) > 1.e-100 ? udata->troe_a[0] * exp(-T/udata->troe_Ts[0]) : 0.);
-    Fcent3 = (udata->troe_len[0] == 4 ? exp(-udata->troe_Tss[0] * invT) : 0.);
+    Fcent1 = (1.-0.68000000000000005)*exp(-T/78);
+    Fcent2 = 0.68000000000000005 * exp(-T/1995);
+    Fcent3 = exp(-5590 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -5564,9 +4862,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[0]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[0] : 0.)
-      + (fabs(udata->troe_Ts[0]) > 1.e-100 ? -Fcent2/udata->troe_Ts[0] : 0.)
-      + (udata->troe_len[0] == 4 ? Fcent3*udata->troe_Tss[0]*invT2 : 0.) );
+        -Fcent1/78
+        -Fcent2/1995
+        + Fcent3*5590*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -5594,7 +4892,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[0][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[7] -= dqdci;                /* dwdot[CH2]/d[H2] */
         J[9] += dqdci;                /* dwdot[CH3]/d[H2] */
@@ -5604,7 +4902,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[29] -= dqdci;               /* dwdot[CH2]/d[H] */
         J[31] += dqdci;               /* dwdot[CH3]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[0][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[117] -= dqdci;              /* dwdot[CH2]/d[H2O] */
         J[119] += dqdci;              /* dwdot[CH3]/d[H2O] */
@@ -5619,53 +4917,53 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[205] -= dqdci;              /* dwdot[CH2]/d[CH3] */
         J[207] += dqdci;              /* dwdot[CH3]/d[CH3] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[0][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[227] -= dqdci;              /* dwdot[CH2]/d[CH4] */
         J[229] += dqdci;              /* dwdot[CH3]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[0][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[249] -= dqdci;              /* dwdot[CH2]/d[CO] */
         J[251] += dqdci;              /* dwdot[CH3]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[0][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[271] -= dqdci;              /* dwdot[CH2]/d[CO2] */
         J[273] += dqdci;              /* dwdot[CH3]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[0][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[403] -= dqdci;              /* dwdot[CH2]/d[C2H6] */
         J[405] += dqdci;              /* dwdot[CH3]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[0][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[447] -= dqdci;              /* dwdot[CH2]/d[AR] */
         J[449] += dqdci;              /* dwdot[CH3]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[0][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[7];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[0][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac + k_f*sc[1];
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac - k_r;
-        dqdc[10] = udata->TB[0][2]*dcdc_fac;
-        dqdc[11] = udata->TB[0][3]*dcdc_fac;
-        dqdc[12] = udata->TB[0][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[0][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[0][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+7] -= dqdc[k];
@@ -5680,24 +4978,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[1][0] - 1)*sc[0] + (udata->TB[1][1] - 1)*sc[5] + (udata->TB[1][2] - 1)*sc[10] + (udata->TB[1][3] - 1)*sc[11] + (udata->TB[1][4] - 1)*sc[12] + (udata->TB[1][5] - 1)*sc[18] + (udata->TB[1][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[9];
-    k_f = udata->prefactor_units[1] * udata->fwd_A[1]
-                * exp(udata->fwd_beta[1] * tc[0] - udata->activation_units[1] * udata->fwd_Ea[1] * invT);
-    dlnkfdT = udata->fwd_beta[1] * invT + udata->activation_units[1] * udata->fwd_Ea[1] * invT2;
+    k_f = 1.0000000000000002e-06 * 12700000000000000
+                * exp(-0.63 * tc[0] - 0.50321666580471969 * 383 * invT);
+    dlnkfdT = -0.63 * invT + 0.50321666580471969 *  383  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[1] * exp(udata->low_beta[1] * tc[0] - udata->activation_units[1] * udata->low_Ea[1] * invT);
-    Pr = udata->phase_units[1] * alpha / k_f * k_0;
+    k_0 = 2.4769999999999999e+33 * exp(-4.7599999999999998 * tc[0] - 0.50321666580471969 * 2440 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[1] * invT + udata->activation_units[1] * udata->low_Ea[1] * invT2;
+    dlnk0dT = -4.7599999999999998 * invT + 0.50321666580471969 * 2440 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[1]) > 1.e-100 ? (1.-udata->troe_a[1])*exp(-T/udata->troe_Tsss[1]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[1]) > 1.e-100 ? udata->troe_a[1] * exp(-T/udata->troe_Ts[1]) : 0.);
-    Fcent3 = (udata->troe_len[1] == 4 ? exp(-udata->troe_Tss[1] * invT) : 0.);
+    Fcent1 = (1.-0.78300000000000003)*exp(-T/74);
+    Fcent2 = 0.78300000000000003 * exp(-T/2941);
+    Fcent3 = exp(-6964 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -5707,9 +5005,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[1]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[1] : 0.)
-      + (fabs(udata->troe_Ts[1]) > 1.e-100 ? -Fcent2/udata->troe_Ts[1] : 0.)
-      + (udata->troe_len[1] == 4 ? Fcent3*udata->troe_Tss[1]*invT2 : 0.) );
+        -Fcent1/74
+        -Fcent2/2941
+        + Fcent3*6964*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -5737,7 +5035,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[1][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[9] -= dqdci;                /* dwdot[CH3]/d[H2] */
         J[10] += dqdci;               /* dwdot[CH4]/d[H2] */
@@ -5747,7 +5045,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[31] -= dqdci;               /* dwdot[CH3]/d[H] */
         J[32] += dqdci;               /* dwdot[CH4]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[1][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[119] -= dqdci;              /* dwdot[CH3]/d[H2O] */
         J[120] += dqdci;              /* dwdot[CH4]/d[H2O] */
@@ -5757,53 +5055,53 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[207] -= dqdci;              /* dwdot[CH3]/d[CH3] */
         J[208] += dqdci;              /* dwdot[CH4]/d[CH3] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[1][2] - 1)*dcdc_fac - k_r;
+        dqdci = (2 - 1)*dcdc_fac - k_r;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[229] -= dqdci;              /* dwdot[CH3]/d[CH4] */
         J[230] += dqdci;              /* dwdot[CH4]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[1][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[251] -= dqdci;              /* dwdot[CH3]/d[CO] */
         J[252] += dqdci;              /* dwdot[CH4]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[1][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[273] -= dqdci;              /* dwdot[CH3]/d[CO2] */
         J[274] += dqdci;              /* dwdot[CH4]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[1][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[405] -= dqdci;              /* dwdot[CH3]/d[C2H6] */
         J[406] += dqdci;              /* dwdot[CH4]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[1][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[449] -= dqdci;              /* dwdot[CH3]/d[AR] */
         J[450] += dqdci;              /* dwdot[CH4]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[1][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[9];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[1][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac + k_f*sc[1];
-        dqdc[10] = udata->TB[1][2]*dcdc_fac - k_r;
-        dqdc[11] = udata->TB[1][3]*dcdc_fac;
-        dqdc[12] = udata->TB[1][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac - k_r;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[1][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[1][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+9] -= dqdc[k];
@@ -5818,24 +5116,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[2][0] - 1)*sc[0] + (udata->TB[2][1] - 1)*sc[5] + (udata->TB[2][2] - 1)*sc[10] + (udata->TB[2][3] - 1)*sc[11] + (udata->TB[2][4] - 1)*sc[12] + (udata->TB[2][5] - 1)*sc[18] + (udata->TB[2][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[13];
-    k_f = udata->prefactor_units[2] * udata->fwd_A[2]
-                * exp(udata->fwd_beta[2] * tc[0] - udata->activation_units[2] * udata->fwd_Ea[2] * invT);
-    dlnkfdT = udata->fwd_beta[2] * invT + udata->activation_units[2] * udata->fwd_Ea[2] * invT2;
+    k_f = 1.0000000000000002e-06 * 1090000000000
+                * exp(0.47999999999999998 * tc[0] - 0.50321666580471969 * -260 * invT);
+    dlnkfdT = 0.47999999999999998 * invT + 0.50321666580471969 *  -260  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[2] * exp(udata->low_beta[2] * tc[0] - udata->activation_units[2] * udata->low_Ea[2] * invT);
-    Pr = udata->phase_units[2] * alpha / k_f * k_0;
+    k_0 = 1.35e+24 * exp(-2.5699999999999998 * tc[0] - 0.50321666580471969 * 1425 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[2] * invT + udata->activation_units[2] * udata->low_Ea[2] * invT2;
+    dlnk0dT = -2.5699999999999998 * invT + 0.50321666580471969 * 1425 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[2]) > 1.e-100 ? (1.-udata->troe_a[2])*exp(-T/udata->troe_Tsss[2]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[2]) > 1.e-100 ? udata->troe_a[2] * exp(-T/udata->troe_Ts[2]) : 0.);
-    Fcent3 = (udata->troe_len[2] == 4 ? exp(-udata->troe_Tss[2] * invT) : 0.);
+    Fcent1 = (1.-0.78239999999999998)*exp(-T/271);
+    Fcent2 = 0.78239999999999998 * exp(-T/2755);
+    Fcent3 = exp(-6570 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -5845,9 +5143,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[2]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[2] : 0.)
-      + (fabs(udata->troe_Ts[2]) > 1.e-100 ? -Fcent2/udata->troe_Ts[2] : 0.)
-      + (udata->troe_len[2] == 4 ? Fcent3*udata->troe_Tss[2]*invT2 : 0.) );
+        -Fcent1/271
+        -Fcent2/2755
+        + Fcent3*6570*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -5875,7 +5173,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[2][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[13] -= dqdci;               /* dwdot[HCO]/d[H2] */
         J[14] += dqdci;               /* dwdot[CH2O]/d[H2] */
@@ -5885,22 +5183,22 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[35] -= dqdci;               /* dwdot[HCO]/d[H] */
         J[36] += dqdci;               /* dwdot[CH2O]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[2][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[123] -= dqdci;              /* dwdot[HCO]/d[H2O] */
         J[124] += dqdci;              /* dwdot[CH2O]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[2][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[233] -= dqdci;              /* dwdot[HCO]/d[CH4] */
         J[234] += dqdci;              /* dwdot[CH2O]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[2][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[255] -= dqdci;              /* dwdot[HCO]/d[CO] */
         J[256] += dqdci;              /* dwdot[CH2O]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[2][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[277] -= dqdci;              /* dwdot[HCO]/d[CO2] */
         J[278] += dqdci;              /* dwdot[CH2O]/d[CO2] */
@@ -5915,38 +5213,38 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[321] -= dqdci;              /* dwdot[HCO]/d[CH2O] */
         J[322] += dqdci;              /* dwdot[CH2O]/d[CH2O] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[2][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[409] -= dqdci;              /* dwdot[HCO]/d[C2H6] */
         J[410] += dqdci;              /* dwdot[CH2O]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[2][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[453] -= dqdci;              /* dwdot[HCO]/d[AR] */
         J[454] += dqdci;              /* dwdot[CH2O]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[2][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[13];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[2][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac;
-        dqdc[10] = udata->TB[2][2]*dcdc_fac;
-        dqdc[11] = udata->TB[2][3]*dcdc_fac;
-        dqdc[12] = udata->TB[2][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac + k_f*sc[1];
         dqdc[14] = dcdc_fac - k_r;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[2][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[2][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+13] -= dqdc[k];
@@ -5961,24 +5259,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[3][0] - 1)*sc[0] + (udata->TB[3][1] - 1)*sc[5] + (udata->TB[3][2] - 1)*sc[10] + (udata->TB[3][3] - 1)*sc[11] + (udata->TB[3][4] - 1)*sc[12] + (udata->TB[3][5] - 1)*sc[18];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18];
     /* forward */
     phi_f = sc[1]*sc[14];
-    k_f = udata->prefactor_units[3] * udata->fwd_A[3]
-                * exp(udata->fwd_beta[3] * tc[0] - udata->activation_units[3] * udata->fwd_Ea[3] * invT);
-    dlnkfdT = udata->fwd_beta[3] * invT + udata->activation_units[3] * udata->fwd_Ea[3] * invT2;
+    k_f = 1.0000000000000002e-06 * 540000000000
+                * exp(0.45400000000000001 * tc[0] - 0.50321666580471969 * 2600 * invT);
+    dlnkfdT = 0.45400000000000001 * invT + 0.50321666580471969 *  2600  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[3] * exp(udata->low_beta[3] * tc[0] - udata->activation_units[3] * udata->low_Ea[3] * invT);
-    Pr = udata->phase_units[3] * alpha / k_f * k_0;
+    k_0 = 2.2e+30 * exp(-4.7999999999999998 * tc[0] - 0.50321666580471969 * 5560 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[3] * invT + udata->activation_units[3] * udata->low_Ea[3] * invT2;
+    dlnk0dT = -4.7999999999999998 * invT + 0.50321666580471969 * 5560 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[3]) > 1.e-100 ? (1.-udata->troe_a[3])*exp(-T/udata->troe_Tsss[3]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[3]) > 1.e-100 ? udata->troe_a[3] * exp(-T/udata->troe_Ts[3]) : 0.);
-    Fcent3 = (udata->troe_len[3] == 4 ? exp(-udata->troe_Tss[3] * invT) : 0.);
+    Fcent1 = (1.-0.75800000000000001)*exp(-T/94);
+    Fcent2 = 0.75800000000000001 * exp(-T/1555);
+    Fcent3 = exp(-4200 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -5988,9 +5286,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[3]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[3] : 0.)
-      + (fabs(udata->troe_Ts[3]) > 1.e-100 ? -Fcent2/udata->troe_Ts[3] : 0.)
-      + (udata->troe_len[3] == 4 ? Fcent3*udata->troe_Tss[3]*invT2 : 0.) );
+        -Fcent1/94
+        -Fcent2/1555
+        + Fcent3*4200*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -6018,7 +5316,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[3][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[14] -= dqdci;               /* dwdot[CH2O]/d[H2] */
         J[15] += dqdci;               /* dwdot[CH3O]/d[H2] */
@@ -6028,22 +5326,22 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[36] -= dqdci;               /* dwdot[CH2O]/d[H] */
         J[37] += dqdci;               /* dwdot[CH3O]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[3][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[124] -= dqdci;              /* dwdot[CH2O]/d[H2O] */
         J[125] += dqdci;              /* dwdot[CH3O]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[3][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[234] -= dqdci;              /* dwdot[CH2O]/d[CH4] */
         J[235] += dqdci;              /* dwdot[CH3O]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[3][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[256] -= dqdci;              /* dwdot[CH2O]/d[CO] */
         J[257] += dqdci;              /* dwdot[CH3O]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[3][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[278] -= dqdci;              /* dwdot[CH2O]/d[CO2] */
         J[279] += dqdci;              /* dwdot[CH3O]/d[CO2] */
@@ -6058,31 +5356,31 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[344] -= dqdci;              /* dwdot[CH2O]/d[CH3O] */
         J[345] += dqdci;              /* dwdot[CH3O]/d[CH3O] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[3][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[410] -= dqdci;              /* dwdot[CH2O]/d[C2H6] */
         J[411] += dqdci;              /* dwdot[CH3O]/d[C2H6] */
     }
     else {
-        dqdc[0] = udata->TB[3][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[14];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[3][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac;
-        dqdc[10] = udata->TB[3][2]*dcdc_fac;
-        dqdc[11] = udata->TB[3][3]*dcdc_fac;
-        dqdc[12] = udata->TB[3][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac + k_f*sc[1];
         dqdc[15] = dcdc_fac - k_r;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[3][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
         dqdc[20] = dcdc_fac;
         for (int k=0; k<21; k++) {
@@ -6099,24 +5397,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[4][0] - 1)*sc[0] + (udata->TB[4][1] - 1)*sc[5] + (udata->TB[4][2] - 1)*sc[10] + (udata->TB[4][3] - 1)*sc[11] + (udata->TB[4][4] - 1)*sc[12] + (udata->TB[4][5] - 1)*sc[18] + (udata->TB[4][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[16];
-    k_f = udata->prefactor_units[4] * udata->fwd_A[4]
-                * exp(udata->fwd_beta[4] * tc[0] - udata->activation_units[4] * udata->fwd_Ea[4] * invT);
-    dlnkfdT = udata->fwd_beta[4] * invT + udata->activation_units[4] * udata->fwd_Ea[4] * invT2;
+    k_f = 1.0000000000000002e-06 * 1080000000000
+                * exp(0.45400000000000001 * tc[0] - 0.50321666580471969 * 1820 * invT);
+    dlnkfdT = 0.45400000000000001 * invT + 0.50321666580471969 *  1820  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[4] * exp(udata->low_beta[4] * tc[0] - udata->activation_units[4] * udata->low_Ea[4] * invT);
-    Pr = udata->phase_units[4] * alpha / k_f * k_0;
+    k_0 = 1.1999999999999999e+42 * exp(-7.6200000000000001 * tc[0] - 0.50321666580471969 * 6970 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[4] * invT + udata->activation_units[4] * udata->low_Ea[4] * invT2;
+    dlnk0dT = -7.6200000000000001 * invT + 0.50321666580471969 * 6970 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[4]) > 1.e-100 ? (1.-udata->troe_a[4])*exp(-T/udata->troe_Tsss[4]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[4]) > 1.e-100 ? udata->troe_a[4] * exp(-T/udata->troe_Ts[4]) : 0.);
-    Fcent3 = (udata->troe_len[4] == 4 ? exp(-udata->troe_Tss[4] * invT) : 0.);
+    Fcent1 = (1.-0.97529999999999994)*exp(-T/210);
+    Fcent2 = 0.97529999999999994 * exp(-T/984);
+    Fcent3 = exp(-4374 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -6126,9 +5424,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[4]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[4] : 0.)
-      + (fabs(udata->troe_Ts[4]) > 1.e-100 ? -Fcent2/udata->troe_Ts[4] : 0.)
-      + (udata->troe_len[4] == 4 ? Fcent3*udata->troe_Tss[4]*invT2 : 0.) );
+        -Fcent1/210
+        -Fcent2/984
+        + Fcent3*4374*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -6156,7 +5454,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[4][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[16] -= dqdci;               /* dwdot[C2H4]/d[H2] */
         J[17] += dqdci;               /* dwdot[C2H5]/d[H2] */
@@ -6166,22 +5464,22 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[38] -= dqdci;               /* dwdot[C2H4]/d[H] */
         J[39] += dqdci;               /* dwdot[C2H5]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[4][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[126] -= dqdci;              /* dwdot[C2H4]/d[H2O] */
         J[127] += dqdci;              /* dwdot[C2H5]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[4][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[236] -= dqdci;              /* dwdot[C2H4]/d[CH4] */
         J[237] += dqdci;              /* dwdot[C2H5]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[4][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[258] -= dqdci;              /* dwdot[C2H4]/d[CO] */
         J[259] += dqdci;              /* dwdot[C2H5]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[4][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[280] -= dqdci;              /* dwdot[C2H4]/d[CO2] */
         J[281] += dqdci;              /* dwdot[C2H5]/d[CO2] */
@@ -6196,38 +5494,38 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[390] -= dqdci;              /* dwdot[C2H4]/d[C2H5] */
         J[391] += dqdci;              /* dwdot[C2H5]/d[C2H5] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[4][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[412] -= dqdci;              /* dwdot[C2H4]/d[C2H6] */
         J[413] += dqdci;              /* dwdot[C2H5]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[4][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[456] -= dqdci;              /* dwdot[C2H4]/d[AR] */
         J[457] += dqdci;              /* dwdot[C2H5]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[4][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[16];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[4][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac;
-        dqdc[10] = udata->TB[4][2]*dcdc_fac;
-        dqdc[11] = udata->TB[4][3]*dcdc_fac;
-        dqdc[12] = udata->TB[4][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac + k_f*sc[1];
         dqdc[17] = dcdc_fac - k_r;
-        dqdc[18] = udata->TB[4][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[4][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+16] -= dqdc[k];
@@ -6242,24 +5540,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[5][0] - 1)*sc[0] + (udata->TB[5][1] - 1)*sc[5] + (udata->TB[5][2] - 1)*sc[10] + (udata->TB[5][3] - 1)*sc[11] + (udata->TB[5][4] - 1)*sc[12] + (udata->TB[5][5] - 1)*sc[18] + (udata->TB[5][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[17];
-    k_f = udata->prefactor_units[5] * udata->fwd_A[5]
-                * exp(udata->fwd_beta[5] * tc[0] - udata->activation_units[5] * udata->fwd_Ea[5] * invT);
-    dlnkfdT = udata->fwd_beta[5] * invT + udata->activation_units[5] * udata->fwd_Ea[5] * invT2;
+    k_f = 1.0000000000000002e-06 * 5.21e+17
+                * exp(-0.98999999999999999 * tc[0] - 0.50321666580471969 * 1580 * invT);
+    dlnkfdT = -0.98999999999999999 * invT + 0.50321666580471969 *  1580  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[5] * exp(udata->low_beta[5] * tc[0] - udata->activation_units[5] * udata->low_Ea[5] * invT);
-    Pr = udata->phase_units[5] * alpha / k_f * k_0;
+    k_0 = 1.9900000000000001e+41 * exp(-7.0800000000000001 * tc[0] - 0.50321666580471969 * 6685 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[5] * invT + udata->activation_units[5] * udata->low_Ea[5] * invT2;
+    dlnk0dT = -7.0800000000000001 * invT + 0.50321666580471969 * 6685 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[5]) > 1.e-100 ? (1.-udata->troe_a[5])*exp(-T/udata->troe_Tsss[5]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[5]) > 1.e-100 ? udata->troe_a[5] * exp(-T/udata->troe_Ts[5]) : 0.);
-    Fcent3 = (udata->troe_len[5] == 4 ? exp(-udata->troe_Tss[5] * invT) : 0.);
+    Fcent1 = (1.-0.84219999999999995)*exp(-T/125);
+    Fcent2 = 0.84219999999999995 * exp(-T/2219);
+    Fcent3 = exp(-6882 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -6269,9 +5567,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[5]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[5] : 0.)
-      + (fabs(udata->troe_Ts[5]) > 1.e-100 ? -Fcent2/udata->troe_Ts[5] : 0.)
-      + (udata->troe_len[5] == 4 ? Fcent3*udata->troe_Tss[5]*invT2 : 0.) );
+        -Fcent1/125
+        -Fcent2/2219
+        + Fcent3*6882*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -6299,7 +5597,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[5][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[17] -= dqdci;               /* dwdot[C2H5]/d[H2] */
         J[18] += dqdci;               /* dwdot[C2H6]/d[H2] */
@@ -6309,22 +5607,22 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[39] -= dqdci;               /* dwdot[C2H5]/d[H] */
         J[40] += dqdci;               /* dwdot[C2H6]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[5][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[127] -= dqdci;              /* dwdot[C2H5]/d[H2O] */
         J[128] += dqdci;              /* dwdot[C2H6]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[5][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[237] -= dqdci;              /* dwdot[C2H5]/d[CH4] */
         J[238] += dqdci;              /* dwdot[C2H6]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[5][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[259] -= dqdci;              /* dwdot[C2H5]/d[CO] */
         J[260] += dqdci;              /* dwdot[C2H6]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[5][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[281] -= dqdci;              /* dwdot[C2H5]/d[CO2] */
         J[282] += dqdci;              /* dwdot[C2H6]/d[CO2] */
@@ -6334,38 +5632,38 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[391] -= dqdci;              /* dwdot[C2H5]/d[C2H5] */
         J[392] += dqdci;              /* dwdot[C2H6]/d[C2H5] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[5][5] - 1)*dcdc_fac - k_r;
+        dqdci = (3 - 1)*dcdc_fac - k_r;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[413] -= dqdci;              /* dwdot[C2H5]/d[C2H6] */
         J[414] += dqdci;              /* dwdot[C2H6]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[5][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[457] -= dqdci;              /* dwdot[C2H5]/d[AR] */
         J[458] += dqdci;              /* dwdot[C2H6]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[5][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac + k_f*sc[17];
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[5][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac;
-        dqdc[10] = udata->TB[5][2]*dcdc_fac;
-        dqdc[11] = udata->TB[5][3]*dcdc_fac;
-        dqdc[12] = udata->TB[5][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac + k_f*sc[1];
-        dqdc[18] = udata->TB[5][5]*dcdc_fac - k_r;
+        dqdc[18] = 3*dcdc_fac - k_r;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[5][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+17] -= dqdc[k];
@@ -6380,24 +5678,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[6][0] - 1)*sc[0] + (udata->TB[6][1] - 1)*sc[5] + (udata->TB[6][2] - 1)*sc[10] + (udata->TB[6][3] - 1)*sc[11] + (udata->TB[6][4] - 1)*sc[12] + (udata->TB[6][5] - 1)*sc[18] + (udata->TB[6][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[0]*sc[11];
-    k_f = udata->prefactor_units[6] * udata->fwd_A[6]
-                * exp(udata->fwd_beta[6] * tc[0] - udata->activation_units[6] * udata->fwd_Ea[6] * invT);
-    dlnkfdT = udata->fwd_beta[6] * invT + udata->activation_units[6] * udata->fwd_Ea[6] * invT2;
+    k_f = 1.0000000000000002e-06 * 43000000
+                * exp(1.5 * tc[0] - 0.50321666580471969 * 79600 * invT);
+    dlnkfdT = 1.5 * invT + 0.50321666580471969 *  79600  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[6] * exp(udata->low_beta[6] * tc[0] - udata->activation_units[6] * udata->low_Ea[6] * invT);
-    Pr = udata->phase_units[6] * alpha / k_f * k_0;
+    k_0 = 5.0699999999999998e+27 * exp(-3.4199999999999999 * tc[0] - 0.50321666580471969 * 84350 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[6] * invT + udata->activation_units[6] * udata->low_Ea[6] * invT2;
+    dlnk0dT = -3.4199999999999999 * invT + 0.50321666580471969 * 84350 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[6]) > 1.e-100 ? (1.-udata->troe_a[6])*exp(-T/udata->troe_Tsss[6]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[6]) > 1.e-100 ? udata->troe_a[6] * exp(-T/udata->troe_Ts[6]) : 0.);
-    Fcent3 = (udata->troe_len[6] == 4 ? exp(-udata->troe_Tss[6] * invT) : 0.);
+    Fcent1 = (1.-0.93200000000000005)*exp(-T/197);
+    Fcent2 = 0.93200000000000005 * exp(-T/1540);
+    Fcent3 = exp(-10300 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -6407,9 +5705,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[6]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[6] : 0.)
-      + (fabs(udata->troe_Ts[6]) > 1.e-100 ? -Fcent2/udata->troe_Ts[6] : 0.)
-      + (udata->troe_len[6] == 4 ? Fcent3*udata->troe_Tss[6]*invT2 : 0.) );
+        -Fcent1/197
+        -Fcent2/1540
+        + Fcent3*10300*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -6437,27 +5735,27 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[6][0] - 1)*dcdc_fac + k_f*sc[11];
+        dqdci = (2 - 1)*dcdc_fac + k_f*sc[11];
         J[0] -= dqdci;                /* dwdot[H2]/d[H2] */
         J[11] -= dqdci;               /* dwdot[CO]/d[H2] */
         J[14] += dqdci;               /* dwdot[CH2O]/d[H2] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[6][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[110] -= dqdci;              /* dwdot[H2]/d[H2O] */
         J[121] -= dqdci;              /* dwdot[CO]/d[H2O] */
         J[124] += dqdci;              /* dwdot[CH2O]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[6][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[220] -= dqdci;              /* dwdot[H2]/d[CH4] */
         J[231] -= dqdci;              /* dwdot[CO]/d[CH4] */
         J[234] += dqdci;              /* dwdot[CH2O]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[6][3] - 1)*dcdc_fac + k_f*sc[0];
+        dqdci = (1.5 - 1)*dcdc_fac + k_f*sc[0];
         J[242] -= dqdci;              /* dwdot[H2]/d[CO] */
         J[253] -= dqdci;              /* dwdot[CO]/d[CO] */
         J[256] += dqdci;              /* dwdot[CH2O]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[6][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[264] -= dqdci;              /* dwdot[H2]/d[CO2] */
         J[275] -= dqdci;              /* dwdot[CO]/d[CO2] */
         J[278] += dqdci;              /* dwdot[CH2O]/d[CO2] */
@@ -6467,38 +5765,38 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[319] -= dqdci;              /* dwdot[CO]/d[CH2O] */
         J[322] += dqdci;              /* dwdot[CH2O]/d[CH2O] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[6][5] - 1)*dcdc_fac;
+        dqdci = (3 - 1)*dcdc_fac;
         J[396] -= dqdci;              /* dwdot[H2]/d[C2H6] */
         J[407] -= dqdci;              /* dwdot[CO]/d[C2H6] */
         J[410] += dqdci;              /* dwdot[CH2O]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[6][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[440] -= dqdci;              /* dwdot[H2]/d[AR] */
         J[451] -= dqdci;              /* dwdot[CO]/d[AR] */
         J[454] += dqdci;              /* dwdot[CH2O]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[6][0]*dcdc_fac + k_f*sc[11];
+        dqdc[0] = 2*dcdc_fac + k_f*sc[11];
         dqdc[1] = dcdc_fac;
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[6][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac;
-        dqdc[10] = udata->TB[6][2]*dcdc_fac;
-        dqdc[11] = udata->TB[6][3]*dcdc_fac + k_f*sc[0];
-        dqdc[12] = udata->TB[6][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac + k_f*sc[0];
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac - k_r;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[6][5]*dcdc_fac;
+        dqdc[18] = 3*dcdc_fac;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[6][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+0] -= dqdc[k];
             J[22*k+11] -= dqdc[k];
@@ -6513,24 +5811,24 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a pressure-fall-off reaction */
     /* also 3-body */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[7][0] - 1)*sc[0] + (udata->TB[7][1] - 1)*sc[5] + (udata->TB[7][2] - 1)*sc[10] + (udata->TB[7][3] - 1)*sc[11] + (udata->TB[7][4] - 1)*sc[12] + (udata->TB[7][5] - 1)*sc[18] + (udata->TB[7][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[9]*sc[9];
-    k_f = udata->prefactor_units[7] * udata->fwd_A[7]
-                * exp(udata->fwd_beta[7] * tc[0] - udata->activation_units[7] * udata->fwd_Ea[7] * invT);
-    dlnkfdT = udata->fwd_beta[7] * invT + udata->activation_units[7] * udata->fwd_Ea[7] * invT2;
+    k_f = 1.0000000000000002e-06 * 21200000000000000
+                * exp(-0.96999999999999997 * tc[0] - 0.50321666580471969 * 620 * invT);
+    dlnkfdT = -0.96999999999999997 * invT + 0.50321666580471969 *  620  * invT2;
     /* pressure-fall-off */
-    k_0 = udata->low_A[7] * exp(udata->low_beta[7] * tc[0] - udata->activation_units[7] * udata->low_Ea[7] * invT);
-    Pr = udata->phase_units[7] * alpha / k_f * k_0;
+    k_0 = 1.7700000000000001e+50 * exp(-9.6699999999999999 * tc[0] - 0.50321666580471969 * 6220 * invT);
+    Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = udata->low_beta[7] * invT + udata->activation_units[7] * udata->low_Ea[7] * invT2;
+    dlnk0dT = -9.6699999999999999 * invT + 0.50321666580471969 * 6220 * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
     logPr = log10(Pr);
-    Fcent1 = (fabs(udata->troe_Tsss[7]) > 1.e-100 ? (1.-udata->troe_a[7])*exp(-T/udata->troe_Tsss[7]) : 0.);
-    Fcent2 = (fabs(udata->troe_Ts[7]) > 1.e-100 ? udata->troe_a[7] * exp(-T/udata->troe_Ts[7]) : 0.);
-    Fcent3 = (udata->troe_len[7] == 4 ? exp(-udata->troe_Tss[7] * invT) : 0.);
+    Fcent1 = (1.-0.53249999999999997)*exp(-T/151);
+    Fcent2 = 0.53249999999999997 * exp(-T/1038);
+    Fcent3 = exp(-4970 * invT);
     Fcent = Fcent1 + Fcent2 + Fcent3;
     logFcent = log10(Fcent);
     troe_c = -.4 - .67 * logFcent;
@@ -6540,9 +5838,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     troe = 1.0 / (1.0 + troePr*troePr);
     F = pow(10.0, logFcent * troe);
     dlogFcentdT = log10e/Fcent*( 
-        (fabs(udata->troe_Tsss[7]) > 1.e-100 ? -Fcent1/udata->troe_Tsss[7] : 0.)
-      + (fabs(udata->troe_Ts[7]) > 1.e-100 ? -Fcent2/udata->troe_Ts[7] : 0.)
-      + (udata->troe_len[7] == 4 ? Fcent3*udata->troe_Tss[7]*invT2 : 0.) );
+        -Fcent1/151
+        -Fcent2/1038
+        + Fcent3*4970*invT2);
     dlogFdcn_fac = 2.0 * logFcent * troe*troe * troePr * troePr_den;
     dlogFdc = -troe_n * dlogFdcn_fac * troePr_den;
     dlogFdn = dlogFdcn_fac * troePr;
@@ -6569,11 +5867,11 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     dcdc_fac = q/alpha*(1.0/(Pr+1.0) + dlogFdlogPr);
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[7][0] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[9] += -2 * dqdci;           /* dwdot[CH3]/d[H2] */
         J[18] += dqdci;               /* dwdot[C2H6]/d[H2] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[7][1] - 1)*dcdc_fac;
+        dqdci = (6 - 1)*dcdc_fac;
         J[119] += -2 * dqdci;         /* dwdot[CH3]/d[H2O] */
         J[128] += dqdci;              /* dwdot[C2H6]/d[H2O] */
         /* d()/d[CH3] */
@@ -6581,48 +5879,48 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[207] += -2 * dqdci;         /* dwdot[CH3]/d[CH3] */
         J[216] += dqdci;              /* dwdot[C2H6]/d[CH3] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[7][2] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[229] += -2 * dqdci;         /* dwdot[CH3]/d[CH4] */
         J[238] += dqdci;              /* dwdot[C2H6]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[7][3] - 1)*dcdc_fac;
+        dqdci = (1.5 - 1)*dcdc_fac;
         J[251] += -2 * dqdci;         /* dwdot[CH3]/d[CO] */
         J[260] += dqdci;              /* dwdot[C2H6]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[7][4] - 1)*dcdc_fac;
+        dqdci = (2 - 1)*dcdc_fac;
         J[273] += -2 * dqdci;         /* dwdot[CH3]/d[CO2] */
         J[282] += dqdci;              /* dwdot[C2H6]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[7][5] - 1)*dcdc_fac - k_r;
+        dqdci = (3 - 1)*dcdc_fac - k_r;
         J[405] += -2 * dqdci;         /* dwdot[CH3]/d[C2H6] */
         J[414] += dqdci;              /* dwdot[C2H6]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[7][6] - 1)*dcdc_fac;
+        dqdci = (0.69999999999999996 - 1)*dcdc_fac;
         J[449] += -2 * dqdci;         /* dwdot[CH3]/d[AR] */
         J[458] += dqdci;              /* dwdot[C2H6]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[7][0]*dcdc_fac;
+        dqdc[0] = 2*dcdc_fac;
         dqdc[1] = dcdc_fac;
         dqdc[2] = dcdc_fac;
         dqdc[3] = dcdc_fac;
         dqdc[4] = dcdc_fac;
-        dqdc[5] = udata->TB[7][1]*dcdc_fac;
+        dqdc[5] = 6*dcdc_fac;
         dqdc[6] = dcdc_fac;
         dqdc[7] = dcdc_fac;
         dqdc[8] = dcdc_fac;
         dqdc[9] = dcdc_fac + k_f*2*sc[9];
-        dqdc[10] = udata->TB[7][2]*dcdc_fac;
-        dqdc[11] = udata->TB[7][3]*dcdc_fac;
-        dqdc[12] = udata->TB[7][4]*dcdc_fac;
+        dqdc[10] = 2*dcdc_fac;
+        dqdc[11] = 1.5*dcdc_fac;
+        dqdc[12] = 2*dcdc_fac;
         dqdc[13] = dcdc_fac;
         dqdc[14] = dcdc_fac;
         dqdc[15] = dcdc_fac;
         dqdc[16] = dcdc_fac;
         dqdc[17] = dcdc_fac;
-        dqdc[18] = udata->TB[7][5]*dcdc_fac - k_r;
+        dqdc[18] = 3*dcdc_fac - k_r;
         dqdc[19] = dcdc_fac;
-        dqdc[20] = udata->TB[7][6]*dcdc_fac;
+        dqdc[20] = 0.69999999999999996*dcdc_fac;
         for (int k=0; k<21; k++) {
             J[22*k+9] += -2 * dqdc[k];
             J[22*k+18] += dqdc[k];
@@ -6634,12 +5932,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 9: O + H + M <=> OH + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[8][0] - 1)*sc[0] + (udata->TB[8][1] - 1)*sc[5] + (udata->TB[8][2] - 1)*sc[10] + (udata->TB[8][3] - 1)*sc[11] + (udata->TB[8][4] - 1)*sc[12] + (udata->TB[8][5] - 1)*sc[18] + (udata->TB[8][6] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.69999999999999996 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[2];
-    k_f = udata->prefactor_units[8] * udata->fwd_A[8]
-                * exp(udata->fwd_beta[8] * tc[0] - udata->activation_units[8] * udata->fwd_Ea[8] * invT);
-    dlnkfdT = udata->fwd_beta[8] * invT + udata->activation_units[8] * udata->fwd_Ea[8] * invT2;
+    k_f = 1.0000000000000002e-12 * 5e+17
+                * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -1 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[4];
     Kc = refCinv * exp(g_RT[1] + g_RT[2] - g_RT[4]);
@@ -6659,7 +5957,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     k_r *= alpha;
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[8][0] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[2] -= dqdci;                /* dwdot[O]/d[H2] */
         J[4] += dqdci;                /* dwdot[OH]/d[H2] */
@@ -6679,58 +5977,58 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[90] -= dqdci;               /* dwdot[O]/d[OH] */
         J[92] += dqdci;               /* dwdot[OH]/d[OH] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[8][1] - 1)*q_nocor;
+        dqdci = (6 - 1)*q_nocor;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[112] -= dqdci;              /* dwdot[O]/d[H2O] */
         J[114] += dqdci;              /* dwdot[OH]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[8][2] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[222] -= dqdci;              /* dwdot[O]/d[CH4] */
         J[224] += dqdci;              /* dwdot[OH]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[8][3] - 1)*q_nocor;
+        dqdci = (1.5 - 1)*q_nocor;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[244] -= dqdci;              /* dwdot[O]/d[CO] */
         J[246] += dqdci;              /* dwdot[OH]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[8][4] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[266] -= dqdci;              /* dwdot[O]/d[CO2] */
         J[268] += dqdci;              /* dwdot[OH]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[8][5] - 1)*q_nocor;
+        dqdci = (3 - 1)*q_nocor;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[398] -= dqdci;              /* dwdot[O]/d[C2H6] */
         J[400] += dqdci;              /* dwdot[OH]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[8][6] - 1)*q_nocor;
+        dqdci = (0.69999999999999996 - 1)*q_nocor;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[442] -= dqdci;              /* dwdot[O]/d[AR] */
         J[444] += dqdci;              /* dwdot[OH]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[8][0]*q_nocor;
+        dqdc[0] = 2*q_nocor;
         dqdc[1] = q_nocor + k_f*sc[2];
         dqdc[2] = q_nocor + k_f*sc[1];
         dqdc[3] = q_nocor;
         dqdc[4] = q_nocor - k_r;
-        dqdc[5] = udata->TB[8][1]*q_nocor;
+        dqdc[5] = 6*q_nocor;
         dqdc[6] = q_nocor;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
-        dqdc[10] = udata->TB[8][2]*q_nocor;
-        dqdc[11] = udata->TB[8][3]*q_nocor;
-        dqdc[12] = udata->TB[8][4]*q_nocor;
+        dqdc[10] = 2*q_nocor;
+        dqdc[11] = 1.5*q_nocor;
+        dqdc[12] = 2*q_nocor;
         dqdc[13] = q_nocor;
         dqdc[14] = q_nocor;
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[8][5]*q_nocor;
+        dqdc[18] = 3*q_nocor;
         dqdc[19] = q_nocor;
-        dqdc[20] = udata->TB[8][6]*q_nocor;
+        dqdc[20] = 0.69999999999999996*q_nocor;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+2] -= dqdc[k];
@@ -6744,12 +6042,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 10: O + CO + M <=> CO2 + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[9][0] - 1)*sc[0] + (udata->TB[9][1] - 1)*sc[3] + (udata->TB[9][2] - 1)*sc[5] + (udata->TB[9][3] - 1)*sc[10] + (udata->TB[9][4] - 1)*sc[11] + (udata->TB[9][5] - 1)*sc[12] + (udata->TB[9][6] - 1)*sc[18] + (udata->TB[9][7] - 1)*sc[20];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 6 - 1)*sc[3] + ( 6 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 3.5 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.5 - 1)*sc[20];
     /* forward */
     phi_f = sc[2]*sc[11];
-    k_f = udata->prefactor_units[9] * udata->fwd_A[9]
-                * exp(udata->fwd_beta[9] * tc[0] - udata->activation_units[9] * udata->fwd_Ea[9] * invT);
-    dlnkfdT = udata->fwd_beta[9] * invT + udata->activation_units[9] * udata->fwd_Ea[9] * invT2;
+    k_f = 1.0000000000000002e-12 * 602000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 3000 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  3000  * invT2;
     /* reverse */
     phi_r = sc[12];
     Kc = refCinv * exp(g_RT[2] + g_RT[11] - g_RT[12]);
@@ -6769,7 +6067,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     k_r *= alpha;
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[9][0] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[2] -= dqdci;                /* dwdot[O]/d[H2] */
         J[11] -= dqdci;               /* dwdot[CO]/d[H2] */
         J[12] += dqdci;               /* dwdot[CO2]/d[H2] */
@@ -6779,63 +6077,63 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[55] -= dqdci;               /* dwdot[CO]/d[O] */
         J[56] += dqdci;               /* dwdot[CO2]/d[O] */
         /* d()/d[O2] */
-        dqdci = (udata->TB[9][1] - 1)*q_nocor;
+        dqdci = (6 - 1)*q_nocor;
         J[68] -= dqdci;               /* dwdot[O]/d[O2] */
         J[77] -= dqdci;               /* dwdot[CO]/d[O2] */
         J[78] += dqdci;               /* dwdot[CO2]/d[O2] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[9][2] - 1)*q_nocor;
+        dqdci = (6 - 1)*q_nocor;
         J[112] -= dqdci;              /* dwdot[O]/d[H2O] */
         J[121] -= dqdci;              /* dwdot[CO]/d[H2O] */
         J[122] += dqdci;              /* dwdot[CO2]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[9][3] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[222] -= dqdci;              /* dwdot[O]/d[CH4] */
         J[231] -= dqdci;              /* dwdot[CO]/d[CH4] */
         J[232] += dqdci;              /* dwdot[CO2]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[9][4] - 1)*q_nocor + k_f*sc[2];
+        dqdci = (1.5 - 1)*q_nocor + k_f*sc[2];
         J[244] -= dqdci;              /* dwdot[O]/d[CO] */
         J[253] -= dqdci;              /* dwdot[CO]/d[CO] */
         J[254] += dqdci;              /* dwdot[CO2]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[9][5] - 1)*q_nocor - k_r;
+        dqdci = (3.5 - 1)*q_nocor - k_r;
         J[266] -= dqdci;              /* dwdot[O]/d[CO2] */
         J[275] -= dqdci;              /* dwdot[CO]/d[CO2] */
         J[276] += dqdci;              /* dwdot[CO2]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[9][6] - 1)*q_nocor;
+        dqdci = (3 - 1)*q_nocor;
         J[398] -= dqdci;              /* dwdot[O]/d[C2H6] */
         J[407] -= dqdci;              /* dwdot[CO]/d[C2H6] */
         J[408] += dqdci;              /* dwdot[CO2]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[9][7] - 1)*q_nocor;
+        dqdci = (0.5 - 1)*q_nocor;
         J[442] -= dqdci;              /* dwdot[O]/d[AR] */
         J[451] -= dqdci;              /* dwdot[CO]/d[AR] */
         J[452] += dqdci;              /* dwdot[CO2]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[9][0]*q_nocor;
+        dqdc[0] = 2*q_nocor;
         dqdc[1] = q_nocor;
         dqdc[2] = q_nocor + k_f*sc[11];
-        dqdc[3] = udata->TB[9][1]*q_nocor;
+        dqdc[3] = 6*q_nocor;
         dqdc[4] = q_nocor;
-        dqdc[5] = udata->TB[9][2]*q_nocor;
+        dqdc[5] = 6*q_nocor;
         dqdc[6] = q_nocor;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
-        dqdc[10] = udata->TB[9][3]*q_nocor;
-        dqdc[11] = udata->TB[9][4]*q_nocor + k_f*sc[2];
-        dqdc[12] = udata->TB[9][5]*q_nocor - k_r;
+        dqdc[10] = 2*q_nocor;
+        dqdc[11] = 1.5*q_nocor + k_f*sc[2];
+        dqdc[12] = 3.5*q_nocor - k_r;
         dqdc[13] = q_nocor;
         dqdc[14] = q_nocor;
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[9][6]*q_nocor;
+        dqdc[18] = 3*q_nocor;
         dqdc[19] = q_nocor;
-        dqdc[20] = udata->TB[9][7]*q_nocor;
+        dqdc[20] = 0.5*q_nocor;
         for (int k=0; k<21; k++) {
             J[22*k+2] -= dqdc[k];
             J[22*k+11] -= dqdc[k];
@@ -6849,12 +6147,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 11: H + O2 + M <=> HO2 + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[10][0] - 1)*sc[3] + (udata->TB[10][1] - 1)*sc[5] + (udata->TB[10][2] - 1)*sc[11] + (udata->TB[10][3] - 1)*sc[12] + (udata->TB[10][4] - 1)*sc[18] + (udata->TB[10][5] - 1)*sc[19] + (udata->TB[10][6] - 1)*sc[20];
+    alpha = mixture + ( 0 - 1)*sc[3] + ( 0 - 1)*sc[5] + ( 0.75 - 1)*sc[11] + ( 1.5 - 1)*sc[12] + ( 1.5 - 1)*sc[18] + ( 0 - 1)*sc[19] + ( 0 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[3];
-    k_f = udata->prefactor_units[10] * udata->fwd_A[10]
-                * exp(udata->fwd_beta[10] * tc[0] - udata->activation_units[10] * udata->fwd_Ea[10] * invT);
-    dlnkfdT = udata->fwd_beta[10] * invT + udata->activation_units[10] * udata->fwd_Ea[10] * invT2;
+    k_f = 1.0000000000000002e-12 * 2.8e+18
+                * exp(-0.85999999999999999 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -0.85999999999999999 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[6];
     Kc = refCinv * exp(g_RT[1] + g_RT[3] - g_RT[6]);
@@ -6879,12 +6177,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[25] -= dqdci;               /* dwdot[O2]/d[H] */
         J[28] += dqdci;               /* dwdot[HO2]/d[H] */
         /* d()/d[O2] */
-        dqdci = (udata->TB[10][0] - 1)*q_nocor + k_f*sc[1];
+        dqdci = (0 - 1)*q_nocor + k_f*sc[1];
         J[67] -= dqdci;               /* dwdot[H]/d[O2] */
         J[69] -= dqdci;               /* dwdot[O2]/d[O2] */
         J[72] += dqdci;               /* dwdot[HO2]/d[O2] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[10][1] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[113] -= dqdci;              /* dwdot[O2]/d[H2O] */
         J[116] += dqdci;              /* dwdot[HO2]/d[H2O] */
@@ -6894,27 +6192,27 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[135] -= dqdci;              /* dwdot[O2]/d[HO2] */
         J[138] += dqdci;              /* dwdot[HO2]/d[HO2] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[10][2] - 1)*q_nocor;
+        dqdci = (0.75 - 1)*q_nocor;
         J[243] -= dqdci;              /* dwdot[H]/d[CO] */
         J[245] -= dqdci;              /* dwdot[O2]/d[CO] */
         J[248] += dqdci;              /* dwdot[HO2]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[10][3] - 1)*q_nocor;
+        dqdci = (1.5 - 1)*q_nocor;
         J[265] -= dqdci;              /* dwdot[H]/d[CO2] */
         J[267] -= dqdci;              /* dwdot[O2]/d[CO2] */
         J[270] += dqdci;              /* dwdot[HO2]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[10][4] - 1)*q_nocor;
+        dqdci = (1.5 - 1)*q_nocor;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[399] -= dqdci;              /* dwdot[O2]/d[C2H6] */
         J[402] += dqdci;              /* dwdot[HO2]/d[C2H6] */
         /* d()/d[N2] */
-        dqdci = (udata->TB[10][5] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[419] -= dqdci;              /* dwdot[H]/d[N2] */
         J[421] -= dqdci;              /* dwdot[O2]/d[N2] */
         J[424] += dqdci;              /* dwdot[HO2]/d[N2] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[10][6] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[443] -= dqdci;              /* dwdot[O2]/d[AR] */
         J[446] += dqdci;              /* dwdot[HO2]/d[AR] */
@@ -6923,24 +6221,21 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         dqdc[0] = q_nocor;
         dqdc[1] = q_nocor + k_f*sc[3];
         dqdc[2] = q_nocor;
-        dqdc[3] = udata->TB[10][0]*q_nocor + k_f*sc[1];
+        dqdc[3] =  + k_f*sc[1];
         dqdc[4] = q_nocor;
-        dqdc[5] = udata->TB[10][1]*q_nocor;
         dqdc[6] = q_nocor - k_r;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
         dqdc[10] = q_nocor;
-        dqdc[11] = udata->TB[10][2]*q_nocor;
-        dqdc[12] = udata->TB[10][3]*q_nocor;
+        dqdc[11] = 0.75*q_nocor;
+        dqdc[12] = 1.5*q_nocor;
         dqdc[13] = q_nocor;
         dqdc[14] = q_nocor;
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[10][4]*q_nocor;
-        dqdc[19] = udata->TB[10][5]*q_nocor;
-        dqdc[20] = udata->TB[10][6]*q_nocor;
+        dqdc[18] = 1.5*q_nocor;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+3] -= dqdc[k];
@@ -6954,12 +6249,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 12: 2 H + M <=> H2 + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[11][0] - 1)*sc[0] + (udata->TB[11][1] - 1)*sc[5] + (udata->TB[11][2] - 1)*sc[10] + (udata->TB[11][3] - 1)*sc[12] + (udata->TB[11][4] - 1)*sc[18] + (udata->TB[11][5] - 1)*sc[20];
+    alpha = mixture + ( 0 - 1)*sc[0] + ( 0 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 0 - 1)*sc[12] + ( 3 - 1)*sc[18] + ( 0.63 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[1];
-    k_f = udata->prefactor_units[11] * udata->fwd_A[11]
-                * exp(udata->fwd_beta[11] * tc[0] - udata->activation_units[11] * udata->fwd_Ea[11] * invT);
-    dlnkfdT = udata->fwd_beta[11] * invT + udata->activation_units[11] * udata->fwd_Ea[11] * invT2;
+    k_f = 1.0000000000000002e-12 * 1e+18
+                * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -1 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[0];
     Kc = refCinv * exp(-g_RT[0] + 2*g_RT[1]);
@@ -6978,7 +6273,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     k_r *= alpha;
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[11][0] - 1)*q_nocor - k_r;
+        dqdci = (0 - 1)*q_nocor - k_r;
         J[0] += dqdci;                /* dwdot[H2]/d[H2] */
         J[1] += -2 * dqdci;           /* dwdot[H]/d[H2] */
         /* d()/d[H] */
@@ -6986,48 +6281,46 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[22] += dqdci;               /* dwdot[H2]/d[H] */
         J[23] += -2 * dqdci;          /* dwdot[H]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[11][1] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[110] += dqdci;              /* dwdot[H2]/d[H2O] */
         J[111] += -2 * dqdci;         /* dwdot[H]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[11][2] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[220] += dqdci;              /* dwdot[H2]/d[CH4] */
         J[221] += -2 * dqdci;         /* dwdot[H]/d[CH4] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[11][3] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[264] += dqdci;              /* dwdot[H2]/d[CO2] */
         J[265] += -2 * dqdci;         /* dwdot[H]/d[CO2] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[11][4] - 1)*q_nocor;
+        dqdci = (3 - 1)*q_nocor;
         J[396] += dqdci;              /* dwdot[H2]/d[C2H6] */
         J[397] += -2 * dqdci;         /* dwdot[H]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[11][5] - 1)*q_nocor;
+        dqdci = (0.63 - 1)*q_nocor;
         J[440] += dqdci;              /* dwdot[H2]/d[AR] */
         J[441] += -2 * dqdci;         /* dwdot[H]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[11][0]*q_nocor - k_r;
+        dqdc[0] =  - k_r;
         dqdc[1] = q_nocor + k_f*2*sc[1];
         dqdc[2] = q_nocor;
         dqdc[3] = q_nocor;
         dqdc[4] = q_nocor;
-        dqdc[5] = udata->TB[11][1]*q_nocor;
         dqdc[6] = q_nocor;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
-        dqdc[10] = udata->TB[11][2]*q_nocor;
+        dqdc[10] = 2*q_nocor;
         dqdc[11] = q_nocor;
-        dqdc[12] = udata->TB[11][3]*q_nocor;
         dqdc[13] = q_nocor;
         dqdc[14] = q_nocor;
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[11][4]*q_nocor;
+        dqdc[18] = 3*q_nocor;
         dqdc[19] = q_nocor;
-        dqdc[20] = udata->TB[11][5]*q_nocor;
+        dqdc[20] = 0.63*q_nocor;
         for (int k=0; k<21; k++) {
             J[22*k+0] += dqdc[k];
             J[22*k+1] += -2 * dqdc[k];
@@ -7039,12 +6332,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 13: H + OH + M <=> H2O + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[12][0] - 1)*sc[0] + (udata->TB[12][1] - 1)*sc[5] + (udata->TB[12][2] - 1)*sc[10] + (udata->TB[12][3] - 1)*sc[18] + (udata->TB[12][4] - 1)*sc[20];
+    alpha = mixture + ( 0.72999999999999998 - 1)*sc[0] + ( 3.6499999999999999 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 3 - 1)*sc[18] + ( 0.38 - 1)*sc[20];
     /* forward */
     phi_f = sc[1]*sc[4];
-    k_f = udata->prefactor_units[12] * udata->fwd_A[12]
-                * exp(udata->fwd_beta[12] * tc[0] - udata->activation_units[12] * udata->fwd_Ea[12] * invT);
-    dlnkfdT = udata->fwd_beta[12] * invT + udata->activation_units[12] * udata->fwd_Ea[12] * invT2;
+    k_f = 1.0000000000000002e-12 * 2.2e+22
+                * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -2 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5];
     Kc = refCinv * exp(g_RT[1] + g_RT[4] - g_RT[5]);
@@ -7064,7 +6357,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     k_r *= alpha;
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[12][0] - 1)*q_nocor;
+        dqdci = (0.72999999999999998 - 1)*q_nocor;
         J[1] -= dqdci;                /* dwdot[H]/d[H2] */
         J[4] -= dqdci;                /* dwdot[OH]/d[H2] */
         J[5] += dqdci;                /* dwdot[H2O]/d[H2] */
@@ -7079,38 +6372,38 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[92] -= dqdci;               /* dwdot[OH]/d[OH] */
         J[93] += dqdci;               /* dwdot[H2O]/d[OH] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[12][1] - 1)*q_nocor - k_r;
+        dqdci = (3.6499999999999999 - 1)*q_nocor - k_r;
         J[111] -= dqdci;              /* dwdot[H]/d[H2O] */
         J[114] -= dqdci;              /* dwdot[OH]/d[H2O] */
         J[115] += dqdci;              /* dwdot[H2O]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[12][2] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[221] -= dqdci;              /* dwdot[H]/d[CH4] */
         J[224] -= dqdci;              /* dwdot[OH]/d[CH4] */
         J[225] += dqdci;              /* dwdot[H2O]/d[CH4] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[12][3] - 1)*q_nocor;
+        dqdci = (3 - 1)*q_nocor;
         J[397] -= dqdci;              /* dwdot[H]/d[C2H6] */
         J[400] -= dqdci;              /* dwdot[OH]/d[C2H6] */
         J[401] += dqdci;              /* dwdot[H2O]/d[C2H6] */
         /* d()/d[AR] */
-        dqdci = (udata->TB[12][4] - 1)*q_nocor;
+        dqdci = (0.38 - 1)*q_nocor;
         J[441] -= dqdci;              /* dwdot[H]/d[AR] */
         J[444] -= dqdci;              /* dwdot[OH]/d[AR] */
         J[445] += dqdci;              /* dwdot[H2O]/d[AR] */
     }
     else {
-        dqdc[0] = udata->TB[12][0]*q_nocor;
+        dqdc[0] = 0.72999999999999998*q_nocor;
         dqdc[1] = q_nocor + k_f*sc[4];
         dqdc[2] = q_nocor;
         dqdc[3] = q_nocor;
         dqdc[4] = q_nocor + k_f*sc[1];
-        dqdc[5] = udata->TB[12][1]*q_nocor - k_r;
+        dqdc[5] = 3.6499999999999999*q_nocor - k_r;
         dqdc[6] = q_nocor;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
-        dqdc[10] = udata->TB[12][2]*q_nocor;
+        dqdc[10] = 2*q_nocor;
         dqdc[11] = q_nocor;
         dqdc[12] = q_nocor;
         dqdc[13] = q_nocor;
@@ -7118,9 +6411,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[12][3]*q_nocor;
+        dqdc[18] = 3*q_nocor;
         dqdc[19] = q_nocor;
-        dqdc[20] = udata->TB[12][4]*q_nocor;
+        dqdc[20] = 0.38*q_nocor;
         for (int k=0; k<21; k++) {
             J[22*k+1] -= dqdc[k];
             J[22*k+4] -= dqdc[k];
@@ -7134,12 +6427,12 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*reaction 14: HCO + M <=> H + CO + M */
     /*a third-body and non-pressure-fall-off reaction */
     /* 3-body correction factor */
-    alpha = mixture + (udata->TB[13][0] - 1)*sc[0] + (udata->TB[13][1] - 1)*sc[5] + (udata->TB[13][2] - 1)*sc[10] + (udata->TB[13][3] - 1)*sc[11] + (udata->TB[13][4] - 1)*sc[12] + (udata->TB[13][5] - 1)*sc[18];
+    alpha = mixture + ( 2 - 1)*sc[0] + ( 0 - 1)*sc[5] + ( 2 - 1)*sc[10] + ( 1.5 - 1)*sc[11] + ( 2 - 1)*sc[12] + ( 3 - 1)*sc[18];
     /* forward */
     phi_f = sc[13];
-    k_f = udata->prefactor_units[13] * udata->fwd_A[13]
-                * exp(udata->fwd_beta[13] * tc[0] - udata->activation_units[13] * udata->fwd_Ea[13] * invT);
-    dlnkfdT = udata->fwd_beta[13] * invT + udata->activation_units[13] * udata->fwd_Ea[13] * invT2;
+    k_f = 1.0000000000000002e-06 * 1.87e+17
+                * exp(-1 * tc[0] - 0.50321666580471969 * 17000 * invT);
+    dlnkfdT = -1 * invT + 0.50321666580471969 *  17000  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[11];
     Kc = refC * exp(-g_RT[1] - g_RT[11] + g_RT[13]);
@@ -7159,7 +6452,7 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     k_r *= alpha;
     if (consP) {
         /* d()/d[H2] */
-        dqdci = (udata->TB[13][0] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[1] += dqdci;                /* dwdot[H]/d[H2] */
         J[11] += dqdci;               /* dwdot[CO]/d[H2] */
         J[13] -= dqdci;               /* dwdot[HCO]/d[H2] */
@@ -7169,22 +6462,22 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[33] += dqdci;               /* dwdot[CO]/d[H] */
         J[35] -= dqdci;               /* dwdot[HCO]/d[H] */
         /* d()/d[H2O] */
-        dqdci = (udata->TB[13][1] - 1)*q_nocor;
+        dqdci = (0 - 1)*q_nocor;
         J[111] += dqdci;              /* dwdot[H]/d[H2O] */
         J[121] += dqdci;              /* dwdot[CO]/d[H2O] */
         J[123] -= dqdci;              /* dwdot[HCO]/d[H2O] */
         /* d()/d[CH4] */
-        dqdci = (udata->TB[13][2] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[221] += dqdci;              /* dwdot[H]/d[CH4] */
         J[231] += dqdci;              /* dwdot[CO]/d[CH4] */
         J[233] -= dqdci;              /* dwdot[HCO]/d[CH4] */
         /* d()/d[CO] */
-        dqdci = (udata->TB[13][3] - 1)*q_nocor - k_r*sc[1];
+        dqdci = (1.5 - 1)*q_nocor - k_r*sc[1];
         J[243] += dqdci;              /* dwdot[H]/d[CO] */
         J[253] += dqdci;              /* dwdot[CO]/d[CO] */
         J[255] -= dqdci;              /* dwdot[HCO]/d[CO] */
         /* d()/d[CO2] */
-        dqdci = (udata->TB[13][4] - 1)*q_nocor;
+        dqdci = (2 - 1)*q_nocor;
         J[265] += dqdci;              /* dwdot[H]/d[CO2] */
         J[275] += dqdci;              /* dwdot[CO]/d[CO2] */
         J[277] -= dqdci;              /* dwdot[HCO]/d[CO2] */
@@ -7194,31 +6487,30 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
         J[297] += dqdci;              /* dwdot[CO]/d[HCO] */
         J[299] -= dqdci;              /* dwdot[HCO]/d[HCO] */
         /* d()/d[C2H6] */
-        dqdci = (udata->TB[13][5] - 1)*q_nocor;
+        dqdci = (3 - 1)*q_nocor;
         J[397] += dqdci;              /* dwdot[H]/d[C2H6] */
         J[407] += dqdci;              /* dwdot[CO]/d[C2H6] */
         J[409] -= dqdci;              /* dwdot[HCO]/d[C2H6] */
     }
     else {
-        dqdc[0] = udata->TB[13][0]*q_nocor;
+        dqdc[0] = 2*q_nocor;
         dqdc[1] = q_nocor - k_r*sc[11];
         dqdc[2] = q_nocor;
         dqdc[3] = q_nocor;
         dqdc[4] = q_nocor;
-        dqdc[5] = udata->TB[13][1]*q_nocor;
         dqdc[6] = q_nocor;
         dqdc[7] = q_nocor;
         dqdc[8] = q_nocor;
         dqdc[9] = q_nocor;
-        dqdc[10] = udata->TB[13][2]*q_nocor;
-        dqdc[11] = udata->TB[13][3]*q_nocor - k_r*sc[1];
-        dqdc[12] = udata->TB[13][4]*q_nocor;
+        dqdc[10] = 2*q_nocor;
+        dqdc[11] = 1.5*q_nocor - k_r*sc[1];
+        dqdc[12] = 2*q_nocor;
         dqdc[13] = q_nocor + k_f;
         dqdc[14] = q_nocor;
         dqdc[15] = q_nocor;
         dqdc[16] = q_nocor;
         dqdc[17] = q_nocor;
-        dqdc[18] = udata->TB[13][5]*q_nocor;
+        dqdc[18] = 3*q_nocor;
         dqdc[19] = q_nocor;
         dqdc[20] = q_nocor;
         for (int k=0; k<21; k++) {
@@ -7235,9 +6527,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[0]*sc[2];
-    k_f = udata->prefactor_units[14] * udata->fwd_A[14]
-                * exp(udata->fwd_beta[14] * tc[0] - udata->activation_units[14] * udata->fwd_Ea[14] * invT);
-    dlnkfdT = udata->fwd_beta[14] * invT + udata->activation_units[14] * udata->fwd_Ea[14] * invT2;
+    k_f = 1.0000000000000002e-06 * 50000
+                * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * 6290 * invT);
+    dlnkfdT = 2.6699999999999999 * invT + 0.50321666580471969 *  6290  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[4];
     Kc = exp(g_RT[0] - g_RT[1] + g_RT[2] - g_RT[4]);
@@ -7286,9 +6578,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[6];
-    k_f = udata->prefactor_units[15] * udata->fwd_A[15]
-                * exp(udata->fwd_beta[15] * tc[0] - udata->activation_units[15] * udata->fwd_Ea[15] * invT);
-    dlnkfdT = udata->fwd_beta[15] * invT + udata->activation_units[15] * udata->fwd_Ea[15] * invT2;
+    k_f = 1.0000000000000002e-06 * 20000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[4];
     Kc = exp(g_RT[2] - g_RT[3] - g_RT[4] + g_RT[6]);
@@ -7337,9 +6629,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[7];
-    k_f = udata->prefactor_units[16] * udata->fwd_A[16]
-                * exp(udata->fwd_beta[16] * tc[0] - udata->activation_units[16] * udata->fwd_Ea[16] * invT);
-    dlnkfdT = udata->fwd_beta[16] * invT + udata->activation_units[16] * udata->fwd_Ea[16] * invT2;
+    k_f = 1.0000000000000002e-06 * 80000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[13];
     Kc = exp(-g_RT[1] + g_RT[2] + g_RT[7] - g_RT[13]);
@@ -7388,9 +6680,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[8];
-    k_f = udata->prefactor_units[17] * udata->fwd_A[17]
-                * exp(udata->fwd_beta[17] * tc[0] - udata->activation_units[17] * udata->fwd_Ea[17] * invT);
-    dlnkfdT = udata->fwd_beta[17] * invT + udata->activation_units[17] * udata->fwd_Ea[17] * invT2;
+    k_f = 1.0000000000000002e-06 * 15000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[13];
     Kc = exp(-g_RT[1] + g_RT[2] + g_RT[8] - g_RT[13]);
@@ -7439,9 +6731,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[9];
-    k_f = udata->prefactor_units[18] * udata->fwd_A[18]
-                * exp(udata->fwd_beta[18] * tc[0] - udata->activation_units[18] * udata->fwd_Ea[18] * invT);
-    dlnkfdT = udata->fwd_beta[18] * invT + udata->activation_units[18] * udata->fwd_Ea[18] * invT2;
+    k_f = 1.0000000000000002e-06 * 84300000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[14];
     Kc = exp(-g_RT[1] + g_RT[2] + g_RT[9] - g_RT[14]);
@@ -7490,9 +6782,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[10];
-    k_f = udata->prefactor_units[19] * udata->fwd_A[19]
-                * exp(udata->fwd_beta[19] * tc[0] - udata->activation_units[19] * udata->fwd_Ea[19] * invT);
-    dlnkfdT = udata->fwd_beta[19] * invT + udata->activation_units[19] * udata->fwd_Ea[19] * invT2;
+    k_f = 1.0000000000000002e-06 * 1020000000
+                * exp(1.5 * tc[0] - 0.50321666580471969 * 8600 * invT);
+    dlnkfdT = 1.5 * invT + 0.50321666580471969 *  8600  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[9];
     Kc = exp(g_RT[2] - g_RT[4] - g_RT[9] + g_RT[10]);
@@ -7541,9 +6833,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[13];
-    k_f = udata->prefactor_units[20] * udata->fwd_A[20]
-                * exp(udata->fwd_beta[20] * tc[0] - udata->activation_units[20] * udata->fwd_Ea[20] * invT);
-    dlnkfdT = udata->fwd_beta[20] * invT + udata->activation_units[20] * udata->fwd_Ea[20] * invT2;
+    k_f = 1.0000000000000002e-06 * 30000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[11];
     Kc = exp(g_RT[2] - g_RT[4] - g_RT[11] + g_RT[13]);
@@ -7592,9 +6884,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[13];
-    k_f = udata->prefactor_units[21] * udata->fwd_A[21]
-                * exp(udata->fwd_beta[21] * tc[0] - udata->activation_units[21] * udata->fwd_Ea[21] * invT);
-    dlnkfdT = udata->fwd_beta[21] * invT + udata->activation_units[21] * udata->fwd_Ea[21] * invT2;
+    k_f = 1.0000000000000002e-06 * 30000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[12];
     Kc = exp(-g_RT[1] + g_RT[2] - g_RT[12] + g_RT[13]);
@@ -7643,9 +6935,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[14];
-    k_f = udata->prefactor_units[22] * udata->fwd_A[22]
-                * exp(udata->fwd_beta[22] * tc[0] - udata->activation_units[22] * udata->fwd_Ea[22] * invT);
-    dlnkfdT = udata->fwd_beta[22] * invT + udata->activation_units[22] * udata->fwd_Ea[22] * invT2;
+    k_f = 1.0000000000000002e-06 * 39000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 3540 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  3540  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[13];
     Kc = exp(g_RT[2] - g_RT[4] - g_RT[13] + g_RT[14]);
@@ -7694,9 +6986,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[16];
-    k_f = udata->prefactor_units[23] * udata->fwd_A[23]
-                * exp(udata->fwd_beta[23] * tc[0] - udata->activation_units[23] * udata->fwd_Ea[23] * invT);
-    dlnkfdT = udata->fwd_beta[23] * invT + udata->activation_units[23] * udata->fwd_Ea[23] * invT2;
+    k_f = 1.0000000000000002e-06 * 19200000
+                * exp(1.8300000000000001 * tc[0] - 0.50321666580471969 * 220 * invT);
+    dlnkfdT = 1.8300000000000001 * invT + 0.50321666580471969 *  220  * invT2;
     /* reverse */
     phi_r = sc[9]*sc[13];
     Kc = exp(g_RT[2] - g_RT[9] - g_RT[13] + g_RT[16]);
@@ -7745,9 +7037,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[17];
-    k_f = udata->prefactor_units[24] * udata->fwd_A[24]
-                * exp(udata->fwd_beta[24] * tc[0] - udata->activation_units[24] * udata->fwd_Ea[24] * invT);
-    dlnkfdT = udata->fwd_beta[24] * invT + udata->activation_units[24] * udata->fwd_Ea[24] * invT2;
+    k_f = 1.0000000000000002e-06 * 132000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[9]*sc[14];
     Kc = exp(g_RT[2] - g_RT[9] - g_RT[14] + g_RT[17]);
@@ -7796,9 +7088,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[2]*sc[18];
-    k_f = udata->prefactor_units[25] * udata->fwd_A[25]
-                * exp(udata->fwd_beta[25] * tc[0] - udata->activation_units[25] * udata->fwd_Ea[25] * invT);
-    dlnkfdT = udata->fwd_beta[25] * invT + udata->activation_units[25] * udata->fwd_Ea[25] * invT2;
+    k_f = 1.0000000000000002e-06 * 89800000
+                * exp(1.9199999999999999 * tc[0] - 0.50321666580471969 * 5690 * invT);
+    dlnkfdT = 1.9199999999999999 * invT + 0.50321666580471969 *  5690  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[17];
     Kc = exp(g_RT[2] - g_RT[4] - g_RT[17] + g_RT[18]);
@@ -7847,9 +7139,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[11];
-    k_f = udata->prefactor_units[26] * udata->fwd_A[26]
-                * exp(udata->fwd_beta[26] * tc[0] - udata->activation_units[26] * udata->fwd_Ea[26] * invT);
-    dlnkfdT = udata->fwd_beta[26] * invT + udata->activation_units[26] * udata->fwd_Ea[26] * invT2;
+    k_f = 1.0000000000000002e-06 * 2500000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 47800 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  47800  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[12];
     Kc = exp(-g_RT[2] + g_RT[3] + g_RT[11] - g_RT[12]);
@@ -7898,9 +7190,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[14];
-    k_f = udata->prefactor_units[27] * udata->fwd_A[27]
-                * exp(udata->fwd_beta[27] * tc[0] - udata->activation_units[27] * udata->fwd_Ea[27] * invT);
-    dlnkfdT = udata->fwd_beta[27] * invT + udata->activation_units[27] * udata->fwd_Ea[27] * invT2;
+    k_f = 1.0000000000000002e-06 * 100000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 40000 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  40000  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[13];
     Kc = exp(g_RT[3] - g_RT[6] - g_RT[13] + g_RT[14]);
@@ -7949,9 +7241,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[3]*sc[3];
-    k_f = udata->prefactor_units[28] * udata->fwd_A[28]
-                * exp(udata->fwd_beta[28] * tc[0] - udata->activation_units[28] * udata->fwd_Ea[28] * invT);
-    dlnkfdT = udata->fwd_beta[28] * invT + udata->activation_units[28] * udata->fwd_Ea[28] * invT2;
+    k_f = 1.0000000000000002e-12 * 3e+20
+                * exp(-1.72 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -1.72 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[6];
     Kc = refCinv * exp(g_RT[1] + 2*g_RT[3] - g_RT[3] - g_RT[6]);
@@ -7989,9 +7281,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[3]*sc[5];
-    k_f = udata->prefactor_units[29] * udata->fwd_A[29]
-                * exp(udata->fwd_beta[29] * tc[0] - udata->activation_units[29] * udata->fwd_Ea[29] * invT);
-    dlnkfdT = udata->fwd_beta[29] * invT + udata->activation_units[29] * udata->fwd_Ea[29] * invT2;
+    k_f = 1.0000000000000002e-12 * 9.38e+18
+                * exp(-0.76000000000000001 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -0.76000000000000001 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[6];
     Kc = refCinv * exp(g_RT[1] + g_RT[3] + g_RT[5] - g_RT[5] - g_RT[6]);
@@ -8034,9 +7326,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[3]*sc[19];
-    k_f = udata->prefactor_units[30] * udata->fwd_A[30]
-                * exp(udata->fwd_beta[30] * tc[0] - udata->activation_units[30] * udata->fwd_Ea[30] * invT);
-    dlnkfdT = udata->fwd_beta[30] * invT + udata->activation_units[30] * udata->fwd_Ea[30] * invT2;
+    k_f = 1.0000000000000002e-12 * 3.75e+20
+                * exp(-1.72 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -1.72 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[19];
     Kc = refCinv * exp(g_RT[1] + g_RT[3] - g_RT[6] + g_RT[19] - g_RT[19]);
@@ -8079,9 +7371,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[3]*sc[20];
-    k_f = udata->prefactor_units[31] * udata->fwd_A[31]
-                * exp(udata->fwd_beta[31] * tc[0] - udata->activation_units[31] * udata->fwd_Ea[31] * invT);
-    dlnkfdT = udata->fwd_beta[31] * invT + udata->activation_units[31] * udata->fwd_Ea[31] * invT2;
+    k_f = 1.0000000000000002e-12 * 7e+17
+                * exp(-0.80000000000000004 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -0.80000000000000004 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[20];
     Kc = refCinv * exp(g_RT[1] + g_RT[3] - g_RT[6] + g_RT[20] - g_RT[20]);
@@ -8124,9 +7416,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[3];
-    k_f = udata->prefactor_units[32] * udata->fwd_A[32]
-                * exp(udata->fwd_beta[32] * tc[0] - udata->activation_units[32] * udata->fwd_Ea[32] * invT);
-    dlnkfdT = udata->fwd_beta[32] * invT + udata->activation_units[32] * udata->fwd_Ea[32] * invT2;
+    k_f = 1.0000000000000002e-06 * 83000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 14413 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  14413  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[4];
     Kc = exp(g_RT[1] - g_RT[2] + g_RT[3] - g_RT[4]);
@@ -8175,9 +7467,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[0]*sc[1]*sc[1];
-    k_f = udata->prefactor_units[33] * udata->fwd_A[33]
-                * exp(udata->fwd_beta[33] * tc[0] - udata->activation_units[33] * udata->fwd_Ea[33] * invT);
-    dlnkfdT = udata->fwd_beta[33] * invT + udata->activation_units[33] * udata->fwd_Ea[33] * invT2;
+    k_f = 1.0000000000000002e-12 * 90000000000000000
+                * exp(-0.59999999999999998 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -0.59999999999999998 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[0];
     Kc = refCinv * exp(g_RT[0] - 2*g_RT[0] + 2*g_RT[1]);
@@ -8206,9 +7498,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[1]*sc[5];
-    k_f = udata->prefactor_units[34] * udata->fwd_A[34]
-                * exp(udata->fwd_beta[34] * tc[0] - udata->activation_units[34] * udata->fwd_Ea[34] * invT);
-    dlnkfdT = udata->fwd_beta[34] * invT + udata->activation_units[34] * udata->fwd_Ea[34] * invT2;
+    k_f = 1.0000000000000002e-12 * 6e+19
+                * exp(-1.25 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -1.25 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[5];
     Kc = refCinv * exp(-g_RT[0] + 2*g_RT[1] + g_RT[5] - g_RT[5]);
@@ -8241,9 +7533,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[1]*sc[12];
-    k_f = udata->prefactor_units[35] * udata->fwd_A[35]
-                * exp(udata->fwd_beta[35] * tc[0] - udata->activation_units[35] * udata->fwd_Ea[35] * invT);
-    dlnkfdT = udata->fwd_beta[35] * invT + udata->activation_units[35] * udata->fwd_Ea[35] * invT2;
+    k_f = 1.0000000000000002e-12 * 5.5e+20
+                * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = -2 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[12];
     Kc = refCinv * exp(-g_RT[0] + 2*g_RT[1] + g_RT[12] - g_RT[12]);
@@ -8276,9 +7568,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[6];
-    k_f = udata->prefactor_units[36] * udata->fwd_A[36]
-                * exp(udata->fwd_beta[36] * tc[0] - udata->activation_units[36] * udata->fwd_Ea[36] * invT);
-    dlnkfdT = udata->fwd_beta[36] * invT + udata->activation_units[36] * udata->fwd_Ea[36] * invT2;
+    k_f = 1.0000000000000002e-06 * 28000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 1068 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  1068  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[3];
     Kc = exp(-g_RT[0] + g_RT[1] - g_RT[3] + g_RT[6]);
@@ -8327,9 +7619,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[6];
-    k_f = udata->prefactor_units[37] * udata->fwd_A[37]
-                * exp(udata->fwd_beta[37] * tc[0] - udata->activation_units[37] * udata->fwd_Ea[37] * invT);
-    dlnkfdT = udata->fwd_beta[37] * invT + udata->activation_units[37] * udata->fwd_Ea[37] * invT2;
+    k_f = 1.0000000000000002e-06 * 134000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 635 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  635  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[4];
     Kc = exp(g_RT[1] - 2*g_RT[4] + g_RT[6]);
@@ -8367,9 +7659,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[10];
-    k_f = udata->prefactor_units[38] * udata->fwd_A[38]
-                * exp(udata->fwd_beta[38] * tc[0] - udata->activation_units[38] * udata->fwd_Ea[38] * invT);
-    dlnkfdT = udata->fwd_beta[38] * invT + udata->activation_units[38] * udata->fwd_Ea[38] * invT2;
+    k_f = 1.0000000000000002e-06 * 660000000
+                * exp(1.6200000000000001 * tc[0] - 0.50321666580471969 * 10840 * invT);
+    dlnkfdT = 1.6200000000000001 * invT + 0.50321666580471969 *  10840  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[9];
     Kc = exp(-g_RT[0] + g_RT[1] - g_RT[9] + g_RT[10]);
@@ -8418,9 +7710,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[13];
-    k_f = udata->prefactor_units[39] * udata->fwd_A[39]
-                * exp(udata->fwd_beta[39] * tc[0] - udata->activation_units[39] * udata->fwd_Ea[39] * invT);
-    dlnkfdT = udata->fwd_beta[39] * invT + udata->activation_units[39] * udata->fwd_Ea[39] * invT2;
+    k_f = 1.0000000000000002e-06 * 73400000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[11];
     Kc = exp(-g_RT[0] + g_RT[1] - g_RT[11] + g_RT[13]);
@@ -8469,9 +7761,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[14];
-    k_f = udata->prefactor_units[40] * udata->fwd_A[40]
-                * exp(udata->fwd_beta[40] * tc[0] - udata->activation_units[40] * udata->fwd_Ea[40] * invT);
-    dlnkfdT = udata->fwd_beta[40] * invT + udata->activation_units[40] * udata->fwd_Ea[40] * invT2;
+    k_f = 1.0000000000000002e-06 * 23000000000
+                * exp(1.05 * tc[0] - 0.50321666580471969 * 3275 * invT);
+    dlnkfdT = 1.05 * invT + 0.50321666580471969 *  3275  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[13];
     Kc = exp(-g_RT[0] + g_RT[1] - g_RT[13] + g_RT[14]);
@@ -8520,9 +7812,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[15];
-    k_f = udata->prefactor_units[41] * udata->fwd_A[41]
-                * exp(udata->fwd_beta[41] * tc[0] - udata->activation_units[41] * udata->fwd_Ea[41] * invT);
-    dlnkfdT = udata->fwd_beta[41] * invT + udata->activation_units[41] * udata->fwd_Ea[41] * invT2;
+    k_f = 1.0000000000000002e-06 * 32000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[9];
     Kc = exp(g_RT[1] - g_RT[4] - g_RT[9] + g_RT[15]);
@@ -8571,9 +7863,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[1]*sc[18];
-    k_f = udata->prefactor_units[42] * udata->fwd_A[42]
-                * exp(udata->fwd_beta[42] * tc[0] - udata->activation_units[42] * udata->fwd_Ea[42] * invT);
-    dlnkfdT = udata->fwd_beta[42] * invT + udata->activation_units[42] * udata->fwd_Ea[42] * invT2;
+    k_f = 1.0000000000000002e-06 * 115000000
+                * exp(1.8999999999999999 * tc[0] - 0.50321666580471969 * 7530 * invT);
+    dlnkfdT = 1.8999999999999999 * invT + 0.50321666580471969 *  7530  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[17];
     Kc = exp(-g_RT[0] + g_RT[1] - g_RT[17] + g_RT[18]);
@@ -8622,9 +7914,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[0]*sc[4];
-    k_f = udata->prefactor_units[43] * udata->fwd_A[43]
-                * exp(udata->fwd_beta[43] * tc[0] - udata->activation_units[43] * udata->fwd_Ea[43] * invT);
-    dlnkfdT = udata->fwd_beta[43] * invT + udata->activation_units[43] * udata->fwd_Ea[43] * invT2;
+    k_f = 1.0000000000000002e-06 * 216000000
+                * exp(1.51 * tc[0] - 0.50321666580471969 * 3430 * invT);
+    dlnkfdT = 1.51 * invT + 0.50321666580471969 *  3430  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[5];
     Kc = exp(g_RT[0] - g_RT[1] + g_RT[4] - g_RT[5]);
@@ -8673,9 +7965,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[4];
-    k_f = udata->prefactor_units[44] * udata->fwd_A[44]
-                * exp(udata->fwd_beta[44] * tc[0] - udata->activation_units[44] * udata->fwd_Ea[44] * invT);
-    dlnkfdT = udata->fwd_beta[44] * invT + udata->activation_units[44] * udata->fwd_Ea[44] * invT2;
+    k_f = 1.0000000000000002e-06 * 35700
+                * exp(2.3999999999999999 * tc[0] - 0.50321666580471969 * -2110 * invT);
+    dlnkfdT = 2.3999999999999999 * invT + 0.50321666580471969 *  -2110  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[5];
     Kc = exp(-g_RT[2] + 2*g_RT[4] - g_RT[5]);
@@ -8713,9 +8005,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[6];
-    k_f = udata->prefactor_units[45] * udata->fwd_A[45]
-                * exp(udata->fwd_beta[45] * tc[0] - udata->activation_units[45] * udata->fwd_Ea[45] * invT);
-    dlnkfdT = udata->fwd_beta[45] * invT + udata->activation_units[45] * udata->fwd_Ea[45] * invT2;
+    k_f = 1.0000000000000002e-06 * 29000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * -500 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  -500  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[5];
     Kc = exp(-g_RT[3] + g_RT[4] - g_RT[5] + g_RT[6]);
@@ -8764,9 +8056,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[7];
-    k_f = udata->prefactor_units[46] * udata->fwd_A[46]
-                * exp(udata->fwd_beta[46] * tc[0] - udata->activation_units[46] * udata->fwd_Ea[46] * invT);
-    dlnkfdT = udata->fwd_beta[46] * invT + udata->activation_units[46] * udata->fwd_Ea[46] * invT2;
+    k_f = 1.0000000000000002e-06 * 20000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[14];
     Kc = exp(-g_RT[1] + g_RT[4] + g_RT[7] - g_RT[14]);
@@ -8815,9 +8107,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[8];
-    k_f = udata->prefactor_units[47] * udata->fwd_A[47]
-                * exp(udata->fwd_beta[47] * tc[0] - udata->activation_units[47] * udata->fwd_Ea[47] * invT);
-    dlnkfdT = udata->fwd_beta[47] * invT + udata->activation_units[47] * udata->fwd_Ea[47] * invT2;
+    k_f = 1.0000000000000002e-06 * 30000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[14];
     Kc = exp(-g_RT[1] + g_RT[4] + g_RT[8] - g_RT[14]);
@@ -8866,9 +8158,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[9];
-    k_f = udata->prefactor_units[48] * udata->fwd_A[48]
-                * exp(udata->fwd_beta[48] * tc[0] - udata->activation_units[48] * udata->fwd_Ea[48] * invT);
-    dlnkfdT = udata->fwd_beta[48] * invT + udata->activation_units[48] * udata->fwd_Ea[48] * invT2;
+    k_f = 1.0000000000000002e-06 * 56000000
+                * exp(1.6000000000000001 * tc[0] - 0.50321666580471969 * 5420 * invT);
+    dlnkfdT = 1.6000000000000001 * invT + 0.50321666580471969 *  5420  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[7];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[7] + g_RT[9]);
@@ -8917,9 +8209,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[9];
-    k_f = udata->prefactor_units[49] * udata->fwd_A[49]
-                * exp(udata->fwd_beta[49] * tc[0] - udata->activation_units[49] * udata->fwd_Ea[49] * invT);
-    dlnkfdT = udata->fwd_beta[49] * invT + udata->activation_units[49] * udata->fwd_Ea[49] * invT2;
+    k_f = 1.0000000000000002e-06 * 25010000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[8];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[8] + g_RT[9]);
@@ -8968,9 +8260,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[10];
-    k_f = udata->prefactor_units[50] * udata->fwd_A[50]
-                * exp(udata->fwd_beta[50] * tc[0] - udata->activation_units[50] * udata->fwd_Ea[50] * invT);
-    dlnkfdT = udata->fwd_beta[50] * invT + udata->activation_units[50] * udata->fwd_Ea[50] * invT2;
+    k_f = 1.0000000000000002e-06 * 100000000
+                * exp(1.6000000000000001 * tc[0] - 0.50321666580471969 * 3120 * invT);
+    dlnkfdT = 1.6000000000000001 * invT + 0.50321666580471969 *  3120  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[9];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[9] + g_RT[10]);
@@ -9019,9 +8311,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[11];
-    k_f = udata->prefactor_units[51] * udata->fwd_A[51]
-                * exp(udata->fwd_beta[51] * tc[0] - udata->activation_units[51] * udata->fwd_Ea[51] * invT);
-    dlnkfdT = udata->fwd_beta[51] * invT + udata->activation_units[51] * udata->fwd_Ea[51] * invT2;
+    k_f = 1.0000000000000002e-06 * 47600000
+                * exp(1.228 * tc[0] - 0.50321666580471969 * 70 * invT);
+    dlnkfdT = 1.228 * invT + 0.50321666580471969 *  70  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[12];
     Kc = exp(-g_RT[1] + g_RT[4] + g_RT[11] - g_RT[12]);
@@ -9070,9 +8362,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[13];
-    k_f = udata->prefactor_units[52] * udata->fwd_A[52]
-                * exp(udata->fwd_beta[52] * tc[0] - udata->activation_units[52] * udata->fwd_Ea[52] * invT);
-    dlnkfdT = udata->fwd_beta[52] * invT + udata->activation_units[52] * udata->fwd_Ea[52] * invT2;
+    k_f = 1.0000000000000002e-06 * 50000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[11];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[11] + g_RT[13]);
@@ -9121,9 +8413,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[14];
-    k_f = udata->prefactor_units[53] * udata->fwd_A[53]
-                * exp(udata->fwd_beta[53] * tc[0] - udata->activation_units[53] * udata->fwd_Ea[53] * invT);
-    dlnkfdT = udata->fwd_beta[53] * invT + udata->activation_units[53] * udata->fwd_Ea[53] * invT2;
+    k_f = 1.0000000000000002e-06 * 3430000000
+                * exp(1.1799999999999999 * tc[0] - 0.50321666580471969 * -447 * invT);
+    dlnkfdT = 1.1799999999999999 * invT + 0.50321666580471969 *  -447  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[13];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[13] + g_RT[14]);
@@ -9172,9 +8464,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[4]*sc[18];
-    k_f = udata->prefactor_units[54] * udata->fwd_A[54]
-                * exp(udata->fwd_beta[54] * tc[0] - udata->activation_units[54] * udata->fwd_Ea[54] * invT);
-    dlnkfdT = udata->fwd_beta[54] * invT + udata->activation_units[54] * udata->fwd_Ea[54] * invT2;
+    k_f = 1.0000000000000002e-06 * 3540000
+                * exp(2.1200000000000001 * tc[0] - 0.50321666580471969 * 870 * invT);
+    dlnkfdT = 2.1200000000000001 * invT + 0.50321666580471969 *  870  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[17];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[17] + g_RT[18]);
@@ -9223,9 +8515,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[6]*sc[7];
-    k_f = udata->prefactor_units[55] * udata->fwd_A[55]
-                * exp(udata->fwd_beta[55] * tc[0] - udata->activation_units[55] * udata->fwd_Ea[55] * invT);
-    dlnkfdT = udata->fwd_beta[55] * invT + udata->activation_units[55] * udata->fwd_Ea[55] * invT2;
+    k_f = 1.0000000000000002e-06 * 20000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[14];
     Kc = exp(-g_RT[4] + g_RT[6] + g_RT[7] - g_RT[14]);
@@ -9274,9 +8566,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[6]*sc[9];
-    k_f = udata->prefactor_units[56] * udata->fwd_A[56]
-                * exp(udata->fwd_beta[56] * tc[0] - udata->activation_units[56] * udata->fwd_Ea[56] * invT);
-    dlnkfdT = udata->fwd_beta[56] * invT + udata->activation_units[56] * udata->fwd_Ea[56] * invT2;
+    k_f = 1.0000000000000002e-06 * 1000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[10];
     Kc = exp(-g_RT[3] + g_RT[6] + g_RT[9] - g_RT[10]);
@@ -9325,9 +8617,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[6]*sc[9];
-    k_f = udata->prefactor_units[57] * udata->fwd_A[57]
-                * exp(udata->fwd_beta[57] * tc[0] - udata->activation_units[57] * udata->fwd_Ea[57] * invT);
-    dlnkfdT = udata->fwd_beta[57] * invT + udata->activation_units[57] * udata->fwd_Ea[57] * invT2;
+    k_f = 1.0000000000000002e-06 * 20000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[15];
     Kc = exp(-g_RT[4] + g_RT[6] + g_RT[9] - g_RT[15]);
@@ -9376,9 +8668,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[6]*sc[11];
-    k_f = udata->prefactor_units[58] * udata->fwd_A[58]
-                * exp(udata->fwd_beta[58] * tc[0] - udata->activation_units[58] * udata->fwd_Ea[58] * invT);
-    dlnkfdT = udata->fwd_beta[58] * invT + udata->activation_units[58] * udata->fwd_Ea[58] * invT2;
+    k_f = 1.0000000000000002e-06 * 150000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 23600 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  23600  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[12];
     Kc = exp(-g_RT[4] + g_RT[6] + g_RT[11] - g_RT[12]);
@@ -9427,9 +8719,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[7];
-    k_f = udata->prefactor_units[59] * udata->fwd_A[59]
-                * exp(udata->fwd_beta[59] * tc[0] - udata->activation_units[59] * udata->fwd_Ea[59] * invT);
-    dlnkfdT = udata->fwd_beta[59] * invT + udata->activation_units[59] * udata->fwd_Ea[59] * invT2;
+    k_f = 1.0000000000000002e-06 * 13200000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 1500 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  1500  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[13];
     Kc = exp(g_RT[3] - g_RT[4] + g_RT[7] - g_RT[13]);
@@ -9478,9 +8770,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[0]*sc[7];
-    k_f = udata->prefactor_units[60] * udata->fwd_A[60]
-                * exp(udata->fwd_beta[60] * tc[0] - udata->activation_units[60] * udata->fwd_Ea[60] * invT);
-    dlnkfdT = udata->fwd_beta[60] * invT + udata->activation_units[60] * udata->fwd_Ea[60] * invT2;
+    k_f = 1.0000000000000002e-06 * 500000
+                * exp(2 * tc[0] - 0.50321666580471969 * 7230 * invT);
+    dlnkfdT = 2 * invT + 0.50321666580471969 *  7230  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[9];
     Kc = exp(g_RT[0] - g_RT[1] + g_RT[7] - g_RT[9]);
@@ -9529,9 +8821,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[7]*sc[9];
-    k_f = udata->prefactor_units[61] * udata->fwd_A[61]
-                * exp(udata->fwd_beta[61] * tc[0] - udata->activation_units[61] * udata->fwd_Ea[61] * invT);
-    dlnkfdT = udata->fwd_beta[61] * invT + udata->activation_units[61] * udata->fwd_Ea[61] * invT2;
+    k_f = 1.0000000000000002e-06 * 40000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[16];
     Kc = exp(-g_RT[1] + g_RT[7] + g_RT[9] - g_RT[16]);
@@ -9580,9 +8872,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[7]*sc[10];
-    k_f = udata->prefactor_units[62] * udata->fwd_A[62]
-                * exp(udata->fwd_beta[62] * tc[0] - udata->activation_units[62] * udata->fwd_Ea[62] * invT);
-    dlnkfdT = udata->fwd_beta[62] * invT + udata->activation_units[62] * udata->fwd_Ea[62] * invT2;
+    k_f = 1.0000000000000002e-06 * 2460000
+                * exp(2 * tc[0] - 0.50321666580471969 * 8270 * invT);
+    dlnkfdT = 2 * invT + 0.50321666580471969 *  8270  * invT2;
     /* reverse */
     phi_r = sc[9]*sc[9];
     Kc = exp(g_RT[7] - 2*g_RT[9] + g_RT[10]);
@@ -9620,9 +8912,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[19];
-    k_f = udata->prefactor_units[63] * udata->fwd_A[63]
-                * exp(udata->fwd_beta[63] * tc[0] - udata->activation_units[63] * udata->fwd_Ea[63] * invT);
-    dlnkfdT = udata->fwd_beta[63] * invT + udata->activation_units[63] * udata->fwd_Ea[63] * invT2;
+    k_f = 1.0000000000000002e-06 * 15000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 600 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  600  * invT2;
     /* reverse */
     phi_r = sc[7]*sc[19];
     Kc = exp(-g_RT[7] + g_RT[8] + g_RT[19] - g_RT[19]);
@@ -9655,9 +8947,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[20];
-    k_f = udata->prefactor_units[64] * udata->fwd_A[64]
-                * exp(udata->fwd_beta[64] * tc[0] - udata->activation_units[64] * udata->fwd_Ea[64] * invT);
-    dlnkfdT = udata->fwd_beta[64] * invT + udata->activation_units[64] * udata->fwd_Ea[64] * invT2;
+    k_f = 1.0000000000000002e-06 * 9000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 600 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  600  * invT2;
     /* reverse */
     phi_r = sc[7]*sc[20];
     Kc = exp(-g_RT[7] + g_RT[8] + g_RT[20] - g_RT[20]);
@@ -9690,9 +8982,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[8];
-    k_f = udata->prefactor_units[65] * udata->fwd_A[65]
-                * exp(udata->fwd_beta[65] * tc[0] - udata->activation_units[65] * udata->fwd_Ea[65] * invT);
-    dlnkfdT = udata->fwd_beta[65] * invT + udata->activation_units[65] * udata->fwd_Ea[65] * invT2;
+    k_f = 1.0000000000000002e-06 * 28000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[4]*sc[11];
     Kc = refC * exp(-g_RT[1] + g_RT[3] - g_RT[4] + g_RT[8] - g_RT[11]);
@@ -9754,9 +9046,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[8];
-    k_f = udata->prefactor_units[66] * udata->fwd_A[66]
-                * exp(udata->fwd_beta[66] * tc[0] - udata->activation_units[66] * udata->fwd_Ea[66] * invT);
-    dlnkfdT = udata->fwd_beta[66] * invT + udata->activation_units[66] * udata->fwd_Ea[66] * invT2;
+    k_f = 1.0000000000000002e-06 * 12000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[11];
     Kc = exp(g_RT[3] - g_RT[5] + g_RT[8] - g_RT[11]);
@@ -9805,9 +9097,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[0]*sc[8];
-    k_f = udata->prefactor_units[67] * udata->fwd_A[67]
-                * exp(udata->fwd_beta[67] * tc[0] - udata->activation_units[67] * udata->fwd_Ea[67] * invT);
-    dlnkfdT = udata->fwd_beta[67] * invT + udata->activation_units[67] * udata->fwd_Ea[67] * invT2;
+    k_f = 1.0000000000000002e-06 * 70000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[9];
     Kc = exp(g_RT[0] - g_RT[1] + g_RT[8] - g_RT[9]);
@@ -9856,9 +9148,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[5]*sc[8];
-    k_f = udata->prefactor_units[68] * udata->fwd_A[68]
-                * exp(udata->fwd_beta[68] * tc[0] - udata->activation_units[68] * udata->fwd_Ea[68] * invT);
-    dlnkfdT = udata->fwd_beta[68] * invT + udata->activation_units[68] * udata->fwd_Ea[68] * invT2;
+    k_f = 1.0000000000000002e-06 * 30000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[7];
     Kc = exp(g_RT[5] - g_RT[5] - g_RT[7] + g_RT[8]);
@@ -9891,9 +9183,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[9];
-    k_f = udata->prefactor_units[69] * udata->fwd_A[69]
-                * exp(udata->fwd_beta[69] * tc[0] - udata->activation_units[69] * udata->fwd_Ea[69] * invT);
-    dlnkfdT = udata->fwd_beta[69] * invT + udata->activation_units[69] * udata->fwd_Ea[69] * invT2;
+    k_f = 1.0000000000000002e-06 * 12000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * -570 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  -570  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[16];
     Kc = exp(-g_RT[1] + g_RT[8] + g_RT[9] - g_RT[16]);
@@ -9942,9 +9234,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[10];
-    k_f = udata->prefactor_units[70] * udata->fwd_A[70]
-                * exp(udata->fwd_beta[70] * tc[0] - udata->activation_units[70] * udata->fwd_Ea[70] * invT);
-    dlnkfdT = udata->fwd_beta[70] * invT + udata->activation_units[70] * udata->fwd_Ea[70] * invT2;
+    k_f = 1.0000000000000002e-06 * 16000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * -570 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  -570  * invT2;
     /* reverse */
     phi_r = sc[9]*sc[9];
     Kc = exp(g_RT[8] - 2*g_RT[9] + g_RT[10]);
@@ -9982,9 +9274,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[11];
-    k_f = udata->prefactor_units[71] * udata->fwd_A[71]
-                * exp(udata->fwd_beta[71] * tc[0] - udata->activation_units[71] * udata->fwd_Ea[71] * invT);
-    dlnkfdT = udata->fwd_beta[71] * invT + udata->activation_units[71] * udata->fwd_Ea[71] * invT2;
+    k_f = 1.0000000000000002e-06 * 9000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[7]*sc[11];
     Kc = exp(-g_RT[7] + g_RT[8] + g_RT[11] - g_RT[11]);
@@ -10017,9 +9309,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[12];
-    k_f = udata->prefactor_units[72] * udata->fwd_A[72]
-                * exp(udata->fwd_beta[72] * tc[0] - udata->activation_units[72] * udata->fwd_Ea[72] * invT);
-    dlnkfdT = udata->fwd_beta[72] * invT + udata->activation_units[72] * udata->fwd_Ea[72] * invT2;
+    k_f = 1.0000000000000002e-06 * 7000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[7]*sc[12];
     Kc = exp(-g_RT[7] + g_RT[8] + g_RT[12] - g_RT[12]);
@@ -10052,9 +9344,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[8]*sc[12];
-    k_f = udata->prefactor_units[73] * udata->fwd_A[73]
-                * exp(udata->fwd_beta[73] * tc[0] - udata->activation_units[73] * udata->fwd_Ea[73] * invT);
-    dlnkfdT = udata->fwd_beta[73] * invT + udata->activation_units[73] * udata->fwd_Ea[73] * invT2;
+    k_f = 1.0000000000000002e-06 * 14000000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[11]*sc[14];
     Kc = exp(g_RT[8] - g_RT[11] + g_RT[12] - g_RT[14]);
@@ -10103,9 +9395,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[9];
-    k_f = udata->prefactor_units[74] * udata->fwd_A[74]
-                * exp(udata->fwd_beta[74] * tc[0] - udata->activation_units[74] * udata->fwd_Ea[74] * invT);
-    dlnkfdT = udata->fwd_beta[74] * invT + udata->activation_units[74] * udata->fwd_Ea[74] * invT2;
+    k_f = 1.0000000000000002e-06 * 26750000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 28800 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  28800  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[15];
     Kc = exp(-g_RT[2] + g_RT[3] + g_RT[9] - g_RT[15]);
@@ -10154,9 +9446,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[9];
-    k_f = udata->prefactor_units[75] * udata->fwd_A[75]
-                * exp(udata->fwd_beta[75] * tc[0] - udata->activation_units[75] * udata->fwd_Ea[75] * invT);
-    dlnkfdT = udata->fwd_beta[75] * invT + udata->activation_units[75] * udata->fwd_Ea[75] * invT2;
+    k_f = 1.0000000000000002e-06 * 36000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 8940 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  8940  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[14];
     Kc = exp(g_RT[3] - g_RT[4] + g_RT[9] - g_RT[14]);
@@ -10205,9 +9497,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[9]*sc[9];
-    k_f = udata->prefactor_units[76] * udata->fwd_A[76]
-                * exp(udata->fwd_beta[76] * tc[0] - udata->activation_units[76] * udata->fwd_Ea[76] * invT);
-    dlnkfdT = udata->fwd_beta[76] * invT + udata->activation_units[76] * udata->fwd_Ea[76] * invT2;
+    k_f = 1.0000000000000002e-06 * 4990000000000
+                * exp(0.10000000000000001 * tc[0] - 0.50321666580471969 * 10600 * invT);
+    dlnkfdT = 0.10000000000000001 * invT + 0.50321666580471969 *  10600  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[17];
     Kc = exp(-g_RT[1] + 2*g_RT[9] - g_RT[17]);
@@ -10245,9 +9537,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[9]*sc[13];
-    k_f = udata->prefactor_units[77] * udata->fwd_A[77]
-                * exp(udata->fwd_beta[77] * tc[0] - udata->activation_units[77] * udata->fwd_Ea[77] * invT);
-    dlnkfdT = udata->fwd_beta[77] * invT + udata->activation_units[77] * udata->fwd_Ea[77] * invT2;
+    k_f = 1.0000000000000002e-06 * 26480000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[10]*sc[11];
     Kc = exp(g_RT[9] - g_RT[10] - g_RT[11] + g_RT[13]);
@@ -10296,9 +9588,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[9]*sc[14];
-    k_f = udata->prefactor_units[78] * udata->fwd_A[78]
-                * exp(udata->fwd_beta[78] * tc[0] - udata->activation_units[78] * udata->fwd_Ea[78] * invT);
-    dlnkfdT = udata->fwd_beta[78] * invT + udata->activation_units[78] * udata->fwd_Ea[78] * invT2;
+    k_f = 1.0000000000000002e-06 * 3320
+                * exp(2.8100000000000001 * tc[0] - 0.50321666580471969 * 5860 * invT);
+    dlnkfdT = 2.8100000000000001 * invT + 0.50321666580471969 *  5860  * invT2;
     /* reverse */
     phi_r = sc[10]*sc[13];
     Kc = exp(g_RT[9] - g_RT[10] - g_RT[13] + g_RT[14]);
@@ -10347,9 +9639,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[9]*sc[18];
-    k_f = udata->prefactor_units[79] * udata->fwd_A[79]
-                * exp(udata->fwd_beta[79] * tc[0] - udata->activation_units[79] * udata->fwd_Ea[79] * invT);
-    dlnkfdT = udata->fwd_beta[79] * invT + udata->activation_units[79] * udata->fwd_Ea[79] * invT2;
+    k_f = 1.0000000000000002e-06 * 6140000
+                * exp(1.74 * tc[0] - 0.50321666580471969 * 10450 * invT);
+    dlnkfdT = 1.74 * invT + 0.50321666580471969 *  10450  * invT2;
     /* reverse */
     phi_r = sc[10]*sc[17];
     Kc = exp(g_RT[9] - g_RT[10] - g_RT[17] + g_RT[18]);
@@ -10398,9 +9690,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[5]*sc[13];
-    k_f = udata->prefactor_units[80] * udata->fwd_A[80]
-                * exp(udata->fwd_beta[80] * tc[0] - udata->activation_units[80] * udata->fwd_Ea[80] * invT);
-    dlnkfdT = udata->fwd_beta[80] * invT + udata->activation_units[80] * udata->fwd_Ea[80] * invT2;
+    k_f = 1.0000000000000002e-06 * 2.244e+18
+                * exp(-1 * tc[0] - 0.50321666580471969 * 17000 * invT);
+    dlnkfdT = -1 * invT + 0.50321666580471969 *  17000  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[5]*sc[11];
     Kc = refC * exp(-g_RT[1] + g_RT[5] - g_RT[5] - g_RT[11] + g_RT[13]);
@@ -10443,9 +9735,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[13];
-    k_f = udata->prefactor_units[81] * udata->fwd_A[81]
-                * exp(udata->fwd_beta[81] * tc[0] - udata->activation_units[81] * udata->fwd_Ea[81] * invT);
-    dlnkfdT = udata->fwd_beta[81] * invT + udata->activation_units[81] * udata->fwd_Ea[81] * invT2;
+    k_f = 1.0000000000000002e-06 * 7600000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 400 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  400  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[11];
     Kc = exp(g_RT[3] - g_RT[6] - g_RT[11] + g_RT[13]);
@@ -10494,9 +9786,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[15];
-    k_f = udata->prefactor_units[82] * udata->fwd_A[82]
-                * exp(udata->fwd_beta[82] * tc[0] - udata->activation_units[82] * udata->fwd_Ea[82] * invT);
-    dlnkfdT = udata->fwd_beta[82] * invT + udata->activation_units[82] * udata->fwd_Ea[82] * invT2;
+    k_f = 1.0000000000000002e-06 * 4.2799999999999999e-13
+                * exp(7.5999999999999996 * tc[0] - 0.50321666580471969 * -3530 * invT);
+    dlnkfdT = 7.5999999999999996 * invT + 0.50321666580471969 *  -3530  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[14];
     Kc = exp(g_RT[3] - g_RT[6] - g_RT[14] + g_RT[15]);
@@ -10545,9 +9837,9 @@ __device__ void ajacobian_d(double * J, double * sc, double T, int consP, void *
     /*a non-third-body and non-pressure-fall-off reaction */
     /* forward */
     phi_f = sc[3]*sc[17];
-    k_f = udata->prefactor_units[83] * udata->fwd_A[83]
-                * exp(udata->fwd_beta[83] * tc[0] - udata->activation_units[83] * udata->fwd_Ea[83] * invT);
-    dlnkfdT = udata->fwd_beta[83] * invT + udata->activation_units[83] * udata->fwd_Ea[83] * invT2;
+    k_f = 1.0000000000000002e-06 * 840000000000
+                * exp(0 * tc[0] - 0.50321666580471969 * 3875 * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  3875  * invT2;
     /* reverse */
     phi_r = sc[6]*sc[16];
     Kc = exp(g_RT[3] - g_RT[6] - g_RT[16] + g_RT[17]);
