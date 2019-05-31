@@ -94,9 +94,9 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	/* Print initial time and expected output time */
         time_init = *time;
 	time_out  = *time + (*dt_react);
-        if (iverbose > 3) {
+        //if (iverbose > 3) {
 	    printf("BEG : time curr is %14.6e and dt_react is %14.6e and final time should be %14.6e \n", time_init, *dt_react, time_out);
-	}
+	//}
 
 	/* FIRST STEP get NEQ */
 	CKINDX(&mm,&NEQ,&ii,&nfit);
@@ -151,7 +151,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	    amrex::Abort("\n Check_state failed: state is out of react bounds \n");
 	}
 
-        realtype time_tmp = 0.0e+0;
+        realtype time_tmp = time_init; //0.0e+0;
 	/* Call CVodeInit to initialize the integrator memory and specify the
 	 * user's right hand side function, the inital time, and 
 	 * initial dependent variable vector y. */
@@ -281,15 +281,32 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	}
 
 	*dt_react = dummy_time - time_init;
-        if (iverbose > 3) {
-	    printf("END : time curr is %14.6e and actual dt_react is %14.6e \n", dummy_time, *dt_react);
-	}
+	*time = time_init + *dt_react;
+	printf("END : time curr is %14.6e and dt_react is %14.6e \n", dummy_time, *dt_react);
 
 	/* Pack data to return in main routine external */
 	std::memcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype));
 	for  (int i = 0; i < NCELLS; i++) {
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
 	}
+
+	/* verbose */
+	realtype rho,Pre;
+	realtype Y[NEQ];
+	rho =  0.0;
+	int lierr;
+	for  (int i = 0; i < NEQ; i++) {
+            rho = rho + rY_in[i];
+	}
+	for  (int i = 0; i < NEQ; i++) {
+            Y[i] = rY_in[i]/rho;
+	}
+	CKPY(&rho, &rY_in[NEQ], Y, &Pre);
+        double ngy = rX_in[0] /rho;
+	GET_T_GIVEN_EY(&ngy, Y, &rY_in[NEQ], &lierr);
+	    //cout<<"Time temp e h Press rho"<< endl;
+	std::cout<<dummy_time<<" "<<rY_in[NEQ]<<" "<<rX_in[0]/rho<<" "<< Pre <<" "<<rho << std::endl; 
+	//1e-07 1499.99907 1.165171965e+10 14999989.98 0.002657979088
 
 	/* VERBOSE MODE */
 	if (iverbose > 2) {
