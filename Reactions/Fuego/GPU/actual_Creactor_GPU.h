@@ -32,43 +32,51 @@
 
 /**********************************/
 typedef struct CVodeUserData {
+    /* LS gamma */
     double gamma_d;
+    /* dt on device */
     double dt_save;
+    /* nb of cells to integrate */
     int ncells_d[1]; 
+    /* nb of eq per cell */
     int neqs_per_cell[1];
+    /* HP/UV react */
     int flagP;
+    /* Are we using a AJ */
     int iJac;
-    double *rhoX_init = NULL;
-    double *rhoXsrc_ext = NULL;
-    double *rYsrc       = NULL;
-    // Precond sparse stuff
-    // Device
+    /* energy related variables */
+    double *rhoe_init = NULL;
+    double *rhoesrc_ext = NULL;
+    double *rYsrc = NULL;
+    /* verbose level */
+    int iverbose;
+    // Sparse
+    /* Precond sparse stuff */
     int NNZ; 
     int* csr_row_count_d;
     int* csr_col_index_d;
     double* csr_val_d;
     double* csr_jac_d;
-    // Sparse
-    // CUDA
-    cusparseMatDescr_t descrA;
-    csrqrInfo_t info;
-    cusolverSpHandle_t cusolverHandle;
+    /* CUDA cusolver */
     void *buffer_qr = NULL;
+    csrqrInfo_t info;
+    cusparseMatDescr_t descrA;
+    cusolverSpHandle_t cusolverHandle;
+    cudaStream_t stream;
 }* UserData;
 
 /* Functions Called by the Solver */
 static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot, void *user_data);
 
-
 /**********************************/
 /* Functions Called by the main program */
-int reactor_init(const int* cvode_iE, const int* Ncells); 
+int reactor_info(const int* cvode_iE, const int* Ncells); 
 
 int react(realtype *rY_in, realtype *rY_src_in, 
 		realtype *rX_in, realtype *rX_src_in, 
 		realtype *P_in, 
 		realtype *dt_react, realtype *time, int *Init,
-		const int* cvode_iE, const int* Ncells);
+                const int* cvode_iE, const int* Ncells, cudaStream_t stream);
 
 static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 		booleantype *jcurPtr, realtype gamma, void *user_data);
