@@ -83,7 +83,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	int mm, ii, nfit;
 	int NEQ, NCELLS, neq_tot;
 	int flag;
-        int iverbose       = 1;
+        int iverbose       = 2;
         /* FOR CVODE */
         N_Vector y         = NULL;
         SUNLinearSolver LS = NULL;
@@ -94,9 +94,9 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	/* Print initial time and expected output time */
         time_init = *time;
 	time_out  = *time + (*dt_react);
-        //if (iverbose > 3) {
+        if (iverbose > 3) {
 	    printf("BEG : time curr is %14.6e and dt_react is %14.6e and final time should be %14.6e \n", time_init, *dt_react, time_out);
-	//}
+	}
 
 	/* FIRST STEP get NEQ */
 	CKINDX(&mm,&NEQ,&ii,&nfit);
@@ -282,7 +282,9 @@ int react(realtype *rY_in, realtype *rY_src_in,
 
 	*dt_react = dummy_time - time_init;
 	*time = time_init + *dt_react;
-	printf("END : time curr is %14.6e and dt_react is %14.6e \n", dummy_time, *dt_react);
+	if (iverbose > 3) {
+	    printf("END : time curr is %14.6e and dt_react is %14.6e \n", dummy_time, *dt_react);
+	}
 
 	/* Pack data to return in main routine external */
 	std::memcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype));
@@ -290,29 +292,41 @@ int react(realtype *rY_in, realtype *rY_src_in,
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
 	}
 
-	/* verbose */
-	realtype rho,Pre;
-	realtype Y[NEQ];
-	rho =  0.0;
-	int lierr;
-	for  (int i = 0; i < NEQ; i++) {
-            rho = rho + rY_in[i];
-	}
-	for  (int i = 0; i < NEQ; i++) {
-            Y[i] = rY_in[i]/rho;
-	}
-	CKPY(&rho, &rY_in[NEQ], Y, &Pre);
-        double ngy = rX_in[0] /rho;
-	GET_T_GIVEN_EY(&ngy, Y, &rY_in[NEQ], &lierr);
-	    //cout<<"Time temp e h Press rho"<< endl;
-	std::cout<<dummy_time<<" "<<rY_in[NEQ]<<" "<<rX_in[0]/rho<<" "<< Pre <<" "<<rho << std::endl; 
-	//1e-07 1499.99907 1.165171965e+10 14999989.98 0.002657979088
-
 	/* VERBOSE MODE */
-	if (iverbose > 2) {
+	if (iverbose > 10) {
+            for (int tid = 0; tid < NCELLS; tid ++) {
+	        double rhov, energy, temp, energy2;
+	        double MF[NEQ];
+                //realtype activity[NEQ], cdot[NEQ], molecular_weight[NEQ];
+	        int  lierr;
+	        rhov = 0.0;
+                int offset = tid * (NEQ + 1); 
+                for (int k = 0; k < NEQ; k ++) {
+	    	rhov =  rhov + rY_in[offset + k];
+	        }
+                //CKWT(molecular_weight);
+                for (int k = 0; k < NEQ; k ++) {
+	    	    MF[k] = rY_in[offset + k]/rhov;
+	            //activity[k] = rY_in[offset + k]/(molecular_weight[k]);
+	        }
+	        energy = rX_in[tid]/rhov ;
+	        if (*cvode_iE == 1) { 
+	            GET_T_GIVEN_EY(&energy, MF, &temp, &lierr);
+	            CKHBMS(&temp, MF, &energy2);
+	            CKUBMS(&temp, MF, &energy);
+	    	    CKPY(&rhov, &temp, MF, P_in);
+	            //printf("T,e,h,p,rho 'I'? 
+		    printf("%4.16e %4.16e %4.16e %4.16e %4.16e %4.16e %4.16e %4.16e %4.16e %4.16e %4.16e \n",*time, rY_in[offset + NEQ],energy, energy2, *P_in, rhov, MF[0], MF[1], MF[5], MF[3], MF[2]);
+	        } else {
+	            GET_T_GIVEN_HY(&energy, MF, &temp, &lierr);
+	            CKHBMS(&temp, MF, &energy);
+	            CKUBMS(&temp, MF, &energy2);
+	    	    CKPY(&rhov, &temp, MF, P_in);
+	            printf("e,h,p,rho 'II'? %4.16e %4.16e %4.16e %4.16e\n",energy2, energy, *P_in, rhov);
+	        }
+	    }
 	    printf("\nAdditional verbose info --\n");
 	    PrintFinalStats(cvode_mem, temperature_save, data);
-            printf(" -------------------------------------\n");
 	}
 
 	// Clean up
