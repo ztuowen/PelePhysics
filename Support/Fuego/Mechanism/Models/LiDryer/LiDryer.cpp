@@ -3,7 +3,6 @@
 namespace thermo
 {
     /* Inverse molecular weights */
-//    std::vector<double> imw;
 
     double fwd_A[21], fwd_beta[21], fwd_Ea[21];
     double low_A[21], low_beta[21], low_Ea[21];
