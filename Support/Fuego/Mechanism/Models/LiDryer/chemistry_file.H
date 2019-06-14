@@ -18,10 +18,10 @@ void speciesEntropy(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void cp_R(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void cv_R(double *  species, double *  tc);
 void equilibriumConstants(double *  kc, double *  g_RT, double T);
-void productionRate(double *  wdot, double *  sc, double T);
+AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T);
 void comp_k_f(double *  tc, double invT, double *  k_f);
 void comp_Kc(double *  tc, double invT, double *  Kc);
-void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
+AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
 void progressRate(double *  qdot, double *  speciesConc, double T);
 void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
 void CKINIT();
@@ -85,7 +85,7 @@ void CKABMS(double *  P, double *  T, double *  y, double *  abms);
 void CKWC(double *  T, double *  C, double *  wdot);
 void CKWYP(double *  P, double *  T, double *  y, double *  wdot);
 void CKWXP(double *  P, double *  T, double *  x, double *  wdot);
-void CKWYR(double *  rho, double *  T, double *  y, double *  wdot);
+AMREX_GPU_HOST_DEVICE void CKWYR(double *  rho, double *  T, double *  y, double *  wdot);
 void CKWXR(double *  rho, double *  T, double *  x, double *  wdot);
 void CKQC(double *  T, double *  C, double *  qdot);
 void CKKFKR(double *  P, double *  T, double *  x, double *  q_f, double *  q_r);
@@ -148,8 +148,8 @@ void egtransetCOFETA(double* COFETA);
 void egtransetCOFLAM(double* COFLAM);
 void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
-AMREX_GPU_HOST_DEVICE
-void get_imw(double *imw_new); 
+AMREX_GPU_HOST_DEVICE void get_imw(double imw_new[]);
+AMREX_GPU_HOST_DEVICE void get_mw(double mw_new[]);  
 }
 
 namespace thermo
