@@ -35,12 +35,31 @@ namespace thermo
                1.0 / 34.014740,  /*H2O2 */
                1.0 / 28.013400};  /*N2 */
 
+   static AMREX_GPU_DEVICE_MANAGED double molecular_weights[9] = {
+                2.015940,  /*H2 */
+                31.998800,  /*O2 */
+                18.015340,  /*H2O */
+                1.007970,  /*H */
+                15.999400,  /*O */
+                17.007370,  /*OH */
+                33.006770,  /*HO2 */
+                34.014740,  /*H2O2 */
+                28.013400};  /*N2 */
+
+    
+
 
 using namespace thermo;
 AMREX_GPU_HOST_DEVICE
-void get_imw(double *imw_new){
+void get_imw(double imw_new[]){
 #pragma unroll
     for(int i = 0; i<9; ++i) imw_new[i] = imw[i];
+}
+
+AMREX_GPU_HOST_DEVICE
+void get_mw(double mw_new[]){
+#pragma unroll
+    for(int i = 0; i<9; ++i) mw_new[i] = molecular_weights[i];
 }
 
 
@@ -1846,6 +1865,7 @@ void CKWXP(double *  P, double *  T, double *  x,  double *  wdot)
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
+AMREX_GPU_HOST_DEVICE
 void CKWYR(double *  rho, double *  T, double *  y,  double *  wdot)
 {
     int id; /*loop counter */
@@ -1860,10 +1880,8 @@ void CKWYR(double *  rho, double *  T, double *  y,  double *  wdot)
     c[6] = 1e6 * (*rho) * y[6]*imw[6]; 
     c[7] = 1e6 * (*rho) * y[7]*imw[7]; 
     c[8] = 1e6 * (*rho) * y[8]*imw[8]; 
-
     /*call productionRate */
     productionRate(wdot, c, *T);
-
     /*convert to chemkin units */
     for (id = 0; id < 9; ++id) {
         wdot[id] *= 1.0e-6;
@@ -2710,7 +2728,7 @@ static double Kc_save[21];
 
 
 /*compute the production rate for each species */
-void productionRate(double *  wdot, double *  sc, double T)
+AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
@@ -2913,7 +2931,7 @@ void comp_Kc(double *  tc, double invT, double *  Kc)
     return;
 }
 
-void comp_qfqr(double *  qf, double *  qr, double *  sc, double *  tc, double invT)
+AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  qf, double *  qr, double *  sc, double *  tc, double invT)
 {
 
     /*reaction 1: H + O2 (+M) <=> HO2 (+M) */
