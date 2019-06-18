@@ -10,7 +10,7 @@ void egtransetEPS(double *  EPS);
 void egtransetSIG(double* SIG);
 void atomicWeight(double *  awt);
 void molecularWeight(double *  wt);
-void gibbs(double *  species, double *  tc);
+AMREX_GPU_HOST_DEVICE void gibbs(double *  species, double *  tc);
 void helmholtz(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void speciesInternalEnergy(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void speciesEnthalpy(double *  species, double *  tc);
@@ -19,9 +19,12 @@ AMREX_GPU_HOST_DEVICE void cp_R(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void cv_R(double *  species, double *  tc);
 void equilibriumConstants(double *  kc, double *  g_RT, double T);
 AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T);
-void comp_k_f(double *  tc, double invT, double *  k_f);
-void comp_Kc(double *  tc, double invT, double *  Kc);
-AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
+AMREX_GPU_HOST_DEVICE void comp_k_f(double *  tc, double invT, double *  k_f);
+AMREX_GPU_HOST_DEVICE void comp_Kc(double *  tc, double invT, double *  Kc);
+void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
+#ifdef AMREX_USE_CUDA
+AMREX_GPU_HOST_DEVICE void comp_qfqr_2(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT, double* kf, double* kc);
+#endif
 void progressRate(double *  qdot, double *  speciesConc, double T);
 void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
 void CKINIT();
@@ -155,6 +158,26 @@ AMREX_GPU_HOST_DEVICE void get_mw(double mw_new[]);
 namespace thermo
 {
 //    extern std::vector<double> imw;
+#ifdef AMREX_USE_CUDA 
+
+  AMREX_GPU_DEVICE_MANAGED extern double fwd_A[21], fwd_beta[21], fwd_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED extern double low_A[21], low_beta[21], low_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED extern double rev_A[21], rev_beta[21], rev_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED extern double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
+  AMREX_GPU_DEVICE_MANAGED extern double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
+  AMREX_GPU_DEVICE_MANAGED extern double activation_units[21], prefactor_units[21], phase_units[21];
+  AMREX_GPU_DEVICE_MANAGED extern int is_PD[21], troe_len[21], sri_len[21], nTB[21], TBid[21][3];
+  AMREX_GPU_DEVICE_MANAGED extern double TB[21][3];
+  AMREX_GPU_DEVICE_MANAGED extern double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED extern int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], TBid_DEF[21][3];
+  AMREX_GPU_DEVICE_MANAGED extern double TB_DEF[21][3];
+
+#else 
 
     extern double fwd_A[21], fwd_beta[21], fwd_Ea[21];
     extern double low_A[21], low_beta[21], low_Ea[21];
@@ -173,5 +196,7 @@ namespace thermo
     extern double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
     extern int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
     extern double *TB_DEF[21];
+#endif 
+
     extern std::vector<int> rxn_map;
 }

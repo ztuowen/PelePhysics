@@ -3,7 +3,24 @@
 namespace thermo
 {
     /* Inverse molecular weights */
-
+#ifdef AMREX_USE_CUDA 
+  AMREX_GPU_DEVICE_MANAGED  double fwd_A[21], fwd_beta[21], fwd_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED  double low_A[21], low_beta[21], low_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED  double rev_A[21], rev_beta[21], rev_Ea[21];
+  AMREX_GPU_DEVICE_MANAGED  double troe_a[21],troe_Ts[21], troe_Tss[21], troe_Tsss[21];
+  AMREX_GPU_DEVICE_MANAGED  double sri_a[21], sri_b[21], sri_c[21], sri_d[21], sri_e[21];
+  AMREX_GPU_DEVICE_MANAGED  double activation_units[21], prefactor_units[21], phase_units[21];
+  AMREX_GPU_DEVICE_MANAGED  int is_PD[21], troe_len[21], sri_len[21], nTB[21], TBid[21][3];
+  AMREX_GPU_DEVICE_MANAGED  double TB[21][3];
+  AMREX_GPU_DEVICE_MANAGED  double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  double troe_a_DEF[21],troe_Ts_DEF[21], troe_Tss_DEF[21], troe_Tsss_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  double sri_a_DEF[21], sri_b_DEF[21], sri_c_DEF[21], sri_d_DEF[21], sri_e_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
+  AMREX_GPU_DEVICE_MANAGED  int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], TBid_DEF[21][3];
+  AMREX_GPU_DEVICE_MANAGED  double TB_DEF[21][3];
+#else 
     double fwd_A[21], fwd_beta[21], fwd_Ea[21];
     double low_A[21], low_beta[21], low_Ea[21];
     double rev_A[21], rev_beta[21], rev_Ea[21];
@@ -12,7 +29,6 @@ namespace thermo
     double activation_units[21], prefactor_units[21], phase_units[21];
     int is_PD[21], troe_len[21], sri_len[21], nTB[21], *TBid[21];
     double *TB[21];
-
     double fwd_A_DEF[21], fwd_beta_DEF[21], fwd_Ea_DEF[21];
     double low_A_DEF[21], low_beta_DEF[21], low_Ea_DEF[21];
     double rev_A_DEF[21], rev_beta_DEF[21], rev_Ea_DEF[21];
@@ -21,6 +37,7 @@ namespace thermo
     double activation_units_DEF[21], prefactor_units_DEF[21], phase_units_DEF[21];
     int is_PD_DEF[21], troe_len_DEF[21], sri_len_DEF[21], nTB_DEF[21], *TBid_DEF[21];
     double *TB_DEF[21];
+#endif
     std::vector<int> rxn_map;
 };
 
@@ -84,8 +101,10 @@ void CKINIT()
     phase_units[0]      = 1e-12;
     is_PD[0] = 1;
     nTB[0] = 3;
+#ifndef AMREX_USE_CUDA
     TB[0] = (double *) malloc(3 * sizeof(double));
     TBid[0] = (int *) malloc(3 * sizeof(int));
+#endif
     TBid[0][0] = 0; TB[0][0] = 2; // H2
     TBid[0][1] = 2; TB[0][1] = 11; // H2O
     TBid[0][2] = 1; TB[0][2] = 0.78000000000000003; // O2
@@ -106,8 +125,10 @@ void CKINIT()
     phase_units[1]      = 1e-6;
     is_PD[1] = 1;
     nTB[1] = 2;
+#ifndef AMREX_USE_CUDA
     TB[1] = (double *) malloc(2 * sizeof(double));
     TBid[1] = (int *) malloc(2 * sizeof(int));
+#endif
     TBid[1][0] = 0; TB[1][0] = 2.5; // H2
     TBid[1][1] = 2; TB[1][1] = 12; // H2O
 
@@ -120,8 +141,10 @@ void CKINIT()
     phase_units[2]      = 1e-6;
     is_PD[2] = 0;
     nTB[2] = 2;
+#ifndef AMREX_USE_CUDA
     TB[2] = (double *) malloc(2 * sizeof(double));
     TBid[2] = (int *) malloc(2 * sizeof(int));
+#endif
     TBid[2][0] = 0; TB[2][0] = 2.5; // H2
     TBid[2][1] = 2; TB[2][1] = 12; // H2O
 
@@ -134,8 +157,10 @@ void CKINIT()
     phase_units[3]      = 1e-12;
     is_PD[3] = 0;
     nTB[3] = 2;
+#ifndef AMREX_USE_CUDA
     TB[3] = (double *) malloc(2 * sizeof(double));
     TBid[3] = (int *) malloc(2 * sizeof(int));
+#endif
     TBid[3][0] = 0; TB[3][0] = 2.5; // H2
     TBid[3][1] = 2; TB[3][1] = 12; // H2O
 
@@ -148,8 +173,10 @@ void CKINIT()
     phase_units[4]      = 1e-12;
     is_PD[4] = 0;
     nTB[4] = 2;
+#ifndef AMREX_USE_CUDA
     TB[4] = (double *) malloc(2 * sizeof(double));
     TBid[4] = (int *) malloc(2 * sizeof(int));
+#endif
     TBid[4][0] = 0; TB[4][0] = 2.5; // H2
     TBid[4][1] = 2; TB[4][1] = 12; // H2O
 
@@ -162,8 +189,10 @@ void CKINIT()
     phase_units[5]      = 1e-12;
     is_PD[5] = 0;
     nTB[5] = 2;
+#ifndef AMREX_USE_CUDA
     TB[5] = (double *) malloc(2 * sizeof(double));
     TBid[5] = (int *) malloc(2 * sizeof(int));
+#endif
     TBid[5][0] = 0; TB[5][0] = 2.5; // H2
     TBid[5][1] = 2; TB[5][1] = 12; // H2O
 
@@ -433,8 +462,10 @@ void ResetAllParametersToDefault()
 
         nTB[i]  = nTB_DEF[i];
         if (nTB[i] != 0) {
+#ifndef AMREX_USE_CUDA
            TB[i] = (double *) malloc(sizeof(double) * nTB[i]);
            TBid[i] = (int *) malloc(sizeof(int) * nTB[i]);
+#endif
            for (int j=0; j<nTB[i]; j++) {
              TB[i][j] = TB_DEF[i][j];
              TBid[i][j] = TBid_DEF[i][j];
@@ -485,8 +516,10 @@ void SetAllDefaults()
 
         nTB_DEF[i]  = nTB[i];
         if (nTB_DEF[i] != 0) {
+#ifndef AMREX_USE_CUDA
            TB_DEF[i] = (double *) malloc(sizeof(double) * nTB_DEF[i]);
            TBid_DEF[i] = (int *) malloc(sizeof(int) * nTB_DEF[i]);
+#endif
            for (int j=0; j<nTB_DEF[i]; j++) {
              TB_DEF[i][j] = TB[i][j];
              TBid_DEF[i][j] = TBid[i][j];
@@ -498,6 +531,9 @@ void SetAllDefaults()
 /* Finalizes parameter database */
 void CKFINALIZE()
 {
+    
+
+#ifndef AMREX_USE_CUDA
   for (int i=0; i<21; ++i) {
     free(TB[i]); TB[i] = 0; 
     free(TBid[i]); TBid[i] = 0;
@@ -507,6 +543,22 @@ void CKFINALIZE()
     free(TBid_DEF[i]); TBid_DEF[i] = 0;
     nTB_DEF[i] = 0;
   }
+#else
+  for (int i=0; i<21; ++i) {
+    for(int j=0; j < 3; ++j){
+        TB[i][j] = 0; 
+        TBid[i][j] = 0;
+        if(j ==0)
+            nTB[i] = 0;
+
+        TB_DEF[i][j] = 0; 
+        TBid_DEF[i][j] = 0;
+        if(j==0) 
+            nTB_DEF[i] = 0;
+    }
+  }
+
+#endif
 }
 
 
@@ -2711,6 +2763,7 @@ void CKEQXR(double *  rho, double *  T, double *  x, double *  eqcon)
     /*eqcon[20] *= 1;  */
 }
 
+
 static double T_save = -1;
 #ifdef _OPENMP
 #pragma omp threadprivate(T_save)
@@ -2727,17 +2780,157 @@ static double Kc_save[21];
 #endif
 
 
+#ifdef AMREX_USE_CUDA
 /*compute the production rate for each species */
 AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
 
-    if (T != T_save)
+    double k_f[21]; 
+    double Kc[21]; 
+    comp_k_f(tc,invT,k_f);
+    comp_Kc(tc,invT,Kc);  
+
+    double qdot, q_f[21], q_r[21];
+    comp_qfqr_2(q_f, q_r, sc, tc, invT, k_f, Kc);
+
+    for (int i = 0; i < 9; ++i) {
+        wdot[i] = 0.0;
+    }
+
+    qdot = q_f[0]-q_r[0];
+    wdot[1] -= qdot;
+    wdot[3] -= qdot;
+    wdot[6] += qdot;
+
+    qdot = q_f[1]-q_r[1];
+    wdot[5] += qdot;
+    wdot[5] += qdot;
+    wdot[7] -= qdot;
+
+    qdot = q_f[2]-q_r[2];
+    wdot[0] -= qdot;
+    wdot[3] += qdot;
+    wdot[3] += qdot;
+
+    qdot = q_f[3]-q_r[3];
+    wdot[1] += qdot;
+    wdot[4] -= qdot;
+    wdot[4] -= qdot;
+
+    qdot = q_f[4]-q_r[4];
+    wdot[3] -= qdot;
+    wdot[4] -= qdot;
+    wdot[5] += qdot;
+
+    qdot = q_f[5]-q_r[5];
+    wdot[2] += qdot;
+    wdot[3] -= qdot;
+    wdot[5] -= qdot;
+
+    qdot = q_f[6]-q_r[6];
+    wdot[1] -= qdot;
+    wdot[3] -= qdot;
+    wdot[4] += qdot;
+    wdot[5] += qdot;
+
+    qdot = q_f[7]-q_r[7];
+    wdot[0] -= qdot;
+    wdot[3] += qdot;
+    wdot[4] -= qdot;
+    wdot[5] += qdot;
+
+    qdot = q_f[8]-q_r[8];
+    wdot[0] -= qdot;
+    wdot[2] += qdot;
+    wdot[3] += qdot;
+    wdot[5] -= qdot;
+
+    qdot = q_f[9]-q_r[9];
+    wdot[2] -= qdot;
+    wdot[4] -= qdot;
+    wdot[5] += qdot;
+    wdot[5] += qdot;
+
+    qdot = q_f[10]-q_r[10];
+    wdot[0] += qdot;
+    wdot[1] += qdot;
+    wdot[3] -= qdot;
+    wdot[6] -= qdot;
+
+    qdot = q_f[11]-q_r[11];
+    wdot[3] -= qdot;
+    wdot[5] += qdot;
+    wdot[5] += qdot;
+    wdot[6] -= qdot;
+
+    qdot = q_f[12]-q_r[12];
+    wdot[1] += qdot;
+    wdot[4] -= qdot;
+    wdot[5] += qdot;
+    wdot[6] -= qdot;
+
+    qdot = q_f[13]-q_r[13];
+    wdot[1] += qdot;
+    wdot[2] += qdot;
+    wdot[5] -= qdot;
+    wdot[6] -= qdot;
+
+    qdot = q_f[14]-q_r[14];
+    wdot[1] += qdot;
+    wdot[6] -= qdot;
+    wdot[6] -= qdot;
+    wdot[7] += qdot;
+
+    qdot = q_f[15]-q_r[15];
+    wdot[1] += qdot;
+    wdot[6] -= qdot;
+    wdot[6] -= qdot;
+    wdot[7] += qdot;
+
+    qdot = q_f[16]-q_r[16];
+    wdot[2] += qdot;
+    wdot[3] -= qdot;
+    wdot[5] += qdot;
+    wdot[7] -= qdot;
+
+    qdot = q_f[17]-q_r[17];
+    wdot[0] += qdot;
+    wdot[3] -= qdot;
+    wdot[6] += qdot;
+    wdot[7] -= qdot;
+
+    qdot = q_f[18]-q_r[18];
+    wdot[4] -= qdot;
+    wdot[5] += qdot;
+    wdot[6] += qdot;
+    wdot[7] -= qdot;
+
+    qdot = q_f[19]-q_r[19];
+    wdot[2] += qdot;
+    wdot[5] -= qdot;
+    wdot[6] += qdot;
+    wdot[7] -= qdot;
+
+    qdot = q_f[20]-q_r[20];
+    wdot[2] += qdot;
+    wdot[5] -= qdot;
+    wdot[6] += qdot;
+    wdot[7] -= qdot;
+
+    return;
+}
+#else 
+void productionRate(double *  wdot, double *  sc, double T)
+{
+    double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
+    double invT = 1.0 / tc[1];
+    if(T!=T_save)
     {
-        T_save = T;
+        T_save = T; 
         comp_k_f(tc,invT,k_f_save);
-        comp_Kc(tc,invT,Kc_save);
+        comp_Kc(tc,invT,Kc_save);  
     }
 
     double qdot, q_f[21], q_r[21];
@@ -2870,7 +3063,10 @@ AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T
     return;
 }
 
-void comp_k_f(double *  tc, double invT, double *  k_f)
+
+#endif
+
+AMREX_GPU_HOST_DEVICE void comp_k_f(double *  tc, double invT, double *  k_f)
 {
 #ifdef __INTEL_COMPILER
     #pragma simd
@@ -2882,7 +3078,7 @@ void comp_k_f(double *  tc, double invT, double *  k_f)
     return;
 }
 
-void comp_Kc(double *  tc, double invT, double *  Kc)
+AMREX_GPU_HOST_DEVICE void comp_Kc(double *  tc, double invT, double *  Kc)
 {
     /*compute the Gibbs free energy */
     double g_RT[9];
@@ -2931,7 +3127,157 @@ void comp_Kc(double *  tc, double invT, double *  Kc)
     return;
 }
 
-AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  qf, double *  qr, double *  sc, double *  tc, double invT)
+#ifdef AMREX_USE_CUDA
+/*This is the GPU thread safe version of comp_qfqr_2. Use comp_qfqr for CPU only computations.*/ 
+AMREX_GPU_HOST_DEVICE void comp_qfqr_2(double *  qf, double *  qr, double *  sc, double *  tc, double invT,
+                                       double *  k_f, double *  Kc)
+{
+
+    /*reaction 1: H + O2 (+M) <=> HO2 (+M) */
+    qf[0] = sc[1]*sc[3];
+    qr[0] = sc[6];
+
+    /*reaction 2: H2O2 (+M) <=> OH + OH (+M) */
+    qf[1] = sc[7];
+    qr[1] = sc[5]*sc[5];
+
+    /*reaction 3: H2 + M <=> H + H + M */
+    qf[2] = sc[0];
+    qr[2] = sc[3]*sc[3];
+
+    /*reaction 4: O + O + M <=> O2 + M */
+    qf[3] = sc[4]*sc[4];
+    qr[3] = sc[1];
+
+    /*reaction 5: O + H + M <=> OH + M */
+    qf[4] = sc[3]*sc[4];
+    qr[4] = sc[5];
+
+    /*reaction 6: H + OH + M <=> H2O + M */
+    qf[5] = sc[3]*sc[5];
+    qr[5] = sc[2];
+
+    /*reaction 7: H + O2 <=> O + OH */
+    qf[6] = sc[1]*sc[3];
+    qr[6] = sc[4]*sc[5];
+
+    /*reaction 8: O + H2 <=> H + OH */
+    qf[7] = sc[0]*sc[4];
+    qr[7] = sc[3]*sc[5];
+
+    /*reaction 9: H2 + OH <=> H2O + H */
+    qf[8] = sc[0]*sc[5];
+    qr[8] = sc[2]*sc[3];
+
+    /*reaction 10: O + H2O <=> OH + OH */
+    qf[9] = sc[2]*sc[4];
+    qr[9] = sc[5]*sc[5];
+
+    /*reaction 11: HO2 + H <=> H2 + O2 */
+    qf[10] = sc[3]*sc[6];
+    qr[10] = sc[0]*sc[1];
+
+    /*reaction 12: HO2 + H <=> OH + OH */
+    qf[11] = sc[3]*sc[6];
+    qr[11] = sc[5]*sc[5];
+
+    /*reaction 13: HO2 + O <=> O2 + OH */
+    qf[12] = sc[4]*sc[6];
+    qr[12] = sc[1]*sc[5];
+
+    /*reaction 14: HO2 + OH <=> H2O + O2 */
+    qf[13] = sc[5]*sc[6];
+    qr[13] = sc[1]*sc[2];
+
+    /*reaction 15: HO2 + HO2 <=> H2O2 + O2 */
+    qf[14] = sc[6]*sc[6];
+    qr[14] = sc[1]*sc[7];
+
+    /*reaction 16: HO2 + HO2 <=> H2O2 + O2 */
+    qf[15] = sc[6]*sc[6];
+    qr[15] = sc[1]*sc[7];
+
+    /*reaction 17: H2O2 + H <=> H2O + OH */
+    qf[16] = sc[3]*sc[7];
+    qr[16] = sc[2]*sc[5];
+
+    /*reaction 18: H2O2 + H <=> HO2 + H2 */
+    qf[17] = sc[3]*sc[7];
+    qr[17] = sc[0]*sc[6];
+
+    /*reaction 19: H2O2 + O <=> OH + HO2 */
+    qf[18] = sc[4]*sc[7];
+    qr[18] = sc[5]*sc[6];
+
+    /*reaction 20: H2O2 + OH <=> HO2 + H2O */
+    qf[19] = sc[5]*sc[7];
+    qr[19] = sc[2]*sc[6];
+
+    /*reaction 21: H2O2 + OH <=> HO2 + H2O */
+    qf[20] = sc[5]*sc[7];
+    qr[20] = sc[2]*sc[6];
+
+    double T = tc[1];
+
+    /*compute the mixture concentration */
+    double mixture = 0.0;
+    for (int i = 0; i < 9; ++i) {
+        mixture += sc[i];
+    }
+
+    double Corr[21];
+    for (int i = 0; i < 21; ++i) {
+        Corr[i] = 1.0;
+    }
+
+    /* troe */
+    {
+        double alpha[2];
+        alpha[0] = mixture + (TB[0][0] - 1)*sc[0] + (TB[0][1] - 1)*sc[2] + (TB[0][2] - 1)*sc[1];
+        alpha[1] = mixture + (TB[1][0] - 1)*sc[0] + (TB[1][1] - 1)*sc[2];
+        for (int i=0; i<2; i++)
+        {
+            double redP, F, logPred, logFcent, troe_c, troe_n, troe, F_troe;
+            redP = alpha[i-0] / k_f[i] * phase_units[i] * low_A[i] * exp(low_beta[i] * tc[0] - activation_units[i] * low_Ea[i] *invT);
+            F = redP / (1.0 + redP);
+            logPred = log10(redP);
+            logFcent = log10(
+                (fabs(troe_Tsss[i]) > 1.e-100 ? (1.-troe_a[i])*exp(-T/troe_Tsss[i]) : 0.) 
+                + (fabs(troe_Ts[i]) > 1.e-100 ? troe_a[i] * exp(-T/troe_Ts[i]) : 0.) 
+                + (troe_len[i] == 4 ? exp(-troe_Tss[i] * invT) : 0.) );
+            troe_c = -.4 - .67 * logFcent;
+            troe_n = .75 - 1.27 * logFcent;
+            troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+            F_troe = pow(10., logFcent / (1.0 + troe*troe));
+            Corr[i] = F * F_troe;
+        }
+    }
+
+    /* simple three-body correction */
+    {
+        double alpha;
+        alpha = mixture + (TB[2][0] - 1)*sc[0] + (TB[2][1] - 1)*sc[2];
+        Corr[2] = alpha;
+        alpha = mixture + (TB[3][0] - 1)*sc[0] + (TB[3][1] - 1)*sc[2];
+        Corr[3] = alpha;
+        alpha = mixture + (TB[4][0] - 1)*sc[0] + (TB[4][1] - 1)*sc[2];
+        Corr[4] = alpha;
+        alpha = mixture + (TB[5][0] - 1)*sc[0] + (TB[5][1] - 1)*sc[2];
+        Corr[5] = alpha;
+    }
+
+    for (int i=0; i<21; i++)
+    {
+        qf[i] *= Corr[i] * k_f[i];
+        qr[i] *= Corr[i] * k_f[i] / Kc[i];
+    }
+
+    return;
+}
+#endif
+
+/* This comp_qfqr is not thread safe for GPU. Use comp_qfqr_2 for GPU computations! */ 
+void comp_qfqr(double *  qf, double *  qr, double *  sc, double *  tc, double invT)
 {
 
     /*reaction 1: H + O2 (+M) <=> HO2 (+M) */
@@ -6337,7 +6683,7 @@ void equilibriumConstants(double *  kc, double *  g_RT, double T)
 
 /*compute the g/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-void gibbs(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE void gibbs(double *  species, double *  tc)
 {
 
     /*temperature */
