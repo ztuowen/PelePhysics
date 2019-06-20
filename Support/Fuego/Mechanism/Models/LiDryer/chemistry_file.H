@@ -23,7 +23,7 @@ AMREX_GPU_HOST_DEVICE void comp_k_f(double *  tc, double invT, double *  k_f);
 AMREX_GPU_HOST_DEVICE void comp_Kc(double *  tc, double invT, double *  Kc);
 void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
 #ifdef AMREX_USE_CUDA
-AMREX_GPU_HOST_DEVICE void comp_qfqr_2(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT, double* kf, double* kc);
+AMREX_GPU_HOST_DEVICE void comp_qfqr_2(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
 #endif
 void progressRate(double *  qdot, double *  speciesConc, double T);
 void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
