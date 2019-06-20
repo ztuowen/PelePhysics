@@ -2782,7 +2782,7 @@ static double Kc_save[21];
 
 #ifdef AMREX_USE_CUDA
 /*compute the production rate for each species */
-AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T)
+AMREX_GPU_HOST_DEVICE inline void productionRate(double *  wdot, double *  sc, double T)
 {
     double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
     double invT = 1.0 / tc[1];
@@ -3078,7 +3078,7 @@ AMREX_GPU_HOST_DEVICE void comp_k_f(double *  tc, double invT, double *  k_f)
     return;
 }
 
-AMREX_GPU_HOST_DEVICE void comp_Kc(double *  tc, double invT, double *  Kc)
+AMREX_GPU_HOST_DEVICE inline void comp_Kc(double *  tc, double invT, double *  Kc)
 {
     /*compute the Gibbs free energy */
     double g_RT[9];
@@ -3129,7 +3129,8 @@ AMREX_GPU_HOST_DEVICE void comp_Kc(double *  tc, double invT, double *  Kc)
 
 #ifdef AMREX_USE_CUDA
 /*This is the GPU thread safe version of comp_qfqr_2. Use comp_qfqr for CPU only computations.*/ 
-AMREX_GPU_HOST_DEVICE void comp_qfqr_2(double *  qf, double *  qr, double *  sc, double *  tc, double invT,
+AMREX_GPU_HOST_DEVICE 
+inline void comp_qfqr_2(double *  qf, double *  qr, double *  sc, double *  tc, double invT,
                                        double *  k_f, double *  Kc)
 {
 
@@ -6683,7 +6684,7 @@ void equilibriumConstants(double *  kc, double *  g_RT, double T)
 
 /*compute the g/(RT) at the given temperature */
 /*tc contains precomputed powers of T, tc[0] = log(T) */
-AMREX_GPU_HOST_DEVICE void gibbs(double *  species, double *  tc)
+AMREX_GPU_HOST_DEVICE inline void gibbs(double *  species, double *  tc)
 {
 
     /*temperature */
