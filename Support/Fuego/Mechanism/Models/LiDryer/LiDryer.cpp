@@ -1920,6 +1920,7 @@ void VCKWYR(int *  np, double *  rho, double *  T,
 	    double *  y,
 	    double *  wdot)
 {
+#ifndef AMREX_USE_CUDA
     double c[9*(*np)]; /*temporary storage */
     /*See Eq 8 with an extra 1e6 so c goes to SI */
     for (int n=0; n<9; n++) {
@@ -1935,8 +1936,8 @@ void VCKWYR(int *  np, double *  rho, double *  T,
     for (int i=0; i<9*(*np); i++) {
         wdot[i] *= 1.0e-6;
     }
+#endif
 }
-
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mole fractions */
