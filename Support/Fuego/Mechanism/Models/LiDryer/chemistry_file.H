@@ -124,11 +124,11 @@ void VCKWYR(int *  np, double *  rho, double *  T,
             double *  y,
             double *  wdot);
 /*vector version */
+void VCKYTX(int *  np, double *  y, double *  x);
+void VCKHMS(int *  np, double *  T, double *  ums);
 #ifndef AMREX_USE_CUDA
 void vproductionRate(int npt, double *  wdot, double *  c, double *  T);
-void VCKHMS(int *  np, double *  T, double *  ums);
 void VCKPY(int *  np, double *  rho, double *  T, double *  y, double *  P);
-void VCKYTX(int *  np, double *  y, double *  x);
 void vcomp_k_f(int npt, double *  k_f_s, double *  tc, double *  invT);
 void vcomp_gibbs(int npt, double *  g_RT, double *  tc);
 void vcomp_Kc(int npt, double *  Kc_s, double *  g_RT, double *  invT);
