@@ -1928,7 +1928,6 @@ AMREX_GPU_HOST_DEVICE void CKWYR(double *  rho, double *  T, double *  y,  doubl
 }
 
 
-#ifndef AMREX_USE_CUDA
 /*Returns the molar production rate of species */
 /*Given rho, T, and mass fractions */
 void VCKWYR(int *  np, double *  rho, double *  T,
@@ -1953,7 +1952,6 @@ void VCKWYR(int *  np, double *  rho, double *  T,
     }
 #endif
 }
-#endif
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mole fractions */
