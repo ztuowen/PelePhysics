@@ -78,7 +78,7 @@ main (int   argc,
     extern_init(&(probin_file_name[0]),&probin_file_length, &cvode_iE);
 
     /* Initialize D/CVODE reactor */
-    reactor_init(&cvode_iE, &cvode_ncells);
+    react_info(&cvode_iE, &cvode_ncells);
 
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
@@ -170,9 +170,8 @@ main (int   argc,
 	        for (int i = 0; i < ndt; ++i) {
 		        react(tmp_vect, tmp_src_vect, 
 				tmp_vect_energy, tmp_src_vect_energy,
-				&pressure, &dt_incr, &time_tmp, &reInit);
-	                // increment time with true dt_incr
-		        time_tmp = time_tmp + dt_incr;
+				&pressure, &dt_incr, &time_tmp,
+				&cvode_iE, &cvode_ncells);
 		        // fix new dt_incr to chosen value, hoping cvode will reach it
 		        dt_incr = dt;
 	        }

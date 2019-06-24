@@ -12,6 +12,8 @@ USE_MPI    = FALSE
 USE_MPI    = TRUE
 USE_OMP    = FALSE
 
+USE_CUDA   = FALSE
+
 FUEGO_GAS  = TRUE
 
 # define the location of the PELE_PHYSICS top directory
