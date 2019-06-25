@@ -50,7 +50,6 @@ using namespace thermo;
         33.006770,  /*HO2 */
         34.014740,  /*H2O2 */
         28.013400};  /*N2 */
-
 #endif
 
 AMREX_GPU_HOST_DEVICE
@@ -1951,6 +1950,7 @@ void VCKWYR(int *  np, double *  rho, double *  T,
     }
 #endif
 }
+
 
 /*Returns the molar production rate of species */
 /*Given rho, T, and mole fractions */
