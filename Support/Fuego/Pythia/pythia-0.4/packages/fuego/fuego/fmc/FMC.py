@@ -22,16 +22,12 @@ class FMC(Application):
         import fuego
         import pyre.monitors
 
-        save          = self.inventory.name
-        input         = self.inventory.input
-        output        = self.inventory.output
+        save = self.inventory.name
+        input = self.inventory.input
+        output = self.inventory.output
         mechanismFile = self.inventory.mechanism
-        thermo        = self.inventory.thermo
-        trans         = self.inventory.trans
-        #AF
-        save_chop   = save.split(".")[0]+"_1.cpp" #self.inventory.name_chop
-        save_header = "chemistry_file.H" #save.split(".")[0]+".H" #self.inventory.header
-        mech_header = "mechanism.h"
+        thermo = self.inventory.thermo
+        trans = self.inventory.trans
 
         timer = pyre.monitors.timer("fuego")
         if not input:
@@ -54,36 +50,16 @@ class FMC(Application):
         timer.reset()
         timer.start()
         print "Converting into '%s' format" % output,
-        lines        = fuego.serialization.save(mechanism, output)
+        lines = fuego.serialization.save(mechanism, output)
         print "... done (%g sec)" % timer.stop()
 
-        print "saving in '%s' '%s' (headers) and '%s'" % (mech_header, save_header, save),
+        print "saving in '%s'" % save,
         timer.reset()
         timer.start()
-        outputFileHeader  = self._openOutput(save_header)
-        count_lines = 0
-        for line in lines:
-            if ('include "chemistry_file.H"') in line:
-                line_start_core = count_lines
-                break;
-            outputFileHeader.write(line)
-            outputFileHeader.write('\n')
-            count_lines += 1
-
         outputFile = self._openOutput(save)
-        for line in lines[line_start_core:]:
-            if ('#ifndef MECHANISM_h') in line:
-                line_start_mech_header = count_lines
-                break;
+        for line in lines:
             outputFile.write(line)
             outputFile.write('\n')
-            count_lines += 1
-
-        MechHeaderFile = self._openOutput(mech_header)
-        for line in lines[line_start_mech_header:]:
-            MechHeaderFile.write(line)
-            MechHeaderFile.write('\n')
-
         print "... done (%g sec)" % timer.stop()
 
         return
@@ -112,7 +88,6 @@ class FMC(Application):
             pyre.properties.str("thermo", default=""),
             pyre.properties.str("trans", default=""),
             pyre.properties.str("input", default=""),
-            #pyre.properties.str("output", default="c"),
             pyre.properties.str("output", default="f"),
             ]
 

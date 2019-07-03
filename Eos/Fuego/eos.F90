@@ -18,16 +18,11 @@ module eos_module
   logical, save, private :: initialized = .false.
 
   real(amrex_real), save, public :: smallT = 1.d-50
-
-  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_vec, &
-          eos_cpi, eos_hi, eos_hi_vec, eos_cv, eos_cp, eos_p_wb, eos_wb, &
+  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_gpu, eos_ytx_vec_gpu, &
+          eos_cpi, eos_cpi_gpu, eos_hi, eos_hi_vec_gpu, eos_cv, eos_cp, eos_p_wb, eos_wb, &
           eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, &
           eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, &
           eos_mui, eos_rp1, eos_get_activity_h
-
-  !integer :: iwrk
-  !real(amrex_real) :: rwrk
-  !acc declare create(iwrk,rwrk)
 
   !private :: nspecies, Ru, inv_mwt
   private :: Ru
@@ -158,7 +153,7 @@ contains
 
     call ckcvms(state % T, state % cvi)  ! erg/gi.K
     call ckcpms(state % T, state % cpi)  ! erg/gi.K
-    call ckhms (state % T, state % hi)    ! erg/gi
+    call ckhms2(state % T, state % hi)    ! erg/gi
 
     state % cv = sum(state % massfrac(:) * state % cvi(:)) ! erg/g.K
     state % cp = sum(state % massfrac(:) * state % cpi(:)) ! erg/g.K
@@ -233,7 +228,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckytx (state % massfrac,state % molefrac)
+    call ckytx2(state % massfrac,state % molefrac)
 
   end subroutine eos_ytx
 
@@ -260,7 +255,7 @@ contains
     double precision, intent(in) :: Y(:)
     double precision, intent(out) :: X(:)
 
-    call ckytx2(Y(:),iwrk,rwrk,X(:))
+    call ckytx2(Y(:),X(:))
 
   end subroutine eos_ytx_gpu
 
@@ -281,7 +276,7 @@ contains
 !    npts = (hi(1)+1)-(lo(1)-1)+1
 !    do k = lo(3)-1, hi(3)+1
 !       do j = lo(2)-1, hi(2)+1
-!         call vckytx( npts, Y(lo(1)-1:hi(1)+1, j, k, :), iwrk, rwrk, X( lo(1)-1:hi(1)+1, j, k, :) )
+!         call vckytx( npts, Y(lo(1)-1:hi(1)+1, j, k, :), X( lo(1)-1:hi(1)+1, j, k, :) )
 !       enddo
 !    enddo
 !
@@ -324,7 +319,7 @@ contains
     double precision, intent(in) :: state_T
     double precision, intent(out) :: state_cpi(:)
 
-    call ckcpms(state_T, iwrk, rwrk, state_cpi)
+    call ckcpms(state_T, state_cpi)
 
   end subroutine eos_cpi_gpu
 
@@ -380,7 +375,7 @@ contains
 !    npts = (high(1)+1)-(low(1)-1)+1
 !    do k = low(3)-1, high(3)+1
 !       do j = low(2)-1, high(2)+1
-!          call vckhms( npts, T(low(1)-1:high(1)+1, j, k), iwrk, rwrk, hi( low(1)-1:high(1)+1, j, k, :) )
+!          call vckhms( npts, T(low(1)-1:high(1)+1, j, k), hi( low(1)-1:high(1)+1, j, k, :) )
 !       enddo
 !    enddo
 !
@@ -581,20 +576,21 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    integer :: lierr
+    !integer :: lierr
 
-    call eos_wb(state)
+    !call eos_wb(state)
 
-    call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
-    if (lierr .ne. 0) then
-            print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
-                    state % T, state % h, state % massfrac
-    end if
-    state % T = max(state % T, smallT)
-    call ckhms(state % T, state % hi)
-    call ckrhoy(state % p, state % T, state % massfrac, state % rho)
+    !call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
+    !if (lierr .ne. 0) then
+    !        print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
+    !                state % T, state % h, state % massfrac
+    !end if
+    !state % T = max(state % T, smallT)
+    !call ckhms(state % T, state % hi)
+    !call ckrhoy(state % p, state % T, state % massfrac, state % rho)
 
-    call eos_bottom_h(state)
+    !call eos_bottom_h(state)
+    call bl_error('EOS: eos_ph is not supported in this EOS.')
 
   end subroutine eos_ph
 
@@ -614,20 +610,21 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    integer :: lierr
+    !integer :: lierr
 
-    call eos_wb(state)
+    !call eos_wb(state)
 
-    call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
-    if (lierr .ne. 0) then
-            print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
-                    state % T, state % h, state % massfrac
-    end if
-    state % T = max(state % T, smallT)
-    call ckhms(state % T, state % hi)
-    call ckpy(state % rho, state % T, state % massfrac, state % p)
+    !call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
+    !if (lierr .ne. 0) then
+    !        print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
+    !                state % T, state % h, state % massfrac
+    !end if
+    !state % T = max(state % T, smallT)
+    !call ckhms(state % T, state % hi)
+    !call ckpy(state % rho, state % T, state % massfrac, state % p)
 
-    call eos_bottom_h(state)
+    !call eos_bottom_h(state)
+    call bl_error('EOS: eos_rh is not supported in this EOS.')
 
   end subroutine eos_rh
 

@@ -448,12 +448,10 @@ end subroutine
 
 
 ! A few mechanism parameters
-subroutine ckindx(iwrk, rwrk, mm, kk, ii, nfit)
+subroutine ckindx(mm, kk, ii, nfit)
 
     implicit none
 
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     integer, intent(out) :: mm
     integer, intent(out) :: kk
     integer, intent(out) :: ii
@@ -556,12 +554,10 @@ subroutine cksyms(kname, plenkname)
 end subroutine
 
 ! Returns R, Rc, Patm
-subroutine ckrp(ickwrk, rckwrk, ru, ruc, pa)
+subroutine ckrp(ru, ruc, pa)
 
     implicit none
 
-    integer, intent(in) :: ickwrk
-    double precision, intent(in) :: rckwrk
     double precision, intent(out) :: ru
     double precision, intent(out) :: ruc
     double precision, intent(out) :: pa
@@ -573,15 +569,13 @@ subroutine ckrp(ickwrk, rckwrk, ru, ruc, pa)
 end subroutine
 
 ! Compute P = rhoRT/W(y)
-subroutine ckpy(rho, T, y, iwrk, rwrk, P)
+subroutine ckpy(rho, T, y, P)
 
     implicit none
 
     double precision, intent(in) :: rho
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: P
 
     double precision :: YOW ! for computing mean MW
@@ -614,15 +608,13 @@ subroutine ckpy(rho, T, y, iwrk, rwrk, P)
 end subroutine
 
 ! Compute rho = P*W(y)/RT
-subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
+subroutine ckrhoy(P, T, y, rho)
 
     implicit none
 
     double precision, intent(in) :: P
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: rho
 
     double precision :: YOW, tmp(9)
@@ -652,12 +644,10 @@ subroutine ckrhoy(P, T, y, iwrk, rwrk, rho)
 end subroutine
 
 ! get molecular weight for all species
-subroutine ckwt(iwrk, rwrk, wt)
+subroutine ckwt(wt)
 
     implicit none
 
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: wt(9)
 
     call molecularWeight(wt)
@@ -665,13 +655,11 @@ subroutine ckwt(iwrk, rwrk, wt)
 end subroutine
 
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
-subroutine ckytx2(y, iwrk, rwrk, x)
+subroutine ckytx2(y, x)
 
     !$acc routine(ckytx2) seq
 
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: x(9)
 
     double precision :: YOW, YOWINV
@@ -741,14 +729,12 @@ subroutine ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
 end subroutine
 
 ! convert y(npoints,species) (mass fracs) to x(npoints,species) (mole fracs)
-subroutine vckytx(np, y, iwrk, rwrk, x)
+subroutine vckytx(np, y, x)
 
     implicit none
 
     integer, intent(in) :: np
     double precision, intent(in) :: y(np,9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: x(np,9)
 
     double precision :: YOW(np)
@@ -788,15 +774,13 @@ subroutine vckytx(np, y, iwrk, rwrk, x)
 end subroutine
 
 ! convert y[species] (mass fracs) to c[species] (molar conc)
-subroutine ckytcr(rho, T, y, iwrk, rwrk, c)
+subroutine ckytcr(rho, T, y, c)
 
     implicit none
 
     double precision, intent(in) :: rho
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: c(9)
 
     integer :: i
@@ -818,13 +802,11 @@ subroutine ckytcr(rho, T, y, iwrk, rwrk, c)
 end subroutine
 
 ! convert x[species] (mole fracs) to y[species] (mass fracs)
-subroutine ckxty(x, iwrk, rwrk, y)
+subroutine ckxty(x, y)
 
     implicit none
 
     double precision, intent(in) :: x(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: y(9)
 
     double precision :: XW, XWinv
@@ -858,13 +840,11 @@ end subroutine
 
 ! Returns the specific heats at constant volume
 ! in mass units (Eq. 29)
-subroutine ckcvms(T, iwrk, rwrk, cvms)
+subroutine ckcvms(T, cvms)
 
     implicit none
 
     double precision, intent(in) :: T
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: cvms(9)
 
     double precision :: tT, tc(5)
@@ -918,15 +898,13 @@ end subroutine
 
 ! Returns the specific heats at constant pressure
 ! in mass units (Eq. 26)
-subroutine ckcpms(T, iwrk, rwrk, cpms)
+subroutine ckcpms(T, cpms)
 
     !$acc routine(ckcpms) seq
 
     implicit none
 
     double precision, intent(in) :: T
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: cpms(9)
 
     double precision :: tT, tc(5)
@@ -950,13 +928,11 @@ subroutine ckcpms(T, iwrk, rwrk, cpms)
 end subroutine
 
 ! Returns internal energy in mass units (Eq 30.)
-subroutine ckums(T, iwrk, rwrk, ums)
+subroutine ckums(T, ums)
 
     implicit none
 
     double precision, intent(in) :: T
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: ums(9)
 
     double precision :: tT, tc(5)
@@ -1020,13 +996,11 @@ subroutine ckums1(T, ums)
 
 end subroutine
 
-subroutine ckhms2(T, iwrk, rwrk, hms)
+subroutine ckhms2(T, hms)
 
     implicit none
 
     double precision, intent(in) :: T
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: hms(9)
 
     double precision :: tT, RT
@@ -1095,14 +1069,12 @@ subroutine ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
 end subroutine
 
 ! Returns enthalpy in mass units (Eq 27.)
-subroutine vckhms(np, T, iwrk, rwrk, hms)
+subroutine vckhms(np, T, hms)
 
     implicit none
 
     integer, intent(in) :: np
     double precision, intent(in) :: T(np)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: hms(np,9)
 
     double precision :: tc(5), h(9)
@@ -1147,14 +1119,12 @@ subroutine vckhms(np, T, iwrk, rwrk, hms)
 end subroutine
 
 ! Returns the mean specific heat at CP (Eq. 34)
-subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
+subroutine ckcpbs(T, y, cpbs)
 
     implicit none
 
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: cpbs
 
     double precision :: cpor(9)
@@ -1192,14 +1162,12 @@ subroutine ckcpbs(T, y, iwrk, rwrk, cpbs)
 end subroutine
 
 ! Returns the mean specific heat at CV (Eq. 36)
-subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
+subroutine ckcvbs(T, y, cvbs)
 
     implicit none
 
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: cvbs
 
     double precision :: cvor(9)
@@ -1238,14 +1206,12 @@ subroutine ckcvbs(T, y, iwrk, rwrk, cvbs)
 end subroutine
 
 ! get mean internal energy in mass units
-subroutine ckubms(T, y, iwrk, rwrk, ubms)
+subroutine ckubms(T, y, ubms)
 
     implicit none
 
     double precision, intent(in) :: T
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: ubms
 
     double precision :: ums(9) ! temporary energy array
@@ -1286,14 +1252,12 @@ subroutine ckubms(T, y, iwrk, rwrk, ubms)
 end subroutine
 
 ! compute the production rate for each species
-subroutine ckwc(T, C, iwrk, rwrk, wdot)
+subroutine ckwc(T, C, wdot)
 
     implicit none
 
     double precision, intent(in) :: T
     double precision, intent(inout) :: C(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(inout) :: wdot(9)
 
     integer :: id ! loop counter
@@ -2681,14 +2645,12 @@ subroutine molecularWeight(wt)
 end subroutine
 
 ! get temperature given internal energy in mass units and mass fracs
-subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
+subroutine get_t_given_ey(e, y, t, ierr)
 
     implicit none
 
     double precision, intent(in) :: e
     double precision, intent(in) :: y(9)
-    integer, intent(in) :: iwrk
-    double precision, intent(in) :: rwrk
     double precision, intent(out) :: t
     integer, intent(out) :: ierr
 
@@ -2708,19 +2670,19 @@ subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
 
     ein = e
 
-    call ckubms(tmin, y, iwrk, rwrk, emin)
-    call ckubms(tmax, y, iwrk, rwrk, emax)
+    call ckubms(tmin, y, emin)
+    call ckubms(tmax, y, emax)
 
     if (ein < emin) then
         ! Linear Extrapolation below tmin
-        call ckcvbs(tmin, y, iwrk, rwrk, cv)
+        call ckcvbs(tmin, y, cv)
         t = tmin - (emin-ein) / cv
         ierr = 1
         return
     end if
     if (ein > emax) then
         ! Linear Extrapolation above tmax
-        call ckcvbs(tmax, y, iwrk, rwrk, cv)
+        call ckcvbs(tmax, y, cv)
         t = tmax - (emax - ein) / cv
         ierr = 1
         return
@@ -2730,8 +2692,8 @@ subroutine get_t_given_ey(e, y, iwrk, rwrk, t, ierr)
         t1 = tmin + (tmax-tmin)/(emax-emin)*(ein-emin)
     end if
     do i=1, maxiter
-        call ckubms(t1,y,iwrk,rwrk,e1)
-        call ckcvbs(t1,y,iwrk,rwrk,cv)
+        call ckubms(t1,y,e1)
+        call ckcvbs(t1,y,cv)
         dt = (ein - e1) / cv
         if (dt > 100.d0) then
             dt = 100.d0
