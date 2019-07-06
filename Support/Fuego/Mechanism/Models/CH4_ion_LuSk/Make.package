@@ -1,3 +1,9 @@
+CEXE_headers+=chemistry_file.H
+
 cEXE_sources += LuSk_CH4_ion.c
+
+LIBRARIES += 
+
+INCLUDE_LOCATIONS += $(CHEM_DIR)
 
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
