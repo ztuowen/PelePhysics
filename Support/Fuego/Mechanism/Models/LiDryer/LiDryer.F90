@@ -469,8 +469,8 @@ subroutine cksyme(kname, plenkname)
 
     implicit none
 
-    integer, intent(out) :: kname(plenkname*3)
     integer, intent(in) :: plenkname
+    integer, intent(out) :: kname(plenkname*3)
 
     integer :: i
     integer :: lenkname
@@ -499,8 +499,8 @@ subroutine cksyms(kname, plenkname)
 
     implicit none
 
-    integer, intent(out) :: kname(plenkname*9)
     integer, intent(in) :: plenkname
+    integer, intent(out) :: kname(plenkname*9)
 
     integer :: i
     integer :: lenkname
