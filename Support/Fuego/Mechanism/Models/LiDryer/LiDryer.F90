@@ -659,6 +659,8 @@ subroutine ckytx(y, x)
 
     !$acc routine(ckytx) seq
 
+    implicit none
+
     double precision, intent(in) :: y(9)
     double precision, intent(out) :: x(9)
 
@@ -940,6 +942,9 @@ end subroutine ckums
 
 subroutine ckhms(T, hms)
 
+    !$acc routine(ckhms) seq
+    !$acc routine(speciesEnthalpy) seq
+
     implicit none
 
     double precision, intent(in) :: T
@@ -963,7 +968,7 @@ subroutine ckhms(T, hms)
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
     RT = 8.31451000d+07 * tT ! R*T
 
-    call speciesEnthalpy2(hms, tc)
+    call speciesEnthalpy(hms, tc)
 
     do i=1, 9
         hms(i) = hms(i) * (RT * imw(i))
@@ -975,7 +980,7 @@ end subroutine
 subroutine ckhms_gpu(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
 
     !$acc routine(ckhms_gpu) seq
-    !$acc routine(speciesEnthalpy) seq
+    !$acc routine(speciesEnthalpy_gpu) seq
 
     implicit none
 
@@ -1002,7 +1007,7 @@ subroutine ckhms_gpu(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
     RT = 8.31451000d+07 * tT ! R*T
 
-    call speciesEnthalpy(hii, lo, hi, i, j, k, tc, nspec)
+    call speciesEnthalpy_gpu(hii, lo, hi, i, j, k, tc, nspec)
 
     do n=1, 9
         hii(i,j,k,n) = hii(i,j,k,n) * (RT * imw(n))
@@ -1039,7 +1044,7 @@ subroutine vckhms(np, T, hms)
         tc(4) = T(i)*T(i)*T(i)
         tc(5) = T(i)*T(i)*T(i)*T(i)
 
-        call speciesEnthalpy2(h, tc)
+        call speciesEnthalpy(h, tc)
 
         hms(i, 1) = h(1)
         hms(i, 2) = h(2)
@@ -2240,7 +2245,11 @@ end subroutine
 
 ! compute the h/(RT) at the given temperature (Eq 20)
 ! tc contains precomputed powers of T, tc(1) = log(T)
-subroutine speciesEnthalpy2(species, tc)
+subroutine speciesEnthalpy(species, tc)
+
+    !$acc routine(speciesEnthalpy) seq
+
+    implicit none
 
     double precision, intent(out) :: species(9)
     double precision, intent(in) :: tc(5)
@@ -2404,9 +2413,9 @@ end subroutine
 
 ! compute the h/(RT) at the given temperature (Eq 20)
 ! tc contains precomputed powers of T, tc(1) = log(T)
-subroutine speciesEnthalpy(hii, lo, hi, i, j, k, tc, nspec)
+subroutine speciesEnthalpy_gpu(hii, lo, hi, i, j, k, tc, nspec)
 
-    !$acc routine(speciesEnthalpy) seq
+    !$acc routine(speciesEnthalpy_gpu) seq
 
     implicit none
 

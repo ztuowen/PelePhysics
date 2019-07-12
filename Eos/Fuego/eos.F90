@@ -17,7 +17,7 @@ module eos_module
   character (len=64) :: eos_name = "fuego"
   logical, save, private :: initialized = .false.
 
-  real(amrex_real), save, public :: smallT = 1.d-50
+  !real(amrex_real), save, public :: smallT = 1.d-50
   public :: eos_init, eos_xty, eos_ytx, eos_ytx_gpu, eos_ytx_vec_gpu, &
           eos_cpi, eos_cpi_gpu, eos_hi, eos_hi_vec_gpu, eos_cv, eos_cp, eos_p_wb, eos_wb, &
           eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, &
@@ -563,6 +563,7 @@ contains
 
   subroutine eos_re_gpu(eos_state_T, eos_state_rho, eos_state_e, eos_state_massfrac, eos_state_aux, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar)
 
+    !$acc routine(eos_re_gpu) seq
     !$acc routine(eos_wb) seq
     !$acc routine(get_t_given_ey) seq
     !$acc routine(ckums) seq
@@ -591,6 +592,7 @@ contains
     double precision :: eos_state_hi(9)
     double precision :: eos_state_cv
     double precision :: Cvx
+    double precision :: smallT = 1.d-50
 
     integer :: lierr
 
@@ -625,6 +627,7 @@ contains
     type (eos_t), intent(inout) :: state
 
     integer :: lierr
+    double precision :: smallT = 1.d-50
 
     call eos_wb(state)
 
@@ -658,6 +661,7 @@ contains
     type (eos_t), intent(inout) :: state
 
     !integer :: lierr
+    !double precision :: smallT = 1.d-50
 
     !call eos_wb(state)
 
@@ -692,6 +696,7 @@ contains
     type (eos_t), intent(inout) :: state
 
     !integer :: lierr
+    !double precision :: smallT = 1.d-50
 
     !call eos_wb(state)
 
