@@ -11,18 +11,18 @@ module eos_module
   !use fuego_chemistry
   !use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
   use chemistry_module, only : Ru, chemistry_init, chemistry_initialized, spec_names, elem_names
-  use fuego_module, only : ckytx2, ckytx, ckhms2, ckhms, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
+  use fuego_module, only : ckytx, ckytx_gpu, ckhms, ckhms_gpu, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
   implicit none
   character (len=64) :: eos_name = "fuego"
   logical, save, private :: initialized = .false.
 
   real(amrex_real), save, public :: smallT = 1.d-50
-  public :: eos_init, eos_xty, eos_ytx, eos_ytx2, eos_ytx_gpu, eos_ytx_vec_gpu, &
+  public :: eos_init, eos_xty, eos_ytx, eos_ytx_gpu, eos_ytx_vec_gpu, &
           eos_cpi, eos_cpi_gpu, eos_hi, eos_hi_vec_gpu, eos_cv, eos_cp, eos_p_wb, eos_wb, &
           eos_get_activity, eos_rt, eos_tp, eos_rp, eos_re, eos_ps, &
           eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, &
-          eos_mui, eos_rp1, eos_get_activity_h
+          eos_mui, eos_rp_gpu, eos_get_activity_h
 
   !private :: nspecies, Ru, inv_mwt
   private :: Ru
@@ -37,14 +37,14 @@ module eos_module
 
 contains
 
-  subroutine eos_rp1(rho, p, massfrac, e, gam1, cs, nspec)
+  subroutine eos_rp_gpu(rho, p, massfrac, e, gam1, cs, nspec)
 
-    !$acc routine(eos_rp1) seq
-    !$acc routine(ckums1) seq
-    !$acc routine(ckcvms1) seq
+    !$acc routine(eos_rp_gpu) seq
+    !$acc routine(ckums) seq
+    !$acc routine(ckcvms) seq
 
     USE chemistry_module, ONLY: Ru
-    USE fuego_module, ONLY: ckcvms1, ckums1
+    USE fuego_module, ONLY: ckcvms, ckums
 
     implicit none
 
@@ -68,14 +68,14 @@ contains
 
     wbar = 1.d0 / sum(massfrac(:) * inv_mwt(:))
     T = p * wbar / (rho * Ru)
-    call ckums1(T, ei(:))
+    call ckums(T, ei(:))
     e = sum(massfrac(:) * ei(:))
-    call ckcvms1(T, cvi(:))
+    call ckcvms(T, cvi(:))
     cv = sum(massfrac(:) * cvi(:))
     gam1 = ((wbar * cv) + Ru) / (wbar * cv)
     cs = sqrt(gam1 * p / rho)
 
-  end subroutine eos_rp1
+  end subroutine eos_rp_gpu
 
   subroutine eos_init(small_temp, small_dens)
 
@@ -153,7 +153,7 @@ contains
 
     call ckcvms(state % T, state % cvi)  ! erg/gi.K
     call ckcpms(state % T, state % cpi)  ! erg/gi.K
-    call ckhms2(state % T, state % hi)    ! erg/gi
+    call ckhms(state % T, state % hi)    ! erg/gi
 
     state % cv = sum(state % massfrac(:) * state % cvi(:)) ! erg/g.K
     state % cp = sum(state % massfrac(:) * state % cpi(:)) ! erg/g.K
@@ -228,34 +228,34 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckytx2(state % massfrac,state % molefrac)
+    call ckytx(state % massfrac, state % molefrac)
 
   end subroutine eos_ytx
 
-  subroutine eos_ytx2(Y, X, Nsp)
+  !subroutine eos_ytx2(Y, X, Nsp)
 
-    !$acc routine seq
+  !  !$acc routine seq
 
-    implicit none
+  !  implicit none
 
-    double precision, intent(in), dimension(1:Nsp) :: Y
-    double precision, intent(out), dimension(1:Nsp) :: X
-    integer, intent(in) :: Nsp
+  !  double precision, intent(in), dimension(1:Nsp) :: Y
+  !  double precision, intent(out), dimension(1:Nsp) :: X
+  !  integer, intent(in) :: Nsp
 
-    call ckytx2(Y(:),X(:))
+  !  call ckytx(Y(:), X(:))
 
-  end subroutine eos_ytx2
+  !end subroutine eos_ytx2
 
   subroutine eos_ytx_gpu(Y, X)
 
-    !$acc routine seq
+    !$acc routine(eos_ytx_gpu) seq
 
     implicit none
 
     double precision, intent(in) :: Y(:)
     double precision, intent(out) :: X(:)
 
-    call ckytx2(Y(:),X(:))
+    call ckytx(Y(:), X(:))
 
   end subroutine eos_ytx_gpu
 
@@ -285,7 +285,7 @@ contains
   subroutine eos_ytx_vec_gpu(q, x, lo, hi, nspec, qfs, qvar)
 
     !$acc routine(eos_ytx_vec_gpu) gang
-    !$acc routine(ckytx) seq
+    !$acc routine(ckytx_gpu) seq
 
     implicit none
 
@@ -302,7 +302,7 @@ contains
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
           do i = lo(1)-1, hi(1)+1
-             call ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
+             call ckytx_gpu(q, x, lo, hi, i, j, k, qfs, qvar)
           enddo
        enddo
     enddo
@@ -312,7 +312,7 @@ contains
 
   subroutine eos_cpi_gpu(state_t, state_cpi)
 
-    !$acc routine seq
+    !$acc routine(eos_cpi_gpu) seq
 
     implicit none
 
@@ -339,21 +339,21 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    call ckhms2(state % T,state % hi)
+    call ckhms(state % T, state % hi)
 
   end subroutine eos_hi
 
-  subroutine eos_hi2(T, hi, Nsp)
-
-    implicit none
-
-    double precision, intent(in) :: T
-    integer, intent(in)          :: Nsp
-    double precision, intent(inout), dimension(1:Nsp) :: hi
-
-    call ckhms2(T,hi(:))
-
-  end subroutine eos_hi2
+!  subroutine eos_hi2(T, hi, Nsp)
+!
+!    implicit none
+!
+!    double precision, intent(in) :: T
+!    integer, intent(in)          :: Nsp
+!    double precision, intent(inout), dimension(1:Nsp) :: hi
+!
+!    call ckhms(T, hi(:))
+!
+!  end subroutine eos_hi2
 
 !  subroutine eos_hi_vec(mass, masslo, masshi, T, Tlo, Thi, hi, hilo, hihi, low, high, Nsp)
 !
@@ -384,7 +384,7 @@ contains
   subroutine eos_hi_vec_gpu(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
 
     !$acc routine(eos_hi_vec_gpu) gang
-    !$acc routine(ckhms) seq
+    !$acc routine(ckhms_gpu) seq
 
     implicit none
 
@@ -399,7 +399,7 @@ contains
     do k = lo(3)-1, hi(3)+1
        do j = lo(2)-1, hi(2)+1
           do i = lo(1)-1, hi(1)+1
-             call ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
+             call ckhms_gpu(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
           enddo
        enddo
     enddo
@@ -437,6 +437,30 @@ contains
     call ckpy(state % rho, state % T, state % massfrac, state % p)
 
   end subroutine eos_p_wb
+
+  subroutine eos_wb_gpu(eos_state_wbar, eos_state_massfrac)
+
+    !$acc routine(eos_wb_gpu) seq
+
+    implicit none
+
+    double precision, intent(inout) :: eos_state_wbar
+    double precision, intent(in   ) :: eos_state_massfrac(9)
+
+    double precision, parameter :: inv_mwt(9) = (/ &
+        1.d0 / 2.015940d0,  & ! H2
+        1.d0 / 31.998800d0,  & ! O2
+        1.d0 / 18.015340d0,  & ! H2O
+        1.d0 / 1.007970d0,  & ! H
+        1.d0 / 15.999400d0,  & ! O
+        1.d0 / 17.007370d0,  & ! OH
+        1.d0 / 33.006770d0,  & ! HO2
+        1.d0 / 34.014740d0,  & ! H2O2
+        1.d0 / 28.013400d0 /) ! N2
+
+    eos_state_wbar = 1.d0 / sum(eos_state_massfrac(:) * inv_mwt(:))
+
+  end subroutine eos_wb_gpu
 
   subroutine eos_wb(state)
 
@@ -536,6 +560,63 @@ contains
     call eos_bottom(state)
 
   end subroutine eos_rp
+
+  subroutine eos_re_gpu(eos_state_T, eos_state_rho, eos_state_e, eos_state_massfrac, eos_state_aux, eos_state_p, eos_state_dpdr_e, eos_state_dpde, eos_state_gam1, eos_state_cs, eos_state_wbar)
+
+    !$acc routine(eos_wb) seq
+    !$acc routine(get_t_given_ey) seq
+    !$acc routine(ckums) seq
+    !$acc routine(ckpy) seq
+    !$acc routine(ckcvms) seq
+    !$acc routine(ckcpms) seq
+    !$acc routine(ckhms) seq
+
+    implicit none
+
+    double precision, intent(inout) :: eos_state_T
+    double precision, intent(in) :: eos_state_rho
+    double precision, intent(in) :: eos_state_e
+    double precision, intent(in) :: eos_state_massfrac(9)
+    double precision, intent(in) :: eos_state_aux(9)
+    double precision, intent(inout) :: eos_state_p
+    double precision, intent(inout) :: eos_state_dpdr_e
+    double precision, intent(inout) :: eos_state_dpde
+    double precision, intent(in) :: eos_state_gam1
+    double precision, intent(in) :: eos_state_cs
+    double precision, intent(inout) :: eos_state_wbar
+
+    double precision :: eos_state_ei(9)
+    double precision :: eos_state_cvi(9)
+    double precision :: eos_state_cpi(9)
+    double precision :: eos_state_hi(9)
+    double precision :: eos_state_cv
+    double precision :: Cvx
+
+    integer :: lierr
+
+    call eos_wb_gpu(eos_state_wbar, eos_state_massfrac)
+    call get_T_given_eY(eos_state_e, eos_state_massfrac, eos_state_T, lierr)
+    eos_state_T = max(eos_state_T, smallT)
+    call ckums(eos_state_T, eos_state_ei)
+    call ckpy(eos_state_rho, eos_state_T, eos_state_massfrac, eos_state_p)
+
+    !eos_bottom_gpu start
+    call ckcvms(eos_state_T, eos_state_cvi)
+    call ckcpms(eos_state_T, eos_state_cpi)
+    call ckhms(eos_state_T, eos_state_hi)
+
+    eos_state_cv = sum(eos_state_massfrac(:) * eos_state_cvi(:))
+
+    Cvx = eos_state_wbar * eos_state_cv
+
+    eos_state_gam1 = (Cvx + Ru) / Cvx
+    eos_state_cs = sqrt(eos_state_gam1 * eos_state_p / eos_state_rho)
+
+    eos_state_dpdr_e = eos_state_p / eos_state_rho
+    eos_state_dpde = (eos_state_gam1 - 1.d0) * eos_state_rho
+    !eos_bottom_gpu end
+
+  end subroutine eos_re_gpu
 
   subroutine eos_re(state)
 

@@ -4,16 +4,14 @@ module fuego_module
   private
   public :: ckcpms
   public :: ckums
-  public :: ckums1
   public :: ckrhoy
   public :: ckcvms
-  public :: ckcvms1
   public :: ckxty
   public :: ckytcr
-  public :: ckytx2
   public :: ckytx
+  public :: ckytx_gpu
   public :: ckhms
-  public :: ckhms2
+  public :: ckhms_gpu
   public :: vckytx
   public :: vckhms
   public :: ckcvbs
@@ -571,6 +569,8 @@ end subroutine
 ! Compute P = rhoRT/W(y)
 subroutine ckpy(rho, T, y, P)
 
+    !$acc routine(ckpy) seq
+
     implicit none
 
     double precision, intent(in) :: rho
@@ -655,9 +655,9 @@ subroutine ckwt(wt)
 end subroutine
 
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
-subroutine ckytx2(y, x)
+subroutine ckytx(y, x)
 
-    !$acc routine(ckytx2) seq
+    !$acc routine(ckytx) seq
 
     double precision, intent(in) :: y(9)
     double precision, intent(out) :: x(9)
@@ -692,9 +692,9 @@ subroutine ckytx2(y, x)
 end subroutine
 
 ! convert y[species] (mass fracs) to x[species] (mole fracs)
-subroutine ckytx(q, x, lo, hi, i, j, k, qfs, qvar)
+subroutine ckytx_gpu(q, x, lo, hi, i, j, k, qfs, qvar)
 
-    !$acc routine(ckytx) seq
+    !$acc routine(ckytx_gpu) seq
 
     implicit none
 
@@ -842,6 +842,9 @@ end subroutine
 ! in mass units (Eq. 29)
 subroutine ckcvms(T, cvms)
 
+    !$acc routine(ckcvms) seq
+    !$acc routine(cv_r) seq
+
     implicit none
 
     double precision, intent(in) :: T
@@ -855,35 +858,6 @@ subroutine ckcvms(T, cvms)
     call cv_R(cvms, tc)
 
     ! multiply by R/molecularweight
-    cvms(1) = cvms(1) * 4.124383662212169d+07 !H2
-    cvms(2) = cvms(2) * 2.598381814318037d+06 !O2
-    cvms(3) = cvms(3) * 4.615239012974499d+06 !H2O
-    cvms(4) = cvms(4) * 8.248767324424338d+07 !H
-    cvms(5) = cvms(5) * 5.196763628636074d+06 !O
-    cvms(6) = cvms(6) * 4.888768810227566d+06 !OH
-    cvms(7) = cvms(7) * 2.519031701678171d+06 !HO2
-    cvms(8) = cvms(8) * 2.444384405113783d+06 !H2O2
-    cvms(9) = cvms(9) * 2.968047434442088d+06 !N2
-
-end subroutine
-
-subroutine ckcvms1(T, cvms)
-
-    !$acc routine(ckcvms1) seq
-
-    implicit none
-
-    double precision, intent(in) :: T
-    double precision, intent(inout) :: cvms(9)
-
-    double precision :: tT, tc(5)
-
-    tT = T ! temporary temperature
-    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
-
-    call cv_R(cvms, tc)
-    ! multiply by R/molecularweight
-
     cvms(1) = cvms(1) * 4.124383662212169d+07 !H2
     cvms(2) = cvms(2) * 2.598381814318037d+06 !O2
     cvms(3) = cvms(3) * 4.615239012974499d+06 !H2O
@@ -930,6 +904,9 @@ end subroutine
 ! Returns internal energy in mass units (Eq 30.)
 subroutine ckums(T, ums)
 
+    !$acc routine(ckums) seq
+    !$acc routine(speciesinternalenergy) seq
+
     implicit none
 
     double precision, intent(in) :: T
@@ -961,42 +938,7 @@ subroutine ckums(T, ums)
 
 end subroutine ckums
 
-subroutine ckums1(T, ums)
-
-    !$acc routine(ckums1) seq
-
-    implicit none
-
-    double precision, intent(in) :: T
-    double precision, intent(inout) :: ums(9)
-
-    double precision :: tT, tc(5)
-    double precision :: RT
-    integer :: i
-    double precision, parameter :: imw(9) = (/ &
-        1.d0 / 2.015940d0,  & ! H2
-        1.d0 / 31.998800d0,  & ! O2
-        1.d0 / 18.015340d0,  & ! H2O
-        1.d0 / 1.007970d0,  & ! H
-        1.d0 / 15.999400d0,  & ! O
-        1.d0 / 17.007370d0,  & ! OH
-        1.d0 / 33.006770d0,  & ! HO2
-        1.d0 / 34.014740d0,  & ! H2O2
-        1.d0 / 28.013400d0 /) ! N2
-
-    tT = T ! temporary temperature
-    tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
-    RT = 8.31451000d+07 * tT ! R*T
-
-    call speciesInternalEnergy(ums, tc)
-
-    do i=1, 9
-        ums(i) = ums(i) * (RT * imw(i))
-    end do
-
-end subroutine
-
-subroutine ckhms2(T, hms)
+subroutine ckhms(T, hms)
 
     implicit none
 
@@ -1030,9 +972,9 @@ subroutine ckhms2(T, hms)
 end subroutine
 
 ! Returns enthalpy in mass units (Eq 27.)
-subroutine ckhms(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
+subroutine ckhms_gpu(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
 
-    !$acc routine(ckhms) seq
+    !$acc routine(ckhms_gpu) seq
     !$acc routine(speciesEnthalpy) seq
 
     implicit none
@@ -1164,6 +1106,8 @@ end subroutine
 ! Returns the mean specific heat at CV (Eq. 36)
 subroutine ckcvbs(T, y, cvbs)
 
+    !$acc routine(ckcvbs) seq
+
     implicit none
 
     double precision, intent(in) :: T
@@ -1207,6 +1151,9 @@ end subroutine
 
 ! get mean internal energy in mass units
 subroutine ckubms(T, y, ubms)
+
+    !$acc routine(ckubms) seq
+    !$acc routine(speciesinternalenergy) seq
 
     implicit none
 
@@ -2646,6 +2593,10 @@ end subroutine
 
 ! get temperature given internal energy in mass units and mass fracs
 subroutine get_t_given_ey(e, y, t, ierr)
+
+    !$acc routine(get_t_given_ey) seq
+    !$acc routine(ckubms) seq
+    !$acc routine(ckcvbs) seq
 
     implicit none
 
