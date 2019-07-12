@@ -589,6 +589,7 @@ class CPickler(CMill):
         self._ckeqxp(mechanism)
         self._ckeqyr(mechanism)
         self._ckeqxr(mechanism)
+        self._ckchrg(mechanism)
         
         # Fuego Functions
         # GPU version
@@ -1042,6 +1043,7 @@ class CPickler(CMill):
             'void CKEQXP'+sym+'(double *  P, double *  T, double *  x, double *  eqcon);',
             'void CKEQYR'+sym+'(double *  rho, double *  T, double *  y, double *  eqcon);',
             'void CKEQXR'+sym+'(double *  rho, double *  T, double *  x, double *  eqcon);',
+            'void CKCHRG'+sym+'(int * kcharge);',
             'AMREX_GPU_HOST_DEVICE void DWDOT(double *  J, double *  sc, double *  T, int * consP);',
             'AMREX_GPU_HOST_DEVICE void DWDOT_PRECOND(double *  J, double *  sc, double *  Tp, int * HP);',
             'AMREX_GPU_HOST_DEVICE void SLJ_PRECOND_CSC(double *  Jsps, int * indx, int * len, double * sc, double * Tp, int * HP, double * gamma);',
@@ -6224,7 +6226,8 @@ class CPickler(CMill):
                     self._write("   *  (%d > 3 ? %.17g*exp(%.17g*tc[0]) : 1.0);" % (nsri,sri[3],sri[4]))
                     self._write("Corr = F * F_sri;")
                     self._write("qf[%d] *= Corr * k_f;" % idx)
-                elif reaction.lindemann:
+                elif (nlindemann > 0):
+                    print("nlindemann "+str(nlindemann))
                     self._write("Corr = redP / (1. + redP);")
                     self._write("qf[%d] *= Corr * k_f;" % idx)
 

@@ -1,6 +1,6 @@
 CEXE_headers+=chemistry_file.H
 
-cEXE_sources += LuSk_CH4_ion.c
+CEXE_sources += LuSk_CH4_ion.cpp
 
 LIBRARIES += 
 

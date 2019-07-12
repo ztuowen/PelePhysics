@@ -282,6 +282,10 @@ module fuego_chemistry
             real(amrex_real), intent(inout) :: wdot(*)
         end subroutine
 
+        subroutine ckchrg(kchrg) bind(c,name='CKCHRG')
+            integer, intent(inout) :: kchrg(*)
+        end subroutine
+
     end interface
 
 end module fuego_chemistry
