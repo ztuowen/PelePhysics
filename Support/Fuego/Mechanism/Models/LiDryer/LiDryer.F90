@@ -17,6 +17,7 @@ module fuego_module
   public :: vckytx
   public :: vckhms
   public :: ckcvbs
+  public :: ckytcr
   public :: ckubms
   public :: ckcpbs
   public :: ckpy
@@ -26,6 +27,7 @@ module fuego_module
   public :: ckwt
   public :: ckrp
   public :: ckwc
+  public :: ckwc1
   public :: ckindx
   public :: ckinit
   public :: ckfinalize
@@ -91,6 +93,8 @@ type(nonsquare_matrix_int) :: TBid_DEF(21)
 double precision, save :: T_save = -1
 double precision, save :: k_f_save(21)
 double precision, save :: Kc_save(21)
+    
+!$acc declare create(k_f_save,T_save,Kc_save)
 
 contains
 
@@ -776,6 +780,7 @@ end subroutine
 ! convert y[species] (mass fracs) to c[species] (molar conc)
 subroutine ckytcr(rho, T, y, c)
 
+    !!$acc routine(ckytcr) seq
     implicit none
 
     double precision, intent(in) :: rho
@@ -1164,6 +1169,7 @@ end subroutine
 ! Returns the mean specific heat at CV (Eq. 36)
 subroutine ckcvbs(T, y, cvbs)
 
+    !$acc routine(ckcvbs1) seq
     implicit none
 
     double precision, intent(in) :: T
@@ -1254,6 +1260,7 @@ end subroutine
 ! compute the production rate for each species
 subroutine ckwc(T, C, wdot)
 
+    !!$acc routine(ckwc) seq
     implicit none
 
     double precision, intent(in) :: T
@@ -1280,6 +1287,8 @@ end subroutine
 
 ! compute the production rate for each species
 subroutine productionRate(wdot, sc, T)
+
+    !!$acc routine(productionRate) seq
 
     implicit none
 
@@ -1431,6 +1440,7 @@ end subroutine
 
 subroutine comp_k_f(tc, invT, k_f)
 
+    !!$acc routine(comp_k_f) seq
     implicit none
 
     double precision, intent(in) :: tc(5)
@@ -1447,6 +1457,7 @@ end subroutine
 
 subroutine comp_Kc(tc, invT, Kc)
 
+    !!$acc routine(comp_Kc) seq
     implicit none
 
     double precision, intent(in) :: tc(5)
@@ -1501,6 +1512,7 @@ end subroutine
 
 subroutine comp_qfqr(qf, qr, sc, tc, invT)
 
+    !!$acc routine(comp_qfqr) seq
     implicit none
 
     double precision, intent(out) :: qf(21)
