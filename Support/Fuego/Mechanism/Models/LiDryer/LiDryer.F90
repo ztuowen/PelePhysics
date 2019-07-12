@@ -9,7 +9,6 @@ module fuego_module
   public :: ckcvms
   public :: ckcvms1
   public :: ckxty
-  public :: ckytcr
   public :: ckytx2
   public :: ckytx
   public :: ckhms
@@ -27,7 +26,6 @@ module fuego_module
   public :: ckwt
   public :: ckrp
   public :: ckwc
-  public :: ckwc1
   public :: ckindx
   public :: ckinit
   public :: ckfinalize
@@ -76,8 +74,11 @@ double precision, save :: troe_a(21),troe_Ts(21), troe_Tss(21), troe_Tsss(21)
 double precision, save :: sri_a(21), sri_b(21), sri_c(21), sri_d(21), sri_e(21)
 double precision, save :: activation_units(21), prefactor_units(21), phase_units(21)
 integer, save :: is_PD(21), troe_len(21), sri_len(21), nTB(21)
-type(nonsquare_matrix_double) :: TB(21)
-type(nonsquare_matrix_int) :: TBid(21)
+
+!each column for each reaction, use as TBid(j,i) where i is 
+!reaction id and j is third body index
+integer, save :: TBid(21,21)
+double precision, save :: TB(21,21)
 
 double precision, save :: fwd_A_DEF(21), fwd_beta_DEF(21), fwd_Ea_DEF(21)
 double precision, save :: low_A_DEF(21), low_beta_DEF(21), low_Ea_DEF(21)
@@ -86,15 +87,35 @@ double precision, save :: troe_a_DEF(21),troe_Ts_DEF(21), troe_Tss_DEF(21), troe
 double precision, save :: sri_a_DEF(21), sri_b_DEF(21), sri_c_DEF(21), sri_d_DEF(21), sri_e_DEF(21)
 double precision, save :: activation_units_DEF(21), prefactor_units_DEF(21), phase_units_DEF(21)
 integer, save :: is_PD_DEF(21), troe_len_DEF(21), sri_len_DEF(21), nTB_DEF(21)
-type(nonsquare_matrix_double) :: TB_DEF(21)
-type(nonsquare_matrix_int) :: TBid_DEF(21)
+
+!each column for each reaction, use as TBid(j,i) where i is 
+!reaction id and j is third body index
+integer, save :: TBid_DEF(21,21)
+double precision, save :: TB_DEF(21,21)
 
 ! productionRate() static variables
 double precision, save :: T_save = -1
 double precision, save :: k_f_save(21)
 double precision, save :: Kc_save(21)
     
-!$acc declare create(k_f_save,T_save,Kc_save)
+!$acc declare create(fwd_A,fwd_beta,fwd_Ea) &
+!$acc create(low_A,low_beta,low_Ea) &
+!$acc create(rev_A,rev_beta,rev_Ea) &
+!$acc create(troe_a,troe_Ts,troe_Tss,troe_Tsss) &
+!$acc create(sri_a,sri_b,sri_c,sri_d,sri_e) &
+!$acc create(activation_units,prefactor_units,phase_units) &
+!$acc create(is_PD,troe_len,sri_len,nTB,TBid,TB) &
+!$acc create(T_save,k_f_save,Kc_save)
+
+!$acc declare create(fwd_A_DEF,fwd_beta_DEF,fwd_Ea_DEF) &
+!$acc create(low_A_DEF,low_beta_DEF,low_Ea_DEF) &
+!$acc create(rev_A_DEF,rev_beta_DEF,rev_Ea_DEF) &
+!$acc create(troe_a_DEF,troe_Ts_DEF,troe_Tss_DEF,troe_Tsss_DEF) &
+!$acc create(sri_a_DEF,sri_b_DEF,sri_c_DEF,sri_d_DEF,sri_e_DEF) &
+!$acc create(activation_units_DEF,prefactor_units_DEF,phase_units_DEF) &
+!$acc create(is_PD_DEF,troe_len_DEF,sri_len_DEF,nTB_DEF,TBid_DEF,TB_DEF)
+
+
 
 contains
 
@@ -105,11 +126,8 @@ subroutine SetAllDefaults()
     integer :: i, j
 
     do i=1, 21
-        if (nTB_DEF(i) /= 0) then
-            nTB_DEF(i) = 0
-            if (allocated(TB_DEF(i) % vector)) deallocate(TB_DEF(i) % vector)
-            if (allocated(TBid_DEF(i) % vector)) deallocate(TBid_DEF(i) % vector)
-        end if
+
+        nTB_DEF(i) = 0
 
         fwd_A_DEF(i)    = fwd_A(i)
         fwd_beta_DEF(i) = fwd_beta(i)
@@ -144,14 +162,21 @@ subroutine SetAllDefaults()
 
         nTB_DEF(i)  = nTB(i)
         if (nTB_DEF(i) /= 0) then
-           if (.not. allocated(TB_DEF(i) % vector)) allocate(TB_DEF(i) % vector(nTB_DEF(i)))
-           if (.not. allocated(TBid_DEF(i) % vector)) allocate(TBid_DEF(i) % vector(nTB_DEF(i)))
            do j=1, nTB_DEF(i)
-             TB_DEF(i) % vector(j) = TB(i) % vector(j)
-             TBid_DEF(i) % vector(j) = TBid(i) % vector(j)
+             TB_DEF(j,i) = TB(j,i)
+             TBid_DEF(j,i) = TBid(j,i)
            end do
         end if
+
     end do
+    
+    !$acc update device(fwd_A_DEF,fwd_beta_DEF,fwd_Ea_DEF) &
+    !$acc device(low_A_DEF,low_beta_DEF,low_Ea_DEF) &
+    !$acc device(rev_A_DEF,rev_beta_DEF,rev_Ea_DEF) &
+    !$acc device(troe_a_DEF,troe_Ts_DEF,troe_Tss_DEF,troe_Tsss_DEF) &
+    !$acc device(sri_a_DEF,sri_b_DEF,sri_c_DEF,sri_d_DEF,sri_e_DEF) &
+    !$acc device(activation_units_DEF,prefactor_units_DEF,phase_units_DEF) &
+    !$acc device(is_PD_DEF,troe_len_DEF,sri_len_DEF,nTB_DEF,TBid_DEF,TB_DEF)
 
 end subroutine
 
@@ -164,16 +189,7 @@ subroutine ckfinalize()
   integer :: i
 
   do i=1, 21
-    if (allocated(TB(i) % vector)) deallocate(TB(i) % vector)
-    !TB(i) = 0
-    if (allocated(TBid(i) % vector)) deallocate(TBid(i) % vector)
-    !TBid(i) = 0
     nTB(i) = 0
-
-    if (allocated(TB_DEF(i) % vector)) deallocate(TB_DEF(i) % vector)
-    !TB_DEF(i) = 0
-    if (allocated(TBid_DEF(i) % vector)) deallocate(TBid_DEF(i) % vector)
-    !TBid_DEF(i) = 0
     nTB_DEF(i) = 0
   end do
 
@@ -233,12 +249,10 @@ subroutine ckinit()
     phase_units(3)      = 1d-6
     is_PD(3) = 0
     nTB(3) = 2
-    if (.not. allocated(TB(3) % vector)) allocate(TB(3) % vector(2))
-    if (.not. allocated(TBid(3) % vector)) allocate(TBid(3) % vector(2))
-    TBid(3) % vector(1) = 0d0
-    TB(3) % vector(1) = 2.5d0 ! H2
-    TBid(3) % vector(2) = 2d0
-    TB(3) % vector(2) = 12d0 ! H2O
+    TBid(1,3) = 1    !H2
+    TB(1,3) = 2.5d0
+    TBid(2,3) = 3    !H2O
+    TB(2,3)   = 12.d0
 
     ! (5):  O + O + M <=> O2 + M
     fwd_A(4)     = 6165000000000000d0
@@ -249,12 +263,10 @@ subroutine ckinit()
     phase_units(4)      = 1d-12
     is_PD(4) = 0
     nTB(4) = 2
-    if (.not. allocated(TB(4) % vector)) allocate(TB(4) % vector(2))
-    if (.not. allocated(TBid(4) % vector)) allocate(TBid(4) % vector(2))
-    TBid(4) % vector(1) = 0d0
-    TB(4) % vector(1) = 2.5d0 ! H2
-    TBid(4) % vector(2) = 2d0
-    TB(4) % vector(2) = 12d0 ! H2O
+    TBid(1,4) = 1
+    TB(1,4) = 2.5d0 ! H2
+    TBid(2,4) = 3
+    TB(2,4) = 12d0 ! H2O
 
     ! (6):  O + H + M <=> OH + M
     fwd_A(5)     = 4.714d+18
@@ -265,12 +277,10 @@ subroutine ckinit()
     phase_units(5)      = 1d-12
     is_PD(5) = 0
     nTB(5) = 2
-    if (.not. allocated(TB(5) % vector)) allocate(TB(5) % vector(2))
-    if (.not. allocated(TBid(5) % vector)) allocate(TBid(5) % vector(2))
-    TBid(5) % vector(1) = 0d0
-    TB(5) % vector(1) = 2.5d0 ! H2
-    TBid(5) % vector(2) = 2d0
-    TB(5) % vector(2) = 12d0 ! H2O
+    TBid(1,5) = 1
+    TB(1,5) = 2.5d0 ! H2
+    TBid(2,5) = 3
+    TB(2,5) = 12d0 ! H2O
 
     ! (7):  H + OH + M <=> H2O + M
     fwd_A(6)     = 3.8000000000000004d+22
@@ -281,12 +291,10 @@ subroutine ckinit()
     phase_units(6)      = 1d-12
     is_PD(6) = 0
     nTB(6) = 2
-    if (.not. allocated(TB(6) % vector)) allocate(TB(6) % vector(2))
-    if (.not. allocated(TBid(6) % vector)) allocate(TBid(6) % vector(2))
-    TBid(6) % vector(1) = 0d0
-    TB(6) % vector(1) = 2.5d0 ! H2
-    TBid(6) % vector(2) = 2d0
-    TB(6) % vector(2) = 12d0 ! H2O
+    TBid(1,6) = 1
+    TB(1,6) = 2.5d0 ! H2
+    TBid(2,6) = 3
+    TB(2,6) = 12d0 ! H2O
 
     ! (8):  H + O2 (+M) <=> HO2 (+M)
     fwd_A(1)     = 1475000000000d0
@@ -304,14 +312,12 @@ subroutine ckinit()
     phase_units(1)      = 1d-12
     is_PD(1) = 1
     nTB(1) = 3
-    if (.not. allocated(TB(1) % vector)) allocate(TB(1) % vector(3))
-    if (.not. allocated(TBid(1) % vector)) allocate(TBid(1) % vector(3))
-    TBid(1) % vector(1) = 0d0
-    TB(1) % vector(1) = 2d0 ! H2
-    TBid(1) % vector(2) = 2d0
-    TB(1) % vector(2) = 11d0 ! H2O
-    TBid(1) % vector(3) = 1d0
-    TB(1) % vector(3) = 0.78000000000000003d0 ! O2
+    TBid(1,1)  = 1
+    TB(1,1) = 2d0 ! H2
+    TBid(2,1)  = 3
+    TB(2,1) = 11d0 ! H2O
+    TBid(3,1) = 2
+    TB(3,1) = 0.78000000000000003d0 ! O2
 
     ! (9):  HO2 + H <=> H2 + O2
     fwd_A(11)     = 16600000000000d0
@@ -389,12 +395,10 @@ subroutine ckinit()
     phase_units(2)      = 1d-6
     is_PD(2) = 1
     nTB(2) = 2
-    if (.not. allocated(TB(2) % vector)) allocate(TB(2) % vector(2))
-    if (.not. allocated(TBid(2) % vector)) allocate(TBid(2) % vector(2))
-    TBid(2) % vector(1) = 0d0
-    TB(2) % vector(1) = 2.5d0 ! H2
-    TBid(2) % vector(2) = 2d0
-    TB(2) % vector(2) = 12d0 ! H2O
+    TBid(1,2)  = 1
+    TB(1,2) = 2.5d0 ! H2
+    TBid(2,2) = 3
+    TB(2,2) = 12d0 ! H2O
 
     ! (16):  H2O2 + H <=> H2O + OH
     fwd_A(17)     = 24100000000000d0
@@ -445,6 +449,14 @@ subroutine ckinit()
     phase_units(21)      = 1d-12
     is_PD(21) = 0
     nTB(21) = 0
+
+    !$acc update device(fwd_A,fwd_beta,fwd_Ea) &
+    !$acc device(low_A,low_beta,low_Ea) &
+    !$acc device(rev_A,rev_beta,rev_Ea) &
+    !$acc device(troe_a,troe_Ts,troe_Tss,troe_Tsss) &
+    !$acc device(sri_a,sri_b,sri_c,sri_d,sri_e) &
+    !$acc device(activation_units,prefactor_units,phase_units) &
+    !$acc device(is_PD,troe_len,sri_len,nTB,TBid,TB)
 
     call SetAllDefaults()
 
@@ -780,7 +792,7 @@ end subroutine
 ! convert y[species] (mass fracs) to c[species] (molar conc)
 subroutine ckytcr(rho, T, y, c)
 
-    !!$acc routine(ckytcr) seq
+    !$acc routine(ckytcr) seq
     implicit none
 
     double precision, intent(in) :: rho
@@ -1169,7 +1181,7 @@ end subroutine
 ! Returns the mean specific heat at CV (Eq. 36)
 subroutine ckcvbs(T, y, cvbs)
 
-    !$acc routine(ckcvbs1) seq
+    !$acc routine(ckcvbs) seq
     implicit none
 
     double precision, intent(in) :: T
@@ -1260,7 +1272,7 @@ end subroutine
 ! compute the production rate for each species
 subroutine ckwc(T, C, wdot)
 
-    !!$acc routine(ckwc) seq
+    !$acc routine(ckwc) seq
     implicit none
 
     double precision, intent(in) :: T
@@ -1288,7 +1300,7 @@ end subroutine
 ! compute the production rate for each species
 subroutine productionRate(wdot, sc, T)
 
-    !!$acc routine(productionRate) seq
+    !$acc routine(productionRate) seq
 
     implicit none
 
@@ -1440,7 +1452,7 @@ end subroutine
 
 subroutine comp_k_f(tc, invT, k_f)
 
-    !!$acc routine(comp_k_f) seq
+    !$acc routine(comp_k_f) seq
     implicit none
 
     double precision, intent(in) :: tc(5)
@@ -1457,7 +1469,7 @@ end subroutine
 
 subroutine comp_Kc(tc, invT, Kc)
 
-    !!$acc routine(comp_Kc) seq
+    !$acc routine(comp_Kc) seq
     implicit none
 
     double precision, intent(in) :: tc(5)
@@ -1512,7 +1524,7 @@ end subroutine
 
 subroutine comp_qfqr(qf, qr, sc, tc, invT)
 
-    !!$acc routine(comp_qfqr) seq
+    !$acc routine(comp_qfqr) seq
     implicit none
 
     double precision, intent(out) :: qf(21)
@@ -1606,8 +1618,8 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     end do
 
     ! troe
-    alpha_troe(1) = mixture + (TB(1) % vector(1) - 1)*sc(1) + (TB(1) % vector(2) - 1)*sc(3) + (TB(1) % vector(3) - 1)*sc(2)
-    alpha_troe(2) = mixture + (TB(2) % vector(1) - 1)*sc(1) + (TB(2) % vector(2) - 1)*sc(3)
+    alpha_troe(1) = mixture + (TB(1,1)  - 1)*sc(1) + (TB(2,1) - 1)*sc(3) + (TB(3,1) - 1)*sc(2)
+    alpha_troe(2) = mixture + (TB(1,2)  - 1)*sc(1) + (TB(2,2) - 1)*sc(3)
 
     do i=1, 2
         redP = alpha_troe(i-0) / k_f_save(i) * phase_units(i) * low_A(i) * exp(low_beta(i) * tc(1) - activation_units(i) * low_Ea(i) *invT)
@@ -1641,10 +1653,10 @@ subroutine comp_qfqr(qf, qr, sc, tc, invT)
     end do
 
     ! simple three-body correction
-    Corr(3) = mixture + (TB(3) % vector(1) - 1)*sc(1) + (TB(3) % vector(2) - 1)*sc(3)
-    Corr(4) = mixture + (TB(4) % vector(1) - 1)*sc(1) + (TB(4) % vector(2) - 1)*sc(3)
-    Corr(5) = mixture + (TB(5) % vector(1) - 1)*sc(1) + (TB(5) % vector(2) - 1)*sc(3)
-    Corr(6) = mixture + (TB(6) % vector(1) - 1)*sc(1) + (TB(6) % vector(2) - 1)*sc(3)
+    Corr(3) = mixture + (TB(1,3) - 1)*sc(1) + (TB(2,3) - 1)*sc(3)
+    Corr(4) = mixture + (TB(1,4) - 1)*sc(1) + (TB(2,4) - 1)*sc(3)
+    Corr(5) = mixture + (TB(1,5) - 1)*sc(1) + (TB(2,5) - 1)*sc(3)
+    Corr(6) = mixture + (TB(1,6) - 1)*sc(1) + (TB(2,6) - 1)*sc(3)
 
     do i=1, 21
         qf(i) = qf(i) * (Corr(i) * k_f_save(i))
@@ -1657,6 +1669,7 @@ end subroutine
 ! tc contains precomputed powers of T, tc[0] = log(T)
 subroutine gibbs(species, tc)
 
+    !$acc routine(gibbs) seq
     implicit none
 
     double precision, intent(out) :: species(9)
