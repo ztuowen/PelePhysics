@@ -174,7 +174,7 @@ contains
 
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
-    !$acc enter data copyin(hi,lo,mu,xi,lam,D) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+    !$acc enter data copyin(hi,lo) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
     !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present)
     do k = lo(3),hi(3)
        do j = lo(2),hi(2)
@@ -198,7 +198,8 @@ contains
        end do
     end do
     !$acc end parallel loop
-    !$acc exit data copyout(mu,xi,lam,d) delete(hi,lo,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+    !$acc exit data delete(hi,lo,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2) delete(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+
 
   end subroutine get_transport_coeffs
 
