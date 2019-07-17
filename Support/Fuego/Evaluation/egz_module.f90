@@ -802,7 +802,7 @@ contains
 
 
   subroutine egz_init_gpu(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu,fita_gpu,fita0_gpu,eps2_gpu)
-    !$acc routine(egtransetWT,egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL) seq
+    !$acc routine seq
     USE fuego_module, ONLY: egtransetWT, egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL
     implicit none
     double precision, intent(out) :: wt_gpu(nspec_gpu)
@@ -818,8 +818,6 @@ contains
     double precision, intent(out) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
     double precision, intent(in) :: fita0_gpu(nfit)
     double precision, intent(out) :: eps2_gpu(nspec_gpu,nspec_gpu)
-    !$acc enter data create(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu,eps2_gpu)
-    !$acc parallel
     call egtransetWT(wt_gpu)
     call egtransetEPS(eps_gpu)
     call egtransetSIG(sig_gpu)
@@ -831,8 +829,6 @@ contains
     call egtransetCOFLAM(cfl_gpu)
     call egtransetCOFD(cfd_gpu)
     call levEPS_gpu(eps_gpu,eps2_gpu,dip_gpu,pol_gpu,sig_gpu)
-    !$acc end parallel
-    !$acc update host(eps2_gpu)
     call egzABC_gpu(fita_gpu,fita0_gpu,eps2_gpu)
   end subroutine egz_init_gpu
 

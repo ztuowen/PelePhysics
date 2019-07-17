@@ -179,9 +179,11 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
+    !$acc enter data create(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,eps2,fita,fita0,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+    !$acc parallel
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
+    !$acc end parallel
 
-    !$acc enter data copyin(fita,fita0) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
     !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present)
     do k = lo3,hi3
        do j = lo2,hi2
