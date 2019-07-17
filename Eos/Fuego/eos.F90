@@ -282,27 +282,27 @@ contains
 !
 !  end subroutine eos_ytx_vec
 
-  subroutine eos_ytx_vec_gpu(q, x, lo, hi, nspec, qfs, qvar)
+  subroutine eos_ytx_vec_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, nspec, qfs, qvar)
 
     !$acc routine(eos_ytx_vec_gpu) gang
     !$acc routine(ckytx_gpu) seq
 
     implicit none
 
-    integer, intent(in) :: lo(3), hi(3)
+    integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
     integer, intent(in) :: nspec
     integer, intent(in) :: qvar
     integer, intent(in) :: qfs
-    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
-    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: x
+    double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: x
 
     integer :: i, j, k
 
     !$acc loop gang vector collapse(3)
-    do k = lo(3)-1, hi(3)+1
-       do j = lo(2)-1, hi(2)+1
-          do i = lo(1)-1, hi(1)+1
-             call ckytx_gpu(q, x, lo, hi, i, j, k, qfs, qvar)
+    do k = lo3-1, hi3+1
+       do j = lo2-1, hi2+1
+          do i = lo1-1, hi1+1
+             call ckytx_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qfs, qvar)
           enddo
        enddo
     enddo
@@ -381,25 +381,25 @@ contains
 !
 !  end subroutine eos_hi_vec
 
-  subroutine eos_hi_vec_gpu(q, hii, lo, hi, nspec, qtemp, qvar, qfs)
+  subroutine eos_hi_vec_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, nspec, qtemp, qvar, qfs)
 
     !$acc routine(eos_hi_vec_gpu) gang
     !$acc routine(ckhms_gpu) seq
 
     implicit none
 
-    integer, intent(in) :: lo(3), hi(3)
+    integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
     integer, intent(in) :: nspec, qtemp, qvar, qfs
-    double precision, intent(in), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:qvar) :: q
-    double precision, intent(out), dimension(lo(1)-1:hi(1)+1, lo(2)-1:hi(2)+1, lo(3)-1:hi(3)+1, 1:nspec) :: hii
+    double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: hii
     
     integer :: i, j, k
 
     !$acc loop gang vector collapse(3)
-    do k = lo(3)-1, hi(3)+1
-       do j = lo(2)-1, hi(2)+1
-          do i = lo(1)-1, hi(1)+1
-             call ckhms_gpu(q, hii, lo, hi, i, j, k, qvar, qtemp, qfs, nspec)
+    do k = lo3-1, hi3+1
+       do j = lo2-1, hi2+1
+          do i = lo1-1, hi1+1
+             call ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp, qfs, nspec)
           enddo
        enddo
     enddo
@@ -582,8 +582,8 @@ contains
     double precision, intent(inout) :: eos_state_p
     double precision, intent(inout) :: eos_state_dpdr_e
     double precision, intent(inout) :: eos_state_dpde
-    double precision, intent(in) :: eos_state_gam1
-    double precision, intent(in) :: eos_state_cs
+    double precision, intent(inout) :: eos_state_gam1
+    double precision, intent(inout) :: eos_state_cs
     double precision, intent(inout) :: eos_state_wbar
 
     double precision :: eos_state_ei(9)
