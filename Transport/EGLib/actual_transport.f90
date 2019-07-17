@@ -133,15 +133,15 @@ contains
 
     !$acc routine seq
 
-    double precision, intent(in) :: trv_eos_state_massfrac(:)
-    double precision, intent(inout) :: trv_eos_state_molefrac(:)
+    double precision, intent(in) :: trv_eos_state_massfrac(nspec)
+    double precision, intent(inout) :: trv_eos_state_molefrac(nspec)
     double precision, intent(in) :: trv_eos_state_T
     double precision, intent(in) :: trv_eos_state_rho
-    double precision, intent(inout) :: trv_eos_state_cpi(:)
+    double precision, intent(inout) :: trv_eos_state_cpi(nspec)
     double precision, intent(inout) :: trv_mu
     double precision, intent(inout) :: trv_xi
     double precision, intent(inout) :: trv_lam
-    double precision, intent(inout) :: trv_ddiag(:)
+    double precision, intent(inout) :: trv_ddiag(nspec)
     integer, intent(in) :: no
     integer, intent(in) :: nspec
     integer, intent(in) :: nfit
