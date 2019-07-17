@@ -66,6 +66,7 @@ contains
   ! This subroutine should be called outside OMP PARALLEL
   subroutine egz_init(use_bulk_visc_in)
     use fuego_module, only : egtransetKK, egtransetNO, egtransetWT, egtransetEPS, egtransetSIG, egtransetDIP, egtransetPOL, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD
+    implicit none
 
     logical, intent(in) :: use_bulk_visc_in
 
@@ -137,6 +138,7 @@ contains
 
   ! This subroutine can be called inside OMP PARALLEL
   subroutine EGZINI(np_in)
+    implicit none
     integer, intent(in) :: np_in
     logical, save :: first_call = .true.
     !$omp threadprivate(first_call)
@@ -210,6 +212,7 @@ contains
 
 
   subroutine LEVEPS()
+    implicit none
     double precision, parameter :: pi = 3.1415926535D0, &
          fac = 1.0D-12, dipmin = 1.0D-20, boltz = 1.38056D-16
     integer :: j, k
@@ -254,6 +257,7 @@ contains
 
 
   subroutine egzabc(FA, FA0)
+    implicit none
     double precision, intent(in) :: FA0(nfit)
     double precision, intent(out) :: FA(nfit,ns,ns)
     integer i,j,k,l,m,mm
@@ -286,6 +290,7 @@ contains
 
   subroutine EGZPAR_gpu(T, X, cpms, wt_gpu, eps_gpu, zrot_gpu, nlin_gpu, cfe_gpu, cfd_gpu, fita_gpu, xtr_gpu, ytr_gpu, aux_gpu, cxi_gpu, cint_gpu, dlt_gpu, eta_gpu, etalg_gpu, bin_gpu, A_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T, X(nspec_gpu)
     double precision, intent(in) :: cpms(nspec_gpu)
     double precision, intent(in) :: wt_gpu(nspec_gpu)
@@ -344,6 +349,7 @@ contains
 
   subroutine LZPAR_gpu(T, cpms, wt_gpu, eps_gpu, zrot_gpu, nlin_gpu, cfe_gpu, cfd_gpu, fita_gpu, cxi_gpu, cint_gpu, dlt_gpu, eta_gpu, etalg_gpu, bin_gpu, A_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T
     double precision, intent(in) :: cpms(nspec_gpu)
     double precision, intent(in) :: wt_gpu(nspec_gpu)
@@ -446,6 +452,7 @@ contains
 
   subroutine EGZE3_gpu(T, mu, wt_gpu, xtr_gpu, beta_gpu, eta_gpu, rn_gpu, an_gpu, zn_gpu, dmi_gpu, G_gpu, bin_gpu, A_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T
     double precision, intent(out) :: mu
     double precision, intent(in) :: wt_gpu(nspec_gpu)
@@ -476,6 +483,7 @@ contains
 
   subroutine EGZEMH_gpu(T, wt_gpu, xtr_gpu, beta_gpu, eta_gpu, G_gpu, bin_gpu, A_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T
     double precision, intent(in) :: wt_gpu(nspec_gpu)
     double precision, intent(in) :: xtr_gpu(nspec_gpu)
@@ -517,6 +525,7 @@ contains
 
   subroutine EGZCG1_gpu(itmax, rn_gpu, an_gpu, zn_gpu, dmi_gpu, G_gpu)
     !$acc routine seq
+    implicit none
     integer, intent(in) :: itmax
     double precision, intent(inout) :: rn_gpu(nspec_gpu)
     double precision, intent(inout) :: an_gpu(nspec_gpu)
@@ -570,6 +579,7 @@ contains
 
   subroutine EGZAXS_gpu(AA, X, B) ! B = AA.X, AA is symmetric.
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: AA(nspec_gpu,nspec_gpu)
     double precision, intent(in) :: X(nspec_gpu)
     double precision, intent(out) :: B(nspec_gpu)
@@ -586,6 +596,7 @@ contains
 
   subroutine EGZK3_gpu(T, VV, wt_gpu, xtr_gpu, cxi_gpu, cint_gpu, beta_gpu, eta_gpu, G_gpu, bin_gpu, A_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T
     double precision, intent(out) :: VV
     double precision, intent(in) :: wt_gpu(nspec_gpu)
@@ -641,6 +652,7 @@ contains
 
   subroutine EGZL1_gpu(alpha, X, con, cfl_gpu, dlt_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: alpha
     double precision, intent(in) :: X(nspec_gpu)
     double precision, intent(out) :: con
@@ -677,6 +689,7 @@ contains
 
   subroutine EGZVR1_gpu(T, D, wt_gpu, xtr_gpu, aux_gpu, bin_gpu)
     !$acc routine seq
+    implicit none
     double precision, intent(in) :: T
     double precision, intent(out) :: D(nspec_gpu)
     double precision, intent(in) :: wt_gpu(nspec_gpu)
@@ -702,7 +715,9 @@ contains
 
   end subroutine EGZVR1_gpu
 
- subroutine egzabc_gpu(FA, FA0, eps2_gpu)
+  subroutine egzabc_gpu(FA, FA0, eps2_gpu)
+    !$acc routine seq
+    implicit none
     double precision, intent(in) :: FA0(nfit)
     double precision, intent(out) :: FA(nfit,nspec_gpu,nspec_gpu)
     double precision, intent(in) :: eps2_gpu(nspec_gpu,nspec_gpu)
@@ -735,6 +750,8 @@ contains
 
 
   subroutine LEVEPS_gpu(eps_gpu, eps2_gpu, dip_gpu, pol_gpu, sig_gpu)
+    !$acc routine seq
+    implicit none
     double precision, intent(in) :: eps_gpu(nspec_gpu)
     double precision, intent(inout) :: eps2_gpu(nspec_gpu,nspec_gpu)
     double precision, intent(in) :: dip_gpu(nspec_gpu)
@@ -785,9 +802,9 @@ contains
 
 
   subroutine egz_init_gpu(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu,fita_gpu,fita0_gpu,eps2_gpu)
-
+    !$acc routine(egtransetWT,egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL) seq
     USE fuego_module, ONLY: egtransetWT, egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL
-
+    implicit none
     double precision, intent(out) :: wt_gpu(nspec_gpu)
     double precision, intent(out) :: eps_gpu(nspec_gpu)
     double precision, intent(out) :: sig_gpu(nspec_gpu)
@@ -801,7 +818,8 @@ contains
     double precision, intent(out) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
     double precision, intent(in) :: fita0_gpu(nfit)
     double precision, intent(out) :: eps2_gpu(nspec_gpu,nspec_gpu)
-
+    !$acc enter data create(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu)
+    !$acc parallel
     call egtransetWT(wt_gpu)
     call egtransetEPS(eps_gpu)
     call egtransetSIG(sig_gpu)
@@ -812,13 +830,15 @@ contains
     call egtransetCOFETA(cfe_gpu)
     call egtransetCOFLAM(cfl_gpu)
     call egtransetCOFD(cfd_gpu)
+    !$acc end parallel
+    !$acc update host(eps_gpu,dip_gpu,pol_gpu,sig_gpu)
     call levEPS_gpu(eps_gpu,eps2_gpu,dip_gpu,pol_gpu,sig_gpu)
     call egzABC_gpu(fita_gpu,fita0_gpu,eps2_gpu)
-
   end subroutine egz_init_gpu
 
   ! This subroutine can be called inside OMP PARALLEL
   subroutine EGZPAR(T, X, cpms)
+    implicit none
     double precision, intent(in) :: T(np), X(np,ns)
     double precision, intent(in), optional :: cpms(np,ns)
 
@@ -870,6 +890,7 @@ contains
 
 
   subroutine LZPAR(T, cpms)
+    implicit none
     double precision, intent(in) :: T(np)
     double precision, intent(in), optional :: cpms(np,ns)
     integer :: i, m, n
@@ -986,6 +1007,7 @@ contains
 
   ! shear viscosity
   subroutine EGZE1(alpha, X, mu)
+    implicit none
     double precision, intent(in) :: alpha
     double precision, intent(in) :: X(np,ns)
     double precision, intent(out) :: mu(np)
@@ -1035,6 +1057,7 @@ contains
 
   ! shear viscosity
   subroutine EGZE3(T, mu)
+    implicit none
     double precision, intent(in) :: T (np)
     double precision, intent(out) :: mu(np)
 
@@ -1055,6 +1078,7 @@ contains
   end subroutine EGZE3
 
   subroutine EGZEMH(T)
+    implicit none
     double precision, intent(in) :: T (np)
     integer :: i, m, n
     double precision :: FAC(np), CCC, wtfac, wtmn, wtnm, aaa
@@ -1095,6 +1119,7 @@ contains
 
 
   subroutine EGZCG1(itmax)
+    implicit none
     integer, intent(in) :: itmax
 
     integer :: niter, i, n
@@ -1156,6 +1181,7 @@ contains
   end subroutine EGZCG1
 
   subroutine EGZAXS(AA, X, B) ! B = AA.X, AA is symmetric.
+    implicit none
     double precision, intent(in) :: AA(np,ns,ns)
     double precision, intent(in) :: X(np,ns)
     double precision, intent(out) :: B(np,ns)
@@ -1174,6 +1200,7 @@ contains
 
   ! volume viscosity
   subroutine EGZK1(alpha, X, VV)
+    implicit none
     double precision, intent(in) :: alpha
     double precision, intent(in) :: X(np,ns)
     double precision, intent(out) :: VV(np)
@@ -1250,6 +1277,7 @@ contains
 
   ! volume viscosity
   subroutine EGZK3(T, VV)
+    implicit none
     double precision, intent(in) :: T(np)
     double precision, intent(out) :: VV(np)
     
@@ -1307,6 +1335,7 @@ contains
 
   ! therml conductivity
   subroutine EGZL1(alpha, X, con)
+    implicit none
     double precision, intent(in) :: alpha
     double precision, intent(in) :: X(np,ns)
     double precision, intent(out) :: con(np)
@@ -1355,6 +1384,7 @@ contains
 
   ! rho * flux diffusion coefficients
   subroutine EGZVR1(T, D)
+    implicit none
     double precision, intent(in) :: T(np)
     double precision, intent(out) :: D(np,ns)
 

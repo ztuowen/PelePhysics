@@ -130,7 +130,7 @@ contains
     double precision :: a(nspec,nspec)
 
     !! local variables
-    integer      :: i, j, k, n, np
+    integer      :: i, j, k, n, np, lo1, lo2, lo3, hi1, hi2, hi3
     !type (wtr_t) :: which_trans
     !type (trv_t) :: coeff
 
@@ -172,13 +172,20 @@ contains
 
     !call destroy(coeff)
 
+    lo1 = lo(1)
+    lo2 = lo(2)
+    lo3 = lo(3)
+    hi1 = hi(1)
+    hi2 = hi(2)
+    hi3 = hi(3)
+
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
-    !$acc enter data copyin(hi,lo) copyin(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+    !$acc enter data copyin(fita,fita0,eps2) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
     !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present)
-    do k = lo(3),hi(3)
-       do j = lo(2),hi(2)
-          do i = lo(1),hi(1)
+    do k = lo3,hi3
+       do j = lo2,hi2
+          do i = lo1,hi1
              do n=1,nspec
                 trv_eos_state_massfrac(n) = massfrac(i,j,k,n)
              end do
@@ -198,7 +205,7 @@ contains
        end do
     end do
     !$acc end parallel loop
-    !$acc exit data delete(hi,lo,wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2) delete(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+    !$acc exit data delete(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
 
 
   end subroutine get_transport_coeffs

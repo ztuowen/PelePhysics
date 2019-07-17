@@ -2734,7 +2734,7 @@ end subroutine
 
 ! the molecular weights in g/mol
 subroutine egtransetWT(WT)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: WT(9)
@@ -2753,7 +2753,7 @@ end subroutine
 
 ! the lennard-jones potential well depth eps/kb in K
 subroutine egtransetEPS(EPS)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: EPS(9)
@@ -2772,7 +2772,7 @@ end subroutine
 
 ! the lennard-jones collision diameter in Angstroms
 subroutine egtransetSIG(SIG)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: SIG(9)
@@ -2791,7 +2791,7 @@ end subroutine
 
 ! the dipole moment in Debye
 subroutine egtransetDIP(DIP)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: DIP(9)
@@ -2810,7 +2810,7 @@ end subroutine
 
 ! the polarizability in cubic Angstroms
 subroutine egtransetPOL(POL)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: POL(9)
@@ -2829,7 +2829,7 @@ end subroutine
 
 ! the rotational relaxation collision number at 298 K
 subroutine egtransetZROT(ZROT)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: ZROT(9)
@@ -2848,7 +2848,7 @@ end subroutine
 
 ! 0: monoatomic, 1: linear, 2: nonlinear
 subroutine egtransetNLIN(NLIN)
-
+    !$acc routine seq
     implicit none
 
     integer, intent(out) :: NLIN(9)
@@ -2868,7 +2868,7 @@ end subroutine
 
 ! Poly fits for the viscosities, dim NO*KK
 subroutine egtransetCOFETA(COFETA)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: COFETA(36)
@@ -2915,7 +2915,7 @@ end subroutine
 
 ! Poly fits for the conductivities, dim NO*KK
 subroutine egtransetCOFLAM(COFLAM)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: COFLAM(36)
@@ -2961,7 +2961,7 @@ end subroutine
 
 ! Poly fits for the diffusion coefficients, dim NO*KK*KK
 subroutine egtransetCOFD(COFD)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: COFD(324)
@@ -3295,7 +3295,7 @@ end subroutine
 
 ! List of specs with small weight, dim NLITE
 subroutine egtransetKTDIF(KTDIF)
-
+    !$acc routine seq
     implicit none
 
     integer, intent(out) :: KTDIF(2)
@@ -3308,7 +3308,7 @@ end subroutine
 
 ! Poly fits for thermal diff ratios, dim NO*NLITE*KK
 subroutine egtransetCOFTD(COFTD)
-
+    !$acc routine seq
     implicit none
 
     double precision, intent(out) :: COFTD(72)
