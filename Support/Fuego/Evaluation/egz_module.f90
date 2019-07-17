@@ -818,7 +818,7 @@ contains
     double precision, intent(out) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
     double precision, intent(in) :: fita0_gpu(nfit)
     double precision, intent(out) :: eps2_gpu(nspec_gpu,nspec_gpu)
-    !$acc enter data create(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu)
+    !$acc enter data create(wt_gpu,eps_gpu,sig_gpu,dip_gpu,pol_gpu,zrot_gpu,nlin_gpu,cfe_gpu,cfl_gpu,cfd_gpu,eps2_gpu)
     !$acc parallel
     call egtransetWT(wt_gpu)
     call egtransetEPS(eps_gpu)
@@ -830,9 +830,9 @@ contains
     call egtransetCOFETA(cfe_gpu)
     call egtransetCOFLAM(cfl_gpu)
     call egtransetCOFD(cfd_gpu)
-    !$acc end parallel
-    !$acc update host(eps_gpu,dip_gpu,pol_gpu,sig_gpu)
     call levEPS_gpu(eps_gpu,eps2_gpu,dip_gpu,pol_gpu,sig_gpu)
+    !$acc end parallel
+    !$acc update host(eps2_gpu)
     call egzABC_gpu(fita_gpu,fita0_gpu,eps2_gpu)
   end subroutine egz_init_gpu
 

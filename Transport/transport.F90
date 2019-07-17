@@ -181,7 +181,7 @@ contains
 
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
 
-    !$acc enter data copyin(fita,fita0,eps2) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+    !$acc enter data copyin(fita,fita0) create(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
     !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present)
     do k = lo3,hi3
        do j = lo2,hi2
