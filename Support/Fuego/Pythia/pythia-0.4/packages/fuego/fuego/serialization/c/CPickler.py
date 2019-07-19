@@ -2255,7 +2255,7 @@ class CPickler(CMill):
         NuIdxs = []
 
         self._write(self.line('Zero Nus'))
-        self._write('for (id = 0; id < %d; ++ id) {' % (nSpecies * nReactions) )
+        self._write('for (int id = 0; id < %d; ++ id) {' % (nSpecies * nReactions) )
         self._indent()
         self._write(' NuVals[id] = 0; ')
         self._outdent()
@@ -2280,7 +2280,7 @@ class CPickler(CMill):
        
         # done
         #self._outdent()
-        self._write('}')
+        #self._write('}')
 
 
 
@@ -2345,6 +2345,7 @@ class CPickler(CMill):
         ##    self._write(t)            
 
         ##self._write("#endif")
+        self._write()
 
         self._write("cudaMemcpyToSymbol(NuVals_d, NuVals, sizeof(int) * %d);" % (nReactions*nSpecies))
         
@@ -2379,11 +2380,11 @@ class CPickler(CMill):
                 efficiencies = reaction.efficiencies
                 if (len(efficiencies) > 1):
                     start_idx = nSpecies * id
-                    self._write()
-                    self._write("cudaMalloc((void**)&TB_d[%d], sizeof(double) * %d);" % (id,len(efficiencies)))
-                    self._write("cudaMalloc((void**)&TBid_d[%d], sizeof(int) * %d);" % (id,len(efficiencies)))
-                    self._write("cudaMemcpyToSymbol(TBid_d[%d], TBid[%d], sizeof(int) * %d);" %(id,id,len(efficiencies)))
-                    self._write("cudaMemcpyToSymbol(TB_d[%d], TB[%d], sizeof(double) * %d);" %(id,id,len(efficiencies)))
+                    ##self._write()
+                    ##self._write("cudaMalloc((void**)&TB_d[%d], sizeof(double) * %d);" % (id,len(efficiencies)))
+                    ##self._write("cudaMalloc((void**)&TBid_d[%d], sizeof(int) * %d);" % (id,len(efficiencies)))
+                    ##self._write("cudaMemcpyToSymbol(TBid_d[%d], TBid[%d], sizeof(int) * %d);" %(id,id,len(efficiencies)))
+                    ##self._write("cudaMemcpyToSymbol(TB_d[%d], TB[%d], sizeof(double) * %d);" %(id,id,len(efficiencies)))
 
         self._outdent()
         self._write("}")
@@ -6259,7 +6260,7 @@ class CPickler(CMill):
         self._write('}')
         self._write()
 
-        self._write("AMREX_GPU_DEVICE void Kc_reac_d(double T, int reacID, double * Kc)")
+        self._write("AMREX_GPU_DEVICE void Kc_reac_d(double T, int reactID, double * Kc)")
         self._write("{")
         self._indent()
         self.line("compute the Gibbs free energy")
@@ -6267,6 +6268,7 @@ class CPickler(CMill):
         self._write(
             'double tc[] = { 0, T, T*T, T*T*T, T*T*T*T }; '
             + self.line('temperature cache'))
+        self._write("double invT = 1.0 / tc[1];")
         self._write("gibbs(g_RT, tc);")
         self._write()
         self._write("*Kc = 0;")
@@ -6275,7 +6277,7 @@ class CPickler(CMill):
         self._write("for (int j = 0; j<%d; ++j) {" % nSpecies)
         self._indent()
         ##self._write("*Kc += NuVals_d[reactID][j] * g_RT[NuIdx_d[reacID][j]]]")
-        self._write("*Kc += NuVals_d[reacID*%d + j] * g_RT[j];" % (nSpecies))
+        self._write("*Kc += NuVals_d[reactID*%d + j] * g_RT[j];" % (nSpecies))
         self._write("expon += NuVals_d[reactID*%d + j];" % (nSpecies))
         self._outdent()
         self._write("}")
