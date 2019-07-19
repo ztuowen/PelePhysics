@@ -108,10 +108,10 @@ int react(realtype *rY_in, realtype *rY_src_in,
             // Find sparsity pattern to fill structure of sparse matrix
             SPARSITY_INFO_PRECOND(&(user_data->NNZ),&HP);
 
-            cudaMallocManaged(&(user_data->csr_row_count_d), (NEQ+2) * sizeof(int));
-            cudaMallocManaged(&(user_data->csr_col_index_d), user_data->NNZ * sizeof(int));
-            cudaMallocManaged(&(user_data->csr_jac_d), user_data->NNZ * NCELLS * sizeof(double));
-            cudaMallocManaged(&(user_data->csr_val_d), user_data->NNZ * NCELLS * sizeof(double));
+            user_data->csr_row_count_d = (int *) The_Arena()->alloc((NEQ+2) * sizeof(int)) ;
+            user_data->csr_col_index_d = (int *) The_Arena()->alloc(user_data->NNZ * sizeof(int));
+            user_data->csr_jac_d = (double *) The_Arena()->alloc(user_data->NNZ * NCELLS * sizeof(double));
+            user_data->csr_val_d = (double *) The_Arena()->alloc(user_data->NNZ * NCELLS * sizeof(double));
 
             SPARSITY_PREPROC_PRECOND(user_data->csr_row_count_d, user_data->csr_col_index_d, &HP);
 
@@ -178,9 +178,9 @@ int react(realtype *rY_in, realtype *rY_src_in,
         flag = CVodeSetUserData(cvode_mem, static_cast<void*>(user_data));
 
 	/* Define vectors to be used later in creact */
-	cudaMalloc(&(user_data->rhoe_init), NCELLS*sizeof(double));
-	cudaMalloc(&(user_data->rhoesrc_ext), NCELLS*sizeof(double));
-	cudaMalloc(&(user_data->rYsrc), (NCELLS*NEQ)*sizeof(double));
+        user_data->rhoe_init   = (double *) The_Device_Arena()->alloc(NCELLS * sizeof(double));
+        user_data->rhoesrc_ext = (double *) The_Device_Arena()->alloc(NCELLS*sizeof(double));
+        user_data->rYsrc       = (double *) The_Device_Arena()->alloc((NCELLS*NEQ)*sizeof(double));
 
 	/* Get Device MemCpy of in arrays */
 	/* Get Device pointer of solution vector */
@@ -205,7 +205,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	
 	/* Definition of tolerances: one for each species */
 	reltol = 1.0e-10;
-        atol  = N_VNew_Cuda(neq_tot);
+	atol  = N_VNew_Cuda(neq_tot);
 	ratol = N_VGetHostArrayPointer_Cuda(atol);
         for (int i=0; i<neq_tot; i++) {
             ratol[i] = 1.0e-10;
@@ -254,7 +254,6 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	if (check_flag(&flag, "CVode", 1)) return(1);
 
 	/* Pack data to return in main routine external */
-	//cudaMemcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost);
 	cudaMemcpyAsync(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost,stream);
 	for  (int i = 0; i < NCELLS; i++) {
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
@@ -266,13 +265,13 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	SUNLinSolFree(LS);
 	N_VDestroy(y);          /* Free the y vector */
 	CVodeFree(&cvode_mem);
-	cudaFree(user_data->rhoe_init);
-        cudaFree(user_data->rhoesrc_ext);
-	cudaFree(user_data->rYsrc);
-	cudaFree(user_data->csr_row_count_d);
-	cudaFree(user_data->csr_col_index_d);
-	cudaFree(user_data->csr_jac_d);
-	cudaFree(user_data->csr_val_d);
+	The_Device_Arena()->free(user_data->rhoe_init);
+        The_Device_Arena()->free(user_data->rhoesrc_ext);
+        The_Device_Arena()->free(user_data->rYsrc);
+	The_Arena()->free(user_data->csr_row_count_d);
+	The_Arena()->free(user_data->csr_col_index_d);
+	The_Arena()->free(user_data->csr_jac_d);
+	The_Arena()->free(user_data->csr_val_d);
 	cudaFree(user_data->buffer_qr);
 	cudaFree(user_data);
 
@@ -507,7 +506,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 AMREX_GPU_DEVICE
 inline
 void 
-fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
+fKernelComputeAJ(int icell, void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
 {
   UserData udata = static_cast<CVodeUserData*>(user_data);
 
@@ -515,7 +514,8 @@ fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, do
 
   amrex::Real mw[NUM_SPECIES];
   amrex::GpuArray<amrex::Real,NUM_SPECIES> massfrac;
-  amrex::GpuArray<amrex::Real,(NUM_SPECIES+1)*(NUM_SPECIES+1)> Jmat_pt;
+  //amrex::GpuArray<amrex::Real,(NUM_SPECIES+1)*(NUM_SPECIES+1)> Jmat_pt;
+  amrex::Real Jmat_pt[(NUM_SPECIES+1)*(NUM_SPECIES+1)];
   amrex::Real Cv_pt, rho_pt, temp_pt, nrg_pt;
 
   int u_offset   = icell * (NUM_SPECIES + 1); 
@@ -544,15 +544,15 @@ fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, do
 
   /* Additional var needed */
   /* TODO HP */
-  eos.RTY2JAC(rho_pt, temp_pt, massfrac.arr, Jmat)
+  eos.eos_RTY2JAC(rho_pt, temp_pt, massfrac.arr, Jmat_pt);
 
   /* renorm the DenseMat */
   for (int i = 0; i < udata->neqs_per_cell[0]; i++){
       for (int k = 0; k < udata->neqs_per_cell[0]; k++){
-          Jmat[k*(udata->neqs_per_cell[0]+1)+i] = Jmat[k*(udata->neqs_per_cell[0]+1)+i] * molecular_weight[i] / molecular_weight[k];
+          Jmat_pt[k*(udata->neqs_per_cell[0]+1)+i] = Jmat_pt[k*(udata->neqs_per_cell[0]+1)+i] * mw[i] / mw[k];
       }
-      Jmat[i*(udata->neqs_per_cell[0]+1)+udata->neqs_per_cell[0]] = Jmat[i*(udata->neqs_per_cell[0]+1)+udata->neqs_per_cell[0]] / molecular_weight[i]; 
-      Jmat[udata->neqs_per_cell[0]*(udata->neqs_per_cell[0]+1)+i] = Jmat[udata->neqs_per_cell[0]*(udata->neqs_per_cell[0]+1)+i] * molecular_weight[i]; 
+      Jmat_pt[i*(udata->neqs_per_cell[0]+1)+udata->neqs_per_cell[0]] = Jmat_pt[i*(udata->neqs_per_cell[0]+1)+udata->neqs_per_cell[0]] / mw[i]; 
+      Jmat_pt[udata->neqs_per_cell[0]*(udata->neqs_per_cell[0]+1)+i] = Jmat_pt[udata->neqs_per_cell[0]*(udata->neqs_per_cell[0]+1)+i] * mw[i]; 
   }
   /* Fill the Sps Mat */
   int nbVals;
@@ -563,11 +563,11 @@ fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, do
               /* Scale by -gamma */
               /* Add identity matrix */
     	      if (idx == (i-1)) {
-                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = 1.0 - (udata->gamma_d) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
-                  csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = 1.0 - (udata->gamma_d) * Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
+                  csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + idx ]; 
     	      } else {
-                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (udata->gamma_d) * Jmat[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
-                  csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (udata->gamma_d) * Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
+                  csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
     	      }
       }
   }
