@@ -2788,7 +2788,7 @@ AMREX_GPU_HOST_DEVICE inline void productionRate(double *  wdot, double *  sc, d
     double invT = 1.0 / tc[1];
 
     double qdot, q_f[21], q_r[21];
-    comp_qfqr_2(q_f, q_r, sc, tc, invT, k_f, Kc);
+    comp_qfqr_2(q_f, q_r, sc, tc, invT);
 
     for (int i = 0; i < 9; ++i) {
         wdot[i] = 0.0;
