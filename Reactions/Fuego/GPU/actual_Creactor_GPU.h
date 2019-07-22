@@ -14,13 +14,13 @@
 #include <cvode/cvode_spils.h>         /* access to CVSpils interface */
 #include <sundials/sundials_types.h>   /* defs. of realtype, sunindextype      */
 #include <sundials/sundials_math.h>
-#include <cvode/cvode_impl.h>
+//#include <cvode/cvode_impl.h>
 
 #include <nvector/nvector_cuda.h>
 
 //#include <cusolver/cvode_cusolver_spqr.h>
 
-#include <sundials/sundials_sparse.h>
+//#include <sundials/sundials_sparse.h>
 #include <sunmatrix/sunmatrix_sparse.h>
 #include <AMReX_Print.H>
 
@@ -112,10 +112,10 @@ fKernelSpec(int ncells, void *user_data,
 //                                          const int size, const int nnz, 
 //                                          const int nbatched);
 
-//AMREX_GPU_DEVICE
-//inline
-//void 
-KernelComputeAJ(int ncells, void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
+AMREX_GPU_DEVICE
+inline
+void 
+fKernelComputeAJ(int ncells, void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
 
 //__global__ void fKernelFillJB(void *user_data, realtype *gamma);
 
