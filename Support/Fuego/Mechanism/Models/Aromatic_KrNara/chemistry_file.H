@@ -26,19 +26,20 @@ AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  q_f, double *  q_r, double *  sc,
 #ifndef AMREX_USE_CUDA
 void comp_k_f(double *  tc, double invT, double *  k_f);
 void comp_Kc(double *  tc, double invT, double *  Kc);
-#else
-AMREX_GPU_DEVICE void Kf_reac_d(double T, int reacID, double * Kf);
-AMREX_GPU_DEVICE void Kc_reac_d(double T, int reacID, double * Kf);
+//#else
+//AMREX_GPU_DEVICE void Kf_reac_d(double T, int reacID, double * Kf);
+//AMREX_GPU_DEVICE void Kc_reac_d(double T, int reacID, double * Kf);
 #endif
 AMREX_GPU_HOST_DEVICE void progressRate(double *  qdot, double *  speciesConc, double T);
 AMREX_GPU_HOST_DEVICE void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
+#ifndef AMREX_USE_CUDA
 void CKINIT();
 void CKFINALIZE();
 void GET_REACTION_MAP(int *  rmap);
 void SetAllDefaults();
-#ifdef AMREX_USE_CUDA
-void AllocateOnDevice();
-void DeallocateOnDevice();
+//#ifdef AMREX_USE_CUDA
+//void AllocateOnDevice();
+//void DeallocateOnDevice();
 #endif
 void CKINDX(int * mm, int * kk, int * ii, int * nfit );
 void CKXNUM(char * line, int * nexp, int * lout, int * nval, double *  rval, int * kerr, int lenline);

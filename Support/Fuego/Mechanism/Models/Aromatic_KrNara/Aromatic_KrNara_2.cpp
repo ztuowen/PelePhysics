@@ -1,17 +1,36 @@
 #include "chemistry_file.H"
+#include <sstream>
+#include <iostream>
+#include <fstream>
 
 /*Poly fits for the viscosities, dim NO*KK */
 void egtransetCOFETA(double* COFETA) {
-    for (int i = 0 ; i < 631 ; i++) {
-	    COFETA[i] =0.0;
+
+    std::ifstream filetoread;
+    filetoread.open("COFETA.dat");
+
+    char diffcoefs[25];
+
+    for (int i = 0 ; i < 632 ; i++) {
+	    filetoread>>diffcoefs;
+	    COFETA[i] = atof(diffcoefs);
+	    filetoread.ignore(80,'\n');
     }
 }
 
 
 /*Poly fits for the conductivities, dim NO*KK */
 void egtransetCOFLAM(double* COFLAM) {
-    for (int i = 0 ; i < 631 ; i++) {
-	    COFLAM[i] =0.0;
+
+    std::ifstream filetoread;
+    filetoread.open("COFLAM.dat");
+
+    char diffcoefs[25];
+
+    for (int i = 0 ; i < 632 ; i++) {
+	    filetoread>>diffcoefs;
+	    COFLAM[i] = atof(diffcoefs);
+	    filetoread.ignore(80,'\n');
     }
 }
 
@@ -25,8 +44,16 @@ void egtransetKTDIF(int* KTDIF) {
 
 /*Poly fits for thermal diff ratios, dim NO*NLITE*KK */
 void egtransetCOFTD(double* COFTD) {
-    for (int i = 0 ; i < 1263 ; i++) {
-	    COFTD[i] =0.0;
+
+    std::ifstream filetoread;
+    filetoread.open("COFTD.dat");
+
+    char diffcoefs[25];
+
+    for (int i = 0 ; i < 1264 ; i++) {
+	    filetoread>>diffcoefs;
+	    COFTD[i] =atof(diffcoefs);
+	    filetoread.ignore(80,'\n');
     }
 }
 
