@@ -224,7 +224,7 @@ int reactor_init(const int* cvode_iE, const int* Ncells) {
 	if(check_flag(&flag, "CVodeSetMaxOrd", 1)) return(1);
 
         /* Set the num of steps to wait inbetween Jac evals */ 
-	flag = CVodeSetMaxStepsBetweenJac(cvode_mem, 100);
+	flag = CVodeSetMaxStepsBetweenJac(cvode_mem, 50);
 	if(check_flag(&flag, "CVodeSetMaxStepsBetweenJac", 1)) return(1);
 
 	/* Define vectors to be used later in creact */
@@ -291,29 +291,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
         if (iverbose > 1) {
             printf("\n -------------------------------------\n");
 	}
-	//if (*Init == 1) {
-            if (iverbose > 1) {
-                printf("ReInit always \n");
-	    }
-	    CVodeReInit(cvode_mem, time_init, y);
-	    InitPartial = false;
-	//} else {
-	//    temp_old = fabs(rY_in[NEQ] - temp_old);
-	//    // Sloppy but I can't think of anything better now
-        //    if (temp_old > 50.0) {
-        //        if (iverbose > 1) {
-	//            printf("ReInit delta_T = %f \n", temp_old);
-	//	}
-	//        CVodeReInit(cvode_mem, time_init, y);
-	//      InitPartial = false;
-	//    } else {
-        //        if (iverbose > 1) {
-	//            printf("ReInit Partial delta_T = %f \n", temp_old);
-	//	}
-	//        CVodeReInitPartial(cvode_mem, time_init, y);
-	//	InitPartial = true;
-	//    }
-	//}
+	CVodeReInit(cvode_mem, time_init, y);
 
 	flag = CVode(cvode_mem, time_out, y, &dummy_time, CV_NORMAL);
 	/* ONE STEP MODE FOR DEBUGGING */
@@ -334,11 +312,6 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	for  (int i = 0; i < NCELLS; i++) {
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
 	}
-
-	/* Stuff for restart partial not used at the moment */
-	//if (*Init != 1) {
-	//    temp_old = rY_in[NEQ];
-	//}
 
 	/* VERBOSE MODE 
         if (iverbose > 5) {
@@ -450,31 +423,20 @@ void fKernelSpec(realtype *dt, realtype *yvec_d, realtype *ydot_d,
       /* NRG CGS */
       energy = (rhoX_init[tid] + rhoXsrc_ext[tid]*(*dt)) /rho;
 
-      /* FUNC 1 */
-      eos.eos_EY2T(massfrac, energy, temp);
-      /* FUNC 3 */
-      eos.eos_TY2Cv(temp, massfrac, &cX);
-      /* FUNC 4 */
-      eos.eos_T2EI(temp, Xi);
+      if (iE_Creact == 1){
+          /* FUNC 1 */
+          eos.eos_EY2T(massfrac, energy, temp);
+          /* FUNC 3 */
+          eos.eos_TY2Cv(temp, massfrac, &cX);
+          /* FUNC 4 */
+          eos.eos_T2EI(temp, Xi);
+      } else {
+          eos.eos_HY2T(massfrac, energy, temp);
+          eos.eos_TY2Cp(temp, massfrac, &cX);
+	  eos.eos_T2HI(temp, Xi);
+      }
       /* FUNC 1b */
       eos.eos_RTY2W(rho, temp, massfrac, cdot);
-
-      /* Fuego calls on device 
-      if (iE_Creact == 1){
-	  //eos_re_ext(&rho,massfrac,&temp,&energy,Xi,&cX);
-          //GET_T_GIVEN_EY(&energy, massfrac, &temp, &lierr);
-          //CKUMS(&temp, Xi);
-          //CKCVMS(&temp, cXi);
-      } else {
-          GET_T_GIVEN_HY(&energy, massfrac, &temp, &lierr);
-          CKHMS(&temp, Xi);
-          CKCPMS(&temp, cXi);
-	  cX = 0.0;
-          for (int i = 0; i < NEQ; i++){
-              cX = cX + massfrac[i] * cXi[i];
-          }
-      }
-      */
 
       /* Fill ydot vect */
       ydot_d[offset + NEQ] = rhoXsrc_ext[tid];
@@ -603,10 +565,8 @@ static int cJac_KLU(realtype tn, N_Vector u, N_Vector fu, SUNMatrix J,
           }
       }
       /* Go from Dense to Sparse */
-      //printf("\n (new cell) \n");
       for (int i = 1; i < NEQ+2; i++) {
 	  nbVals = data_wk->colPtrs[0][i]-data_wk->colPtrs[0][i - 1];
-	  //printf(" Col %d has %d vals \n", i-1, nbVals);
 	  for (int j = 0; j < nbVals; j++) {
 	          idx = data_wk->rowVals[0][ data_wk->colPtrs[0][i - 1] + j ];
 	              data[ data_wk->colPtrs[0][offset + i - 1] + j ] = Jmat_tmp[(i - 1) * (NEQ + 1) + idx];
