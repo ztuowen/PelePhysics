@@ -276,7 +276,7 @@ main (int   argc,
 				&reInit);
 		            dt_incr =  dt/ndt;
 			    reInit = 1;
-			    printf("%14.6e %14.6e", time, tmp_vect[Ncomp]);
+			    printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
 			}
 		        nc = 0;
 		        for (int l = 0; l < cvode_ncells ; ++l){
