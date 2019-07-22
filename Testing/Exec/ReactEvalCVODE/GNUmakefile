@@ -3,7 +3,7 @@ PROFILE    = FALSE
 
 DEBUG      = FALSE
 
-DIM        = 3
+DIM        = 2
 
 COMP	   = gcc
 FCOMP	   = gfortran
@@ -22,17 +22,18 @@ DEFINES  += -DMOD_REACTOR
 
 USE_SUNDIALS_3x4x = TRUE
 
-USE_KLU = FALSE
+USE_KLU = TRUE
 ifeq ($(USE_KLU), TRUE)
     DEFINES  += -DUSE_KLU
-    include Make.CVODE
+    include Make.KLU
 endif
 
 #######################
 ifeq ($(FUEGO_GAS), TRUE)
   Eos_dir         = Fuego
   #Chemistry_Model = drm19
-  Chemistry_Model = dodecane_wang
+  #Chemistry_Model = dodecane_wang
+  Chemistry_Model = Aromatic_KrNara
   Reactions_dir   = Fuego
   Transport_dir   = Simple
 else

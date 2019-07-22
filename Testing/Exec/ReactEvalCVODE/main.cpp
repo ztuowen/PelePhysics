@@ -127,7 +127,7 @@ main (int   argc,
     for (int i = 0; i < BL_SPACEDIM; ++i) {
 	npts[i] = 1;
     }
-    npts[1] = 512;
+    //npts[1] = 512;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";
@@ -276,6 +276,7 @@ main (int   argc,
 				&reInit);
 		            dt_incr =  dt/ndt;
 			    reInit = 1;
+			    printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
 			}
 		        nc = 0;
 		        for (int l = 0; l < cvode_ncells ; ++l){

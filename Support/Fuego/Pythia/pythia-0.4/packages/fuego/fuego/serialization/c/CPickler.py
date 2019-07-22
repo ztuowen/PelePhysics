@@ -2348,6 +2348,7 @@ class CPickler(CMill):
         self._write()
 
         self._write("cudaMemcpyToSymbol(NuVals_d, NuVals, sizeof(int) * %d);" % (nReactions*nSpecies))
+        self._write("#if 0")
         
         for j in range(nReactions):
             reaction = mechanism.reaction()[j]
@@ -2386,6 +2387,7 @@ class CPickler(CMill):
                     ##self._write("cudaMemcpyToSymbol(TBid_d[%d], TBid[%d], sizeof(int) * %d);" %(id,id,len(efficiencies)))
                     ##self._write("cudaMemcpyToSymbol(TB_d[%d], TB[%d], sizeof(double) * %d);" %(id,id,len(efficiencies)))
 
+        self._write("#endif")
         self._outdent()
         self._write("}")
 
@@ -2478,12 +2480,12 @@ class CPickler(CMill):
                 idxLightSpecs.append(spec.id)
         self._miscTransInfo(KK=self.nSpecies, NLITE=NLITE, do_declarations=True)
         self._wt(True)
-        self._eps(speciesTransport, True)
-        self._sig(speciesTransport, True)
-        self._dip(speciesTransport, True)
-        self._pol(speciesTransport, True)
-        self._zrot(speciesTransport, True)
-        self._nlin(speciesTransport, True)
+        self._eps(mechanism, speciesTransport, True)
+        self._sig(mechanism, speciesTransport, True)
+        self._dip(mechanism, speciesTransport, True)
+        self._pol(mechanism, speciesTransport, True)
+        self._zrot(mechanism, speciesTransport, True)
+        self._nlin(mechanism, speciesTransport, True)
 
         self._viscosity(speciesTransport, True, NTFit=50)
         self._diffcoefs(speciesTransport, True, NTFit=50)
@@ -2503,12 +2505,12 @@ class CPickler(CMill):
                 idxLightSpecs.append(spec.id)
         self._miscTransInfo(KK=self.nSpecies, NLITE=NLITE, do_declarations=False)
         self._wt(False)
-        self._eps(speciesTransport, False)
-        self._sig(speciesTransport, False)
-        self._dip(speciesTransport, False)
-        self._pol(speciesTransport, False)
-        self._zrot(speciesTransport, False)
-        self._nlin(speciesTransport, False)
+        self._eps(mechanism, speciesTransport, False)
+        self._sig(mechanism, speciesTransport, False)
+        self._dip(mechanism, speciesTransport, False)
+        self._pol(mechanism, speciesTransport, False)
+        self._zrot(mechanism, speciesTransport, False)
+        self._nlin(mechanism, speciesTransport, False)
 
         self._viscosity(speciesTransport, False, NTFit=50)
         self._diffcoefs(speciesTransport, False, NTFit=50)
@@ -6270,6 +6272,7 @@ class CPickler(CMill):
             + self.line('temperature cache'))
         self._write("double invT = 1.0 / tc[1];")
         self._write("gibbs(g_RT, tc);")
+        self._write("double invT = 1.0 / T;")
         self._write()
         self._write("*Kc = 0;")
         self._write("int expon = 0;")
@@ -10911,7 +10914,7 @@ class CPickler(CMill):
         return
 
 
-    def _eps(self, speciesTransport, do_declarations):
+    def _eps(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
@@ -10922,52 +10925,52 @@ class CPickler(CMill):
         #for species in mechanism.species():
         #    expression[i] = float(species.trans[0].eps)
         #    i++
-        self._generateTransRoutineSimple(["egtransetEPS", "EGTRANSETEPS", "egtranseteps", "egtranseteps_", "EPS"], 1, speciesTransport, do_declarations)
+        self._generateTransRoutineSimple(mechanism, ["egtransetEPS", "EGTRANSETEPS", "egtranseteps", "egtranseteps_", "EPS"], 1, speciesTransport, do_declarations)
 
         return
     
 
-    def _sig(self, speciesTransport, do_declarations):
+    def _sig(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
         self._write(self.line('the lennard-jones collision diameter in Angstroms'))
-        self._generateTransRoutineSimple(["egtransetSIG", "EGTRANSETSIG", "egtransetsig", "egtransetsig_", "SIG"], 2, speciesTransport, do_declarations)
+        self._generateTransRoutineSimple(mechanism, ["egtransetSIG", "EGTRANSETSIG", "egtransetsig", "egtransetsig_", "SIG"], 2, speciesTransport, do_declarations)
 
         return
 
 
-    def _dip(self, speciesTransport, do_declarations):
+    def _dip(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
         self._write(self.line('the dipole moment in Debye'))
-        self._generateTransRoutineSimple(["egtransetDIP", "EGTRANSETDIP", "egtransetdip", "egtransetdip_", "DIP"], 3, speciesTransport, do_declarations)
+        self._generateTransRoutineSimple(mechanism, ["egtransetDIP", "EGTRANSETDIP", "egtransetdip", "egtransetdip_", "DIP"], 3, speciesTransport, do_declarations)
 
         return
 
 
-    def _pol(self, speciesTransport, do_declarations):
+    def _pol(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
         self._write(self.line('the polarizability in cubic Angstroms'))
-        self._generateTransRoutineSimple(["egtransetPOL", "EGTRANSETPOL", "egtransetpol", "egtransetpol_", "POL"], 4, speciesTransport, do_declarations)
+        self._generateTransRoutineSimple(mechanism, ["egtransetPOL", "EGTRANSETPOL", "egtransetpol", "egtransetpol_", "POL"], 4, speciesTransport, do_declarations)
 
         return
 
 
-    def _zrot(self, speciesTransport, do_declarations):
+    def _zrot(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
         self._write(self.line('the rotational relaxation collision number at 298 K'))
-        self._generateTransRoutineSimple(["egtransetZROT", "EGTRANSETZROT", "egtransetzrot", "egtransetzrot_", "ZROT"], 5, speciesTransport, do_declarations)
+        self._generateTransRoutineSimple(mechanism, ["egtransetZROT", "EGTRANSETZROT", "egtransetzrot", "egtransetzrot_", "ZROT"], 5, speciesTransport, do_declarations)
 
         return
 
 
-    def _nlin(self, speciesTransport, do_declarations):
+    def _nlin(self, mechanism, speciesTransport, do_declarations):
 
         self._write()
         self._write()
@@ -10986,8 +10989,8 @@ class CPickler(CMill):
         self._write('void egtransetNLIN(int* NLIN) {')
         self._indent()
 
-        for species in speciesTransport:
-            self._write('%s[%d] = %d;' % ('NLIN', species.id, int(speciesTransport[species][0])))
+        for species in mechanism.species():
+            self._write('%s[%d] = %d;' % ("NLIN", species.id, int(speciesTransport[species][0])))
 
         self._outdent()
         self._write('}')
@@ -11882,7 +11885,7 @@ class CPickler(CMill):
         return a*(x0 - x[0])*(x0 - x[1]) + (dy21/dx21)*(x0 - x[1]) + y[1]
 
 
-    def _generateTransRoutineSimple(self, nametab, id, speciesTransport, do_declarations):
+    def _generateTransRoutineSimple(self, mechanism, nametab, id, speciesTransport, do_declarations):
 
         if (do_declarations):
             self._write('#if defined(BL_FORT_USE_UPPERCASE)')
@@ -11896,7 +11899,7 @@ class CPickler(CMill):
         self._write('void %s(double* %s ) {' % (nametab[0], nametab[4]))
         self._indent()
 
-        for species in speciesTransport:
+        for species in mechanism.species():
             self._write('%s[%d] = %.8E;' % (nametab[4], species.id, float(speciesTransport[species][id])))
 
         self._outdent()
