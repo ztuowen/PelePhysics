@@ -7,7 +7,7 @@
 extern "C"
 {
   void get_transport_coeffs
-    (const int* lo, const int* hi,
+    (const int* gpustream, const int* lo, const int* hi,
      const BL_FORT_FAB_ARG_3D(massfraction),
      const BL_FORT_FAB_ARG_3D(temperature),
      const BL_FORT_FAB_ARG_3D(density),

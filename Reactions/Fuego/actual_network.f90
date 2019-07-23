@@ -11,12 +11,15 @@
 
 module actual_network
 
-  use fuego_chemistry 
+  !use fuego_chemistry 
   use chemistry_module, only : nspecies, chemistry_init, chemistry_close, chemistry_initialized, spec_names, elem_names
+  use fuego_module, only : ckindx
 
   implicit none
 
   integer :: nspec, nelem, nreac, nfit, naux
+  !$acc declare create(naux)
+
   character (len=16), save, allocatable :: aux_names(:)
 
 contains

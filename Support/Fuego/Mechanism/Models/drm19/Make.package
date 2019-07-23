@@ -1,10 +1,10 @@
-CEXE_headers+=chemistry_file.H
+#CEXE_headers+=chemistry_file.H
 
-CEXE_sources+=drm19.cpp
+#CEXE_sources+=drm19.cpp
 
 LIBRARIES += 
 
 INCLUDE_LOCATIONS += $(CHEM_DIR)
 
+F90EXE_sources += drm19.F90
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
-

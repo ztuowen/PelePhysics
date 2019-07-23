@@ -4,8 +4,11 @@
 #include <stdlib.h>
 #include <vector>
 #include <AMReX_Gpu.H> 
+
 extern "C"
 {
+AMREX_GPU_HOST_DEVICE void get_imw(double imw_new[]);
+AMREX_GPU_HOST_DEVICE void get_mw(double mw_new[]);
 void egtransetEPS(double *  EPS);
 void egtransetSIG(double* SIG);
 void atomicWeight(double *  awt);
@@ -29,6 +32,10 @@ void progressRate(double *  qdot, double *  speciesConc, double T);
 void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
 void CKINIT();
 void CKFINALIZE();
+#ifndef AMREX_USE_CUDA
+void GET_REACTION_MAP(int *  rmap);
+void SetAllDefaults();
+#endif
 void CKINDX(int * mm, int * kk, int * ii, int * nfit );
 void CKXNUM(char * line, int * nexp, int * lout, int * nval, double *  rval, int * kerr, int lenline);
 void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double *  rval, int * kerr, int lenline, int lenkray);
@@ -115,19 +122,19 @@ void aJacobian_precond(double *  J, double *  sc, double T, int HP);
 void dcvpRdT(double *  species, double *  tc);
 AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int *ierr);
 void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);
-void GET_REACTION_MAP(int *  rmap);
+void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentric_i);
 /*vector version */
-void vproductionRate(int npt, double *  wdot, double *  c, double *  T);
+void VCKYTX(int *  np, double *  y, double *  x);
 void VCKHMS(int *  np, double *  T, double *  ums);
-void VCKPY(int *  np, double *  rho, double *  T, double *  y, double *  P);
 void VCKWYR(int *  np, double *  rho, double *  T,
             double *  y,
             double *  wdot);
-void VCKYTX(int *  np, double *  y, double *  x);
+#ifndef AMREX_USE_CUDA
+void vproductionRate(int npt, double *  wdot, double *  c, double *  T);
+void VCKPY(int *  np, double *  rho, double *  T, double *  y, double *  P);
 void vcomp_k_f(int npt, double *  k_f_s, double *  tc, double *  invT);
 void vcomp_gibbs(int npt, double *  g_RT, double *  tc);
 void vcomp_Kc(int npt, double *  Kc_s, double *  g_RT, double *  invT);
-void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentric_i);
 void vcomp_wdot(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
@@ -155,6 +162,7 @@ AMREX_GPU_HOST_DEVICE void get_imw(double imw_new[]);
 AMREX_GPU_HOST_DEVICE void get_mw(double mw_new[]);  
 }
 
+#ifndef AMREX_USE_CUDA
 namespace thermo
 {
 //    extern std::vector<double> imw;
@@ -200,3 +208,4 @@ namespace thermo
 
     extern std::vector<int> rxn_map;
 }
+#endif

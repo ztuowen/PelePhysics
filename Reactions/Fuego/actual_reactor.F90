@@ -16,7 +16,7 @@ module reactor_module
 
   logical, save, private :: reactor_initialized = .false.
 
-  !$omp threadprivate(vodeVec,cdot,rhoydot_ext,ydot_ext,rhoedot_ext,rhoe_init,time_init,rhohdot_ext,rhoh_init,hdot_ext,h_init,time_old,iloc,jloc,kloc,eos_state)
+  !$omp threadprivate(vodeVec,cdot,rhoydot_ext,ydot_ext,rhoedot_ext,rhoe_init,time_init,rhohdot_ext,rhoh_init,hdot_ext,h_init,pressureInit,time_old,iloc,jloc,kloc,ie,eos_state,reactor_initialized)
 
 contains
 
@@ -318,6 +318,7 @@ contains
   subroutine f_rhs(neq, time, y, ydot, rpar, ipar)
 
     use chemistry_module, only : molecular_weight
+    use fuego_module, only : ckwc
     use eos_module
 
     integer,         intent(in)   :: neq, ipar(*)
@@ -385,7 +386,7 @@ contains
 
     integer,        intent(in)  :: neq, npt
     real(amrex_real),intent(in)  :: y(neq,npt), t
-    real(amrex_real),intent(out) :: pd(neq,neq)
+    real(amrex_real),intent(inout) :: pd(neq,neq)
 
     call amrex_error('DVODE version: Analytic Jacobian not yet implemented')
 

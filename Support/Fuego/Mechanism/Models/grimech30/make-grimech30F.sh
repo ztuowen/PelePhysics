@@ -1,7 +1,7 @@
 
-CHEMINP=LiDryer.mec
-THERMINP=LiDryer.therm
-FINALFILE=LiDryer.F90
+CHEMINP=grimech30.dat
+THERMINP=thermo30.dat
+FINALFILE=grimech30.F90
 
 FMC=${PELE_PHYSICS_HOME}/Support/Fuego/Pythia/products/bin/fmc.py
 HEADERDIR=${PELE_PHYSICS_HOME}/Support/Fuego/Mechanism/Models/header
