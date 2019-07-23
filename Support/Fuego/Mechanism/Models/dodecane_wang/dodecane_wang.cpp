@@ -5728,7 +5728,7 @@ void CKCPBL(double *  T, double *  x,  double *  cpbl)
 
 
 /*Returns the mean specific heat at CP (Eq. 34) */
-void CKCPBS(double *  T, double *  y,  double *  cpbs)
+AMREX_GPU_HOST_DEVICE void CKCPBS(double *  T, double *  y,  double *  cpbs)
 {
     double result = 0; 
     double tT = *T; /*temporary temperature */
@@ -5859,7 +5859,7 @@ void CKHBML(double *  T, double *  x,  double *  hbml)
 
 
 /*Returns mean enthalpy of mixture in mass units */
-void CKHBMS(double *  T, double *  y,  double *  hbms)
+AMREX_GPU_HOST_DEVICE void CKHBMS(double *  T, double *  y,  double *  hbms)
 {
     double result = 0;
     double tT = *T; /*temporary temperature */
@@ -89214,7 +89214,7 @@ AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t,
 }
 
 /* get temperature given enthalpy in mass units and mass fracs */
-void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)
+AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)
 {
 #ifdef CONVERGENCE
     const int maxiter = 5000;
