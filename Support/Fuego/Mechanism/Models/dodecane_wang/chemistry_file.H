@@ -26,14 +26,19 @@ AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  q_f, double *  q_r, double *  sc,
 #ifndef AMREX_USE_CUDA
 void comp_k_f(double *  tc, double invT, double *  k_f);
 void comp_Kc(double *  tc, double invT, double *  Kc);
+#else
+AMREX_GPU_DEVICE void Kf_reac_d(double T, int reacID, double * Kf);
+AMREX_GPU_DEVICE void Kc_reac_d(double T, int reacID, double * Kf);
 #endif
 AMREX_GPU_HOST_DEVICE void progressRate(double *  qdot, double *  speciesConc, double T);
 AMREX_GPU_HOST_DEVICE void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
 void CKINIT();
 void CKFINALIZE();
-#ifndef AMREX_USE_CUDA
 void GET_REACTION_MAP(int *  rmap);
 void SetAllDefaults();
+#ifdef AMREX_USE_CUDA
+void AllocateOnDevice();
+void DeallocateOnDevice();
 #endif
 void CKINDX(int * mm, int * kk, int * ii, int * nfit );
 void CKXNUM(char * line, int * nexp, int * lout, int * nval, double *  rval, int * kerr, int lenline);
@@ -178,7 +183,6 @@ void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
 }
 
-#ifndef AMREX_USE_CUDA
 namespace thermo
 {
 
@@ -189,6 +193,7 @@ namespace thermo
     extern double sri_a[289], sri_b[289], sri_c[289], sri_d[289], sri_e[289];
     extern double activation_units[289], prefactor_units[289], phase_units[289];
     extern int is_PD[289], troe_len[289], sri_len[289], nTB[289], *TBid[289];
+    extern int NuVals[16184];
     extern double *TB[289];
 
     extern double fwd_A_DEF[289], fwd_beta_DEF[289], fwd_Ea_DEF[289];
@@ -199,6 +204,7 @@ namespace thermo
     extern double activation_units_DEF[289], prefactor_units_DEF[289], phase_units_DEF[289];
     extern int is_PD_DEF[289], troe_len_DEF[289], sri_len_DEF[289], nTB_DEF[289], *TBid_DEF[289];
     extern double *TB_DEF[289];
+
     extern std::vector<int> rxn_map;
+
 }
-#endif

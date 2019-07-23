@@ -6504,18 +6504,18 @@ class CPickler(CMill):
             else:
                 alpha = self._enhancement_d(mechanism, reaction)
                 self._write("Corr  = %s;" %(alpha))
-                self._write("redP = Corr / k_f * 1e-%d * %.17g " % (dim*6, low_A)) 
-                self._write("           * exp(%.17g  * tc[0] - %.17g  * %.17g *invT);" % (low_beta, aeuc / Rc / kelvin, low_E))
+                self._write("redP = Corr / k_f * 1e-%d * (%.17g) " % (dim*6, low_A)) 
+                self._write("           * exp(%.17g * tc[0] - (%.17g) * (%.17g) * invT);" % (low_beta, aeuc / Rc / kelvin, low_E))
                 if reaction.troe:
                     self._write("F = redP / (1.0 + redP);")
                     self._write("logPred = log10(redP);")
                     self._write('logFcent = log10(')
                     if (abs(troe[1]) > 1.e-100):
-                        self._write('    (1.-%.17g)*exp(-tc[1] / %.17g) ' % (troe[0],troe[1]))
+                        self._write('    (1.-(%.17g))*exp(-tc[1] / %.17g) ' % (troe[0],troe[1]))
                     else:
                         self._write('     0. ' )
                     if (abs(troe[2]) > 1.e-100):
-                        self._write('    + %.17g * exp(-tc[1]/%.17g)  ' % (troe[0],troe[2]))
+                        self._write('    + (%.17g) * exp(-tc[1]/%.17g)  ' % (troe[0],troe[2]))
                     else:
                         self._write('    + 0. ')
                     if (ntroe == 4):
@@ -8428,21 +8428,21 @@ class CPickler(CMill):
         self._write('/* forward */')
         self._write("phi_f = %s;" % self._sortedPhaseSpace(mechanism, sorted_reactants))
         #
-        self._write("k_f = %.17g * %.17g" % (uc.value,A))
-        self._write("            * exp(%.17g * tc[0] - %.17g * %.17g * invT);"
+        self._write("k_f = %.17g * (%.17g)" % (uc.value,A))
+        self._write("            * exp(%.17g * tc[0] - (%.17g) * (%.17g) * invT);"
                     %(beta,aeuc / Rc / kelvin,E))
         #
-        self._write("dlnkfdT = %.17g * invT + %.17g *  %.17g  * invT2;"
+        self._write("dlnkfdT = %.17g * invT + (%.17g) * (%.17g)  * invT2;"
                     %(beta,aeuc / Rc / kelvin,E))
 
         if isPD:
             low_A, low_beta, low_E = reaction.low
             self._write('/* pressure-fall-off */')
-            self._write("k_0 = %.17g * exp(%.17g * tc[0] - %.17g * %.17g * invT);"
+            self._write("k_0 = %.17g * exp(%.17g * tc[0] - (%.17g) * (%.17g) * invT);"
                         %(low_A,low_beta,aeuc / Rc / kelvin,low_E))
             self._write('Pr = 1e-%d * alpha / k_f * k_0;' % (dim*6))
             self._write('fPr = Pr / (1.0+Pr);')
-            self._write("dlnk0dT = %.17g * invT + %.17g * %.17g * invT2;"
+            self._write("dlnk0dT = %.17g * invT + (%.17g) * (%.17g) * invT2;"
                         %(low_beta,aeuc / Rc / kelvin,low_E))
             self._write('dlogPrdT = log10e*(dlnk0dT - dlnkfdT);')
             self._write('dlogfPrdT = dlogPrdT / (1.0+Pr);')
@@ -8482,17 +8482,17 @@ class CPickler(CMill):
 
                 self._write("dlogFcentdT = log10e/Fcent*( ")
                 if (abs(troe[1]) > 1.e-100):
-                    self._write("    -Fcent1/%.17g"
+                    self._write("    -Fcent1/(%.17g)"
                                 % troe[1] )
                 else:
                     self._write("    0.")
                 if (abs(troe[2]) > 1.e-100):
-                    self._write("    -Fcent2/%.17g"
+                    self._write("    -Fcent2/(%.17g)"
                                 % troe[2] )
                 else:
                     self._write("    0.")
                 if (ntroe == 4):
-                    self._write("    + Fcent3*%.17g*invT2);"
+                    self._write("    + Fcent3*(%.17g)*invT2);"
                                 % troe[3] )
                 else:
                     self._write("    + 0.);")
