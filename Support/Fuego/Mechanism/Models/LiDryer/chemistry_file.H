@@ -138,6 +138,7 @@ void vcomp_Kc(int npt, double *  Kc_s, double *  g_RT, double *  invT);
 void vcomp_wdot(int npt, double *  wdot, double *  mixture, double *  sc,
                 double *  k_f_s, double *  Kc_s,
                 double *  tc, double *  invT, double *  T);
+#endif
 
 void SetAllDefaults();
 /*Transport function declarations */

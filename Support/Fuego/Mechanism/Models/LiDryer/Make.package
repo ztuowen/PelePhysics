@@ -1,6 +1,6 @@
-#CEXE_headers+=chemistry_file.H
+CEXE_headers+=chemistry_file.H
 
-#CEXE_sources+=LiDryer.cpp
+CEXE_sources+=LiDryer2.cpp
 
 LIBRARIES += 
 
