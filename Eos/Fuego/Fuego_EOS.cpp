@@ -54,6 +54,7 @@ void EOS::eos_EY2T(amrex::Real *Y, amrex::Real E, amrex::Real T)
 }
 
 /* HP version */
+AMREX_GPU_HOST_DEVICE
 void EOS::eos_HY2T(amrex::Real *Y, amrex::Real H, amrex::Real T)
 {
     int lierr=0; 
