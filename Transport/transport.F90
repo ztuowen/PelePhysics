@@ -53,6 +53,7 @@ contains
   end subroutine transport
 
   subroutine get_transport_coeffs( &
+       gpustream, &
        lo,hi, &
        massfrac,    mf_lo, mf_hi, &
        temperature,  t_lo,  t_hi, &
@@ -69,6 +70,7 @@ contains
     implicit none
 
     integer, parameter :: nspec=9
+    integer         , intent(in   ) :: gpustream
     integer         , intent(in   ) ::     lo(3),    hi(3)
     integer         , intent(in   ) ::  mf_lo(3), mf_hi(3)
     integer         , intent(in   ) ::   t_lo(3),  t_hi(3)
@@ -179,13 +181,13 @@ contains
     hi2 = hi(2)
     hi3 = hi(3)
 
-    !$acc enter data create(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,eps2,fita,fita0,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
+    !$acc enter data create(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,eps2,fita,fita0,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) async(gpustream)
 
-    !$acc parallel default(present)
+    !$acc parallel default(present) async(gpustream)
     call egz_init_gpu(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2)
     !$acc end parallel
 
-    !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present)
+    !$acc parallel loop gang vector collapse(3) private(trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) default(present) async(gpustream)
     do k = lo3,hi3
        do j = lo2,hi2
           do i = lo1,hi1
@@ -208,8 +210,7 @@ contains
        end do
     end do
     !$acc end parallel loop
-    !$acc exit data delete(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a)
-
+    !$acc exit data delete(wt,eps,sig,dip,pol,zrot,nlin,cfe,cfl,cfd,fita,fita0,eps2,trv_eos_state_massfrac,trv_eos_state_molefrac,trv_eos_state_cpi,trv_ddiag,xtr,ytr,aux,cxi,cint,dlt,beta,eta,etalg,rn,an,zn,dmi,g,bin,a) async(gpustream)
 
   end subroutine get_transport_coeffs
 
