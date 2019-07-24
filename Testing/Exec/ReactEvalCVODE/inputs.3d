@@ -2,7 +2,7 @@ dt = 1.e-06
 ndt = 10
 
 # Select CVODE Jacobian eval: 0=FD 1=AJ
-ns.cvode_iJac = 1
+ns.cvode_iJac = 0
 
 # Reactor formalism: 1=full e, 2=full h
 cvode_iE = 1

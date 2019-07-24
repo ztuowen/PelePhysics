@@ -1043,12 +1043,12 @@ class CPickler(CMill):
             'void CKSMS'+sym+'(double *  T, double *  sms);',
             
             'void CKCPBL'+sym+'(double *  T, double *  x, double *  cpbl);',
-            'void CKCPBS'+sym+'(double *  T, double *  y, double *  cpbs);',
+            'AMREX_GPU_HOST_DEVICE void CKCPBS'+sym+'(double *  T, double *  y, double *  cpbs);',
             'void CKCVBL'+sym+'(double *  T, double *  x, double *  cpbl);',
             'AMREX_GPU_HOST_DEVICE void CKCVBS'+sym+'(double *  T, double *  y, double *  cpbs);',
             
             'void CKHBML'+sym+'(double *  T, double *  x, double *  hbml);',
-            'void CKHBMS'+sym+'(double *  T, double *  y, double *  hbms);',
+            'AMREX_GPU_HOST_DEVICE void CKHBMS'+sym+'(double *  T, double *  y, double *  hbms);',
             'void CKUBML'+sym+'(double *  T, double *  x, double *  ubml);',
             'AMREX_GPU_HOST_DEVICE void CKUBMS'+sym+'(double *  T, double *  y, double *  ubms);',
             'void CKSBML'+sym+'(double *  P, double *  T, double *  x, double *  sbml);',
@@ -1096,7 +1096,7 @@ class CPickler(CMill):
             'AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T, int HP);',
             'AMREX_GPU_HOST_DEVICE void dcvpRdT(double *  species, double *  tc);',
             'AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int *ierr);',
-            'void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);',
+            'AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);',
             'void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentric_i);',
             self.line('vector version'),
             'void VCKYTX'+sym+'(int *  np, double *  y, double *  x);',
@@ -3616,7 +3616,7 @@ class CPickler(CMill):
         self._write()
         self._write()
         self._write(self.line('Returns the mean specific heat at CP (Eq. 34)'))
-        self._write('void CKCPBS'+sym+'(double *  T, double *  y,  double *  cpbs)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKCPBS'+sym+'(double *  T, double *  y,  double *  cpbs)')
         self._write('{')
         self._indent()
 
@@ -3791,7 +3791,7 @@ class CPickler(CMill):
         self._write()
         self._write()
         self._write(self.line('Returns mean enthalpy of mixture in mass units'))
-        self._write('void CKHBMS'+sym+'(double *  T, double *  y,  double *  hbms)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKHBMS'+sym+'(double *  T, double *  y,  double *  hbms)')
         self._write('{')
         self._indent()
 
@@ -12314,7 +12314,7 @@ class CPickler(CMill):
 
     def _T_given_hy(self, mechanism):
         self._write(self.line(' get temperature given enthalpy in mass units and mass fracs'))
-        self._write('void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)')
+        self._write('AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)')
         self._write('{')
         self._write('#ifdef CONVERGENCE')
         self._indent()

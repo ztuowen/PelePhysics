@@ -28,15 +28,15 @@ namespace thermo
 }
 
 #ifdef AMREX_USE_CUDA
-AMREX_GPU_DEVICE double fwd_A_d[289], fwd_beta_d[289], fwd_Ea_d[289];
-AMREX_GPU_DEVICE double low_A_d[289], low_beta_d[289], low_Ea_d[289];
-AMREX_GPU_DEVICE double rev_A_d[289], rev_beta_d[289], rev_Ea_d[289];
-AMREX_GPU_DEVICE double troe_a_d[289],troe_Ts_d[289], troe_Tss_d[289], troe_Tsss_d[289];
-AMREX_GPU_DEVICE double sri_a_d[289], sri_b_d[289], sri_c_d[289], sri_d_d[289], sri_e_d[289];
-AMREX_GPU_DEVICE double activation_units_d[289], prefactor_units_d[289], phase_units_d[289];
-AMREX_GPU_DEVICE int is_PD_d[289], troe_len_d[289], sri_len_d[289], nTB_d[289], *TBid_d[289];
-AMREX_GPU_DEVICE double *TB_d[289];
-AMREX_GPU_DEVICE int NuVals_d[16184];
+    AMREX_GPU_DEVICE double fwd_A_d[289], fwd_beta_d[289], fwd_Ea_d[289];
+    AMREX_GPU_DEVICE double low_A_d[289], low_beta_d[289], low_Ea_d[289];
+    AMREX_GPU_DEVICE double rev_A_d[289], rev_beta_d[289], rev_Ea_d[289];
+    AMREX_GPU_DEVICE double troe_a_d[289],troe_Ts_d[289], troe_Tss_d[289], troe_Tsss_d[289];
+    AMREX_GPU_DEVICE double sri_a_d[289], sri_b_d[289], sri_c_d[289], sri_d_d[289], sri_e_d[289];
+    AMREX_GPU_DEVICE double activation_units_d[289], prefactor_units_d[289], phase_units_d[289];
+    AMREX_GPU_DEVICE int is_PD_d[289], troe_len_d[289], sri_len_d[289], nTB_d[289], *TBid_d[289];
+    AMREX_GPU_DEVICE double *TB_d[289];
+    AMREX_GPU_DEVICE int NuVals_d[16184];
 #endif
 
 using namespace thermo;
