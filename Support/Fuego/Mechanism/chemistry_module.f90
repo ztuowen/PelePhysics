@@ -29,7 +29,7 @@ contains
     real(amrex_real) :: T0
     integer, allocatable :: names(:)
 
-    call ckinit()
+    !call ckinit()
     call ckindx(nelements, nspecies, nreactions, nfit)
 
     allocate(elem_names(nelements))
@@ -73,7 +73,7 @@ contains
 
   subroutine chemistry_close()
     deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
-    call ckfinalize()
+    !call ckfinalize()
   end subroutine chemistry_close
 
 

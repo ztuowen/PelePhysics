@@ -23,24 +23,8 @@ AMREX_GPU_HOST_DEVICE void cv_R(double *  species, double *  tc);
 void equilibriumConstants(double *  kc, double *  g_RT, double T);
 AMREX_GPU_HOST_DEVICE void productionRate(double *  wdot, double *  sc, double T);
 AMREX_GPU_HOST_DEVICE void comp_qfqr(double *  q_f, double *  q_r, double *  sc, double *  tc, double invT);
-#ifndef AMREX_USE_CUDA
-void comp_k_f(double *  tc, double invT, double *  k_f);
-void comp_Kc(double *  tc, double invT, double *  Kc);
-//#else
-//AMREX_GPU_DEVICE void Kf_reac_d(double T, int reacID, double * Kf);
-//AMREX_GPU_DEVICE void Kc_reac_d(double T, int reacID, double * Kf);
-#endif
 AMREX_GPU_HOST_DEVICE void progressRate(double *  qdot, double *  speciesConc, double T);
 AMREX_GPU_HOST_DEVICE void progressRateFR(double *  q_f, double *  q_r, double *  speciesConc, double T);
-#ifndef AMREX_USE_CUDA
-void CKINIT();
-void CKFINALIZE();
-void GET_REACTION_MAP(int *  rmap);
-void SetAllDefaults();
-//#ifdef AMREX_USE_CUDA
-//void AllocateOnDevice();
-//void DeallocateOnDevice();
-#endif
 void CKINDX(int * mm, int * kk, int * ii, int * nfit );
 void CKXNUM(char * line, int * nexp, int * lout, int * nval, double *  rval, int * kerr, int lenline);
 void CKSNUM(char * line, int * nexp, int * lout, char * kray, int * nn, int * knum, int * nval, double *  rval, int * kerr, int lenline, int lenkray);
@@ -84,11 +68,11 @@ void CKGMS(double *  T, double *  gms);
 void CKAMS(double *  T, double *  ams);
 void CKSMS(double *  T, double *  sms);
 void CKCPBL(double *  T, double *  x, double *  cpbl);
-AMREX_GPU_HOST_DEVICE void CKCPBS(double *  T, double *  y, double *  cpbs);
+void CKCPBS(double *  T, double *  y, double *  cpbs);
 void CKCVBL(double *  T, double *  x, double *  cpbl);
 AMREX_GPU_HOST_DEVICE void CKCVBS(double *  T, double *  y, double *  cpbs);
 void CKHBML(double *  T, double *  x, double *  hbml);
-AMREX_GPU_HOST_DEVICE void CKHBMS(double *  T, double *  y, double *  hbms);
+void CKHBMS(double *  T, double *  y, double *  hbms);
 void CKUBML(double *  T, double *  x, double *  ubml);
 AMREX_GPU_HOST_DEVICE void CKUBMS(double *  T, double *  y, double *  ubms);
 void CKSBML(double *  P, double *  T, double *  x, double *  sbml);
@@ -229,28 +213,3 @@ void egtransetCOFD(double* COFD);
 void egtransetKTDIF(int* KTDIF);
 }
 
-namespace thermo
-{
-
-    extern double fwd_A[1049], fwd_beta[1049], fwd_Ea[1049];
-    extern double low_A[1049], low_beta[1049], low_Ea[1049];
-    extern double rev_A[1049], rev_beta[1049], rev_Ea[1049];
-    extern double troe_a[1049],troe_Ts[1049], troe_Tss[1049], troe_Tsss[1049];
-    extern double sri_a[1049], sri_b[1049], sri_c[1049], sri_d[1049], sri_e[1049];
-    extern double activation_units[1049], prefactor_units[1049], phase_units[1049];
-    extern int is_PD[1049], troe_len[1049], sri_len[1049], nTB[1049], *TBid[1049];
-    extern int NuVals[165742];
-    extern double *TB[1049];
-
-    extern double fwd_A_DEF[1049], fwd_beta_DEF[1049], fwd_Ea_DEF[1049];
-    extern double low_A_DEF[1049], low_beta_DEF[1049], low_Ea_DEF[1049];
-    extern double rev_A_DEF[1049], rev_beta_DEF[1049], rev_Ea_DEF[1049];
-    extern double troe_a_DEF[1049],troe_Ts_DEF[1049], troe_Tss_DEF[1049], troe_Tsss_DEF[1049];
-    extern double sri_a_DEF[1049], sri_b_DEF[1049], sri_c_DEF[1049], sri_d_DEF[1049], sri_e_DEF[1049];
-    extern double activation_units_DEF[1049], prefactor_units_DEF[1049], phase_units_DEF[1049];
-    extern int is_PD_DEF[1049], troe_len_DEF[1049], sri_len_DEF[1049], nTB_DEF[1049], *TBid_DEF[1049];
-    extern double *TB_DEF[1049];
-
-    extern std::vector<int> rxn_map;
-
-}
