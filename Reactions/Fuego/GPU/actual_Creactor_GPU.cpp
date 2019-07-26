@@ -58,6 +58,13 @@ int react(realtype *rY_in, realtype *rY_src_in,
                 realtype *dt_react, realtype *time, int *Init,
                 const int* cvode_iE,const int* Ncells, cudaStream_t stream) {
 
+        cudaError_t cudaStat1            = cudaSuccess;
+        size_t free_mem = 0;
+        size_t total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(BEGIN) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
         /* CVODE */
         N_Vector y         = NULL;
         SUNLinearSolver LS = NULL;
@@ -75,8 +82,11 @@ int react(realtype *rY_in, realtype *rY_src_in,
         size_t workspaceInBytes, internalDataInBytes;
         cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
         cusparseStatus_t cusparse_status = CUSPARSE_STATUS_SUCCESS;
-        cudaError_t cudaStat1            = cudaSuccess;
+        cudaError_t cuerr                = cudaSuccess;
+        cudaError_t cuda_status          = cudaSuccess;
 
+        workspaceInBytes = 0;
+        internalDataInBytes = 0;
 	NEQ = NUM_SPECIES;
 
 	/* ParmParse from the inputs file */ 
@@ -98,6 +108,12 @@ int react(realtype *rY_in, realtype *rY_src_in,
         user_data->iverbose         = 1;
         user_data->stream           = stream;
 
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(BEGIN II) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
         if (iJac_Creact == 1) { 
             int HP;
             if (iE_Creact == 1) {
@@ -117,9 +133,11 @@ int react(realtype *rY_in, realtype *rY_src_in,
 
             // Create Sparse batch QR solver
             // qr info and matrix descriptor
+            user_data->cusolverHandle = NULL;
             cusolver_status = cusolverSpCreate(&(user_data->cusolverHandle));
             assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
+            user_data->descrA = NULL;
             cusparse_status = cusparseCreateMatDescr(&(user_data->descrA)); 
             assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
 
@@ -129,6 +147,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
             cusparse_status = cusparseSetMatIndexBase(user_data->descrA, CUSPARSE_INDEX_BASE_ONE);
             assert(cusparse_status == CUSPARSE_STATUS_SUCCESS);
 
+            user_data->info = NULL;
             cusolver_status = cusolverSpCreateCsrqrInfo(&(user_data->info));
             assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
@@ -143,8 +162,17 @@ int react(realtype *rY_in, realtype *rY_src_in,
                                                       user_data->info);
             assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
+            free_mem = 0;
+            total_mem = 0;
+            cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+            assert( cudaSuccess == cudaStat1 );
+            std::cout<<"(AFTER SA) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
+            cuda_status = cudaDeviceSynchronize();  
+            assert(cuda_status == cudaSuccess);
 
             // allocate working space 
+            //std::cout<<NEQ+1<< " " <<user_data->NNZ<< " "<<NCELLS <<"\n"<<std::endl;
             cusolver_status = cusolverSpDcsrqrBufferInfoBatched(user_data->cusolverHandle,
                                                       NEQ+1, // size per subsystem
                                                       NEQ+1, // size per subsystem
@@ -161,6 +189,13 @@ int react(realtype *rY_in, realtype *rY_src_in,
             
             cudaStat1 = cudaMalloc((void**)&(user_data->buffer_qr), workspaceInBytes);
             assert(cudaStat1 == cudaSuccess);
+
+            free_mem = 0;
+            total_mem = 0;
+            cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+            assert( cudaSuccess == cudaStat1 );
+            std::cout<<"(AFTER AWS) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+            std::cout<<" WORKSPACE "<< workspaceInBytes<<" INTERNAL DATA "<< internalDataInBytes<<"\n"<<std::endl;
         }
 
 	/* Definition of main vector */
@@ -216,6 +251,15 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	flag = CVodeSVtolerances(cvode_mem, reltol, atol);
 	if (check_flag(&flag, "CVodeSVtolerances", 1)) return(1);
 
+        flag = CVodeSetNonlinConvCoef(cvode_mem, 1.0e-1);
+        if (check_flag(&flag, "CVodeSetNonlinConvCoef", 1)) return(1);
+
+        flag = CVodeSetMaxNonlinIters(cvode_mem, 50);
+        if (check_flag(&flag, "CVodeSetMaxNonlinIters", 1)) return(1);
+
+        flag = CVodeSetMaxErrTestFails(cvode_mem, 100);
+        if (check_flag(&flag, "CVodeSetMaxErrTestFails", 1)) return(1);
+
         /* Create the linear solver object */
         if (iJac_Creact == 0) { 
 	        LS = SUNSPGMR(y, PREC_NONE, 0);
@@ -244,14 +288,31 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	if(check_flag(&flag, "CVodeSetMaxNumSteps", 1)) return(1);
 
         /* Set the max order */
-        flag = CVodeSetMaxOrd(cvode_mem, 5);
+        flag = CVodeSetMaxOrd(cvode_mem, 2);
         if(check_flag(&flag, "CVodeSetMaxOrd", 1)) return(1);
+
+        /* Set the num of steps to wait inbetween Jac evals */ 
+	flag = CVodeSetMaxStepsBetweenJac(cvode_mem, 100);
+	if(check_flag(&flag, "CVodeSetMaxStepsBetweenJac", 1)) return(1);
 
 	/* Call CVODE: ReInit for convergence */
         //CVodeReInit(cvode_mem, time_init, y);
 
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(BEFORE CALL TO CVODE) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
 	flag = CVode(cvode_mem, time_out, y, &time_init, CV_NORMAL);
 	if (check_flag(&flag, "CVode", 1)) return(1);
+
+        /* ONLY FOR PP */
+#ifdef MOD_REACTOR
+	/* If reactor mode is activated, update time */
+        *dt_react = time_init - *time;
+        *time = time_init;
+#endif
 
 	/* Pack data to return in main routine external */
 	cudaMemcpyAsync(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost,stream);
@@ -259,26 +320,52 @@ int react(realtype *rY_in, realtype *rY_src_in,
             rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
 	}
 
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(AFTER CALL TO CVODE) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
         long int nfe;
 	flag = CVodeGetNumRhsEvals(cvode_mem, &nfe);
 
 	SUNLinSolFree(LS);
 	N_VDestroy(y);          /* Free the y vector */
 	CVodeFree(&cvode_mem);
+
 	The_Device_Arena()->free(user_data->rhoe_init);
         The_Device_Arena()->free(user_data->rhoesrc_ext);
         The_Device_Arena()->free(user_data->rYsrc);
-	The_Arena()->free(user_data->csr_row_count_d);
-	The_Arena()->free(user_data->csr_col_index_d);
-	The_Arena()->free(user_data->csr_jac_d);
-	The_Arena()->free(user_data->csr_val_d);
-	cudaFree(user_data->buffer_qr);
+
+        if (iJac_Creact == 1) {
+	    The_Arena()->free(user_data->csr_row_count_d);
+	    The_Arena()->free(user_data->csr_col_index_d);
+	    The_Arena()->free(user_data->csr_jac_d);
+	    The_Arena()->free(user_data->csr_val_d);
+
+            cusolver_status = cusolverSpDestroy(user_data->cusolverHandle);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+            cusolver_status = cusolverSpDestroyCsrqrInfo(user_data->info);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+ 
+            cudaFree(user_data->descrA);
+
+	    cudaFree(user_data->buffer_qr);
+        }
+
 	cudaFree(user_data);
 
 	N_VDestroy(atol);          /* Free the atol vector */
 
-        //cuerr = cudaStreamDestroy(stream); /* Free and cleanup the CUDA stream */    
+        //cuerr = cudaStreamDestroy(user_data->stream); /* Free and cleanup the CUDA stream */    
         //if(cuerr != cudaSuccess) { printf("Error: cudaStreamDestroy() failed\n"); return(1); }
+
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(END) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
 
 	return nfe;
 }
@@ -289,6 +376,14 @@ int react(realtype *rY_in, realtype *rY_src_in,
 static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in, 
 		void *user_data){
 
+        cudaError_t cudaStat1            = cudaSuccess;
+        size_t free_mem = 0;
+        size_t total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(beg of RHS) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
+
+        cudaError_t cuda_status = cudaSuccess;
 	/* Get Device pointers for Kernel call */
 	realtype *yvec_d      = N_VGetDeviceArrayPointer_Cuda(y_in);
 	realtype *ydot_d      = N_VGetDeviceArrayPointer_Cuda(ydot_in);
@@ -297,10 +392,13 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
         UserData udata = static_cast<CVodeUserData*>(user_data);
         udata->dt_save = t;
 
+        //printf("In cF_RHS \n");
+
 	// UV !!
 	/* GPU tests */
         const auto ec = Gpu::ExecutionConfig(udata->ncells_d[0]);   
 	amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, udata->stream>>>(
+	//amrex::launch_global<<<1,1, ec.sharedMem, udata->stream>>>(
 	[=] AMREX_GPU_DEVICE () noexcept {
 	        for (int icell = blockDim.x*blockIdx.x+threadIdx.x, stride = blockDim.x*gridDim.x;
 		icell < udata->ncells_d[0]; icell += stride) {
@@ -310,6 +408,11 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
         }); 
 	//cuda_status = cudaDeviceSynchronize();
 	//assert(cuda_status == cudaSuccess);
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(end of RHS) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
 	
 	return(0);
 }
@@ -321,6 +424,7 @@ fKernelSpec(int icell, void *user_data,
             realtype *yvec_d, realtype *ydot_d,  
             double *rhoe_init, double *rhoesrc_ext, double *rYs)
 {
+
   UserData udata = static_cast<CVodeUserData*>(user_data);
 
   EOS eos;
@@ -332,7 +436,7 @@ fKernelSpec(int icell, void *user_data,
   amrex::Real Cv_pt, rho_pt, temp_pt, nrg_pt;
 
   int offset = icell * (NUM_SPECIES + 1); 
-  
+
   /* MW CGS */
   get_mw(mw);
 
@@ -377,6 +481,12 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         cudaError_t cuda_status = cudaSuccess;
         size_t workspaceInBytes, internalDataInBytes;
         cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
+        cudaError_t cudaStat1            = cudaSuccess;
+        size_t free_mem = 0;
+        size_t total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(beg of PRECOND) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
 
         /* Get Device pointers for Kernel call */
         realtype *u_d      = N_VGetDeviceArrayPointer_Cuda(u);
@@ -396,7 +506,8 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 	    	    fKernelComputeAJ(icell, user_data, u_d, udot_d, udata->csr_val_d);
 	    	}
             }); 
-            cuda_status = cudaStreamSynchronize(udata->stream);  
+            //cuda_status = cudaStreamSynchronize(udata->stream);  
+            cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
             *jcurPtr = SUNFALSE;
         } else {
@@ -409,8 +520,8 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 	    	    fKernelComputeAJ(icell, user_data, u_d, udot_d, udata->csr_val_d);
 	    	}
             }); 
-            //cuda_status = cudaDeviceSynchronize();  
-            cuda_status = cudaStreamSynchronize(udata->stream);  
+            //cuda_status = cudaStreamSynchronize(udata->stream);  
+            cuda_status = cudaDeviceSynchronize();  
             assert(cuda_status == cudaSuccess);
             *jcurPtr = SUNTRUE;
         }
@@ -427,6 +538,15 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
                                 &workspaceInBytes);
 
         assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+	cuda_status = cudaDeviceSynchronize();
+        assert(cuda_status == cudaSuccess);
+
+        free_mem = 0;
+        total_mem = 0;
+        cudaStat1 = cudaMemGetInfo( &free_mem, &total_mem );
+        assert( cudaSuccess == cudaStat1 );
+        std::cout<<"(end of PRECOND) Free: "<< free_mem<< " Tot: "<<total_mem<<std::endl;
 
 	return(0);
 }
@@ -460,6 +580,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                                udata->ncells_d[0],
                                udata->info,
                                udata->buffer_qr);
+        assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
 
         /* Checks */
@@ -512,11 +633,13 @@ fKernelComputeAJ(int icell, void *user_data, realtype *u_d, realtype *udot_d, do
 
   EOS eos;
 
+  //printf("In fKernelComputeAJ\n");
+
   amrex::Real mw[NUM_SPECIES];
   amrex::GpuArray<amrex::Real,NUM_SPECIES> massfrac;
-  //amrex::GpuArray<amrex::Real,(NUM_SPECIES+1)*(NUM_SPECIES+1)> Jmat_pt;
   amrex::Real Jmat_pt[(NUM_SPECIES+1)*(NUM_SPECIES+1)];
-  amrex::Real Cv_pt, rho_pt, temp_pt, nrg_pt;
+  amrex::Real Jmat_pt_2[(NUM_SPECIES+1)*(NUM_SPECIES+1)];
+  amrex::Real rho_pt, temp_pt;
 
   int u_offset   = icell * (NUM_SPECIES + 1); 
   int jac_offset = icell * (udata->NNZ); 

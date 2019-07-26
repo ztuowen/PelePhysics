@@ -119,9 +119,9 @@ main (int   argc,
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
     for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 1;
+	npts[i] = 4;
     }
-    //npts[1] = 256;
+    //npts[1] = 128;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";
@@ -264,6 +264,7 @@ main (int   argc,
                             &cvode_iE, &ncells, amrex::Gpu::gpuStream());
 	    dt_incr =  dt/ndt;
             printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]); 
+            //cuda_status = cudaDeviceSynchronize();;  
         }
 
         /* Unpacking of data */
@@ -282,13 +283,12 @@ main (int   argc,
             }
         });
 
+        //cuda_status = cudaDeviceSynchronize();  
+
         cudaFree(tmp_vect);
         cudaFree(tmp_src_vect);
         cudaFree(tmp_vect_energy);
         cudaFree(tmp_src_vect_energy);
-       
-        //cuda_status = cudaStreamSynchronize(amrex::Gpu::gpuStream());  
-        cuda_status = cudaDeviceSynchronize();  
 
     }
 
