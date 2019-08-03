@@ -179,7 +179,7 @@ contains
   ! and less than one, and they must all sum to unity.
   subroutine normalize_massfracs(state)
 
-    !$acc routine seq
+    !acc routine seq
 
     use amrex_constants_module, only: ONE
     use extern_probin_module, only: small_massfrac

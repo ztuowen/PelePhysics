@@ -9,7 +9,7 @@ module eos_module
   use amrex_constants_module
   use eos_type_module
   !use fuego_chemistry
-  !use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  !use chemistry_module, only : Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
   use chemistry_module, only : Ru, chemistry_init, chemistry_initialized, spec_names, elem_names
   use fuego_module, only : ckytx, ckytx_gpu, ckhms, ckhms_gpu, ckcvms, ckcpms, ckxty, ckcvbs, ckcpbs, ckpy, ckytcr, ckums, ckrhoy, get_t_given_ey
 
@@ -24,8 +24,7 @@ module eos_module
           eos_ph, eos_th, eos_rh, eos_get_transport, eos_h, eos_deriv, &
           eos_mui, eos_rp_gpu, eos_get_activity_h
 
-  !private :: nspecies, Ru, inv_mwt
-  private :: Ru
+  private :: Ru!, inv_mwt
 
   interface
      subroutine amrex_array_init_snan (p, nelem) bind(C,name="amrex_array_init_snan")
@@ -37,25 +36,24 @@ module eos_module
 
 contains
 
-  subroutine eos_rp_gpu(rho, p, massfrac, e, gam1, cs, nspecies)
+  subroutine eos_rp_gpu(rho, p, massfrac, e, gam1, cs)
 
     !$acc routine(eos_rp_gpu) seq
     !$acc routine(ckums) seq
     !$acc routine(ckcvms) seq
 
     USE chemistry_module, ONLY: Ru
+    USE network, ONLY: nspecies
     USE fuego_module, ONLY: ckcvms, ckums
 
     implicit none
 
-    double precision, intent(in) :: rho, p, massfrac(9)
+    double precision, intent(in) :: rho, p, massfrac(nspecies)
     double precision, intent(out) :: e, gam1, cs
-    integer, intent(in) :: nspecies
 
     double precision :: wbar, T, cv
-    !double precision :: ei(nspecies), cvi(nspecies) !Does not work with OpenACC. Why?
-    double precision :: ei(9), cvi(9)
-    double precision, parameter :: inv_mwt(9) = (/ &
+    double precision :: ei(nspecies), cvi(nspecies)
+    double precision, parameter :: inv_mwt(nspecies) = (/ &
         1.d0 / 2.015940d0,  & ! H2
         1.d0 / 31.998800d0,  & ! O2
         1.d0 / 18.015340d0,  & ! H2O
@@ -282,15 +280,16 @@ contains
 !
 !  end subroutine eos_ytx_vec
 
-  subroutine eos_ytx_vec_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, nspecies, qfs, qvar)
+  subroutine eos_ytx_vec_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, qfs, qvar)
 
     !$acc routine(eos_ytx_vec_gpu) gang
     !$acc routine(ckytx_gpu) seq
 
+    use network, only : nspecies
+
     implicit none
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
-    integer, intent(in) :: nspecies
     integer, intent(in) :: qvar
     integer, intent(in) :: qfs
     double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
@@ -381,15 +380,17 @@ contains
 !
 !  end subroutine eos_hi_vec
 
-  subroutine eos_hi_vec_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, nspecies, qtemp, qvar, qfs)
+  subroutine eos_hi_vec_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, qtemp, qvar, qfs)
 
     !$acc routine(eos_hi_vec_gpu) gang
     !$acc routine(ckhms_gpu) seq
 
+    use network, only : nspecies
+
     implicit none
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
-    integer, intent(in) :: nspecies, qtemp, qvar, qfs
+    integer, intent(in) :: qtemp, qvar, qfs
     double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
     double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspecies) :: hii
     

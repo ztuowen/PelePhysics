@@ -64,12 +64,11 @@ contains
        lam,        lam_lo,lam_hi) &
        bind(C, name="get_transport_coeffs")
 
-    !use network, only: nspecies
+    use network, only: nspecies
     !use eos_module
 
     implicit none
 
-    integer, parameter :: nspecies=9
     integer         , intent(in   ) :: gpustream
     integer         , intent(in   ) ::     lo(3),    hi(3)
     integer         , intent(in   ) ::  mf_lo(3), mf_hi(3)
