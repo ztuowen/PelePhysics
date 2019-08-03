@@ -71,7 +71,7 @@ contains
 
   subroutine chemistry_close()
     use fuego_module, only : ckfinalize
-    deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
+    !deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
     call ckfinalize()
   end subroutine chemistry_close
 
