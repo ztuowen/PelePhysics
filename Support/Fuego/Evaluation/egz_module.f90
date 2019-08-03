@@ -10,9 +10,9 @@ module egz_module
   double precision, parameter :: Patmos = 1.01325d6
   integer, parameter :: no_gpu = 4
   integer, parameter :: nfit = 7
-  integer, parameter :: nspec_gpu = 9
+  integer, parameter :: nspecies_gpu = 9
   integer, parameter :: iflag_gpu = 5
-  !$acc declare create(ru,patmos,iflag_gpu,no_gpu,nfit,nspec_gpu)
+  !$acc declare create(ru,patmos,iflag_gpu,no_gpu,nfit,nspecies_gpu)
 
   logical, save :: use_bulk_visc = .true.
   integer, save :: iflag = -1
@@ -291,25 +291,25 @@ contains
   subroutine EGZPAR_gpu(T, X, cpms, wt_gpu, eps_gpu, zrot_gpu, nlin_gpu, cfe_gpu, cfd_gpu, fita_gpu, xtr_gpu, ytr_gpu, aux_gpu, cxi_gpu, cint_gpu, dlt_gpu, eta_gpu, etalg_gpu, bin_gpu, A_gpu)
     !$acc routine seq
     implicit none
-    double precision, intent(in) :: T, X(nspec_gpu)
-    double precision, intent(in) :: cpms(nspec_gpu)
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: eps_gpu(nspec_gpu)
-    double precision, intent(in) :: zrot_gpu(nspec_gpu)
-    integer, intent(in) :: nlin_gpu(nspec_gpu)
-    double precision, intent(in) :: cfe_gpu(no_gpu,nspec_gpu)
-    double precision, intent(in) :: cfd_gpu(no_gpu,nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
-    double precision, intent(out) :: xtr_gpu(nspec_gpu)
-    double precision, intent(out) :: ytr_gpu(nspec_gpu)
-    double precision, intent(out) :: aux_gpu(nspec_gpu)
-    double precision, intent(out) :: cxi_gpu(nspec_gpu)
-    double precision, intent(out) :: cint_gpu(nspec_gpu)
+    double precision, intent(in) :: T, X(nspecies_gpu)
+    double precision, intent(in) :: cpms(nspecies_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: eps_gpu(nspecies_gpu)
+    double precision, intent(in) :: zrot_gpu(nspecies_gpu)
+    integer, intent(in) :: nlin_gpu(nspecies_gpu)
+    double precision, intent(in) :: cfe_gpu(no_gpu,nspecies_gpu)
+    double precision, intent(in) :: cfd_gpu(no_gpu,nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: fita_gpu(nfit,nspecies_gpu,nspecies_gpu)
+    double precision, intent(out) :: xtr_gpu(nspecies_gpu)
+    double precision, intent(out) :: ytr_gpu(nspecies_gpu)
+    double precision, intent(out) :: aux_gpu(nspecies_gpu)
+    double precision, intent(out) :: cxi_gpu(nspecies_gpu)
+    double precision, intent(out) :: cint_gpu(nspecies_gpu)
     double precision, intent(out) :: dlt_gpu(6)
-    double precision, intent(out) :: eta_gpu(nspec_gpu)
-    double precision, intent(out) :: etalg_gpu(nspec_gpu)
-    double precision, intent(out) :: bin_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(out) :: A_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: eta_gpu(nspecies_gpu)
+    double precision, intent(out) :: etalg_gpu(nspecies_gpu)
+    double precision, intent(out) :: bin_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(out) :: A_gpu(nspecies_gpu,nspecies_gpu)
 
     integer :: n
     double precision :: aaa, sumtr, wwtr
@@ -321,14 +321,14 @@ contains
 !-----------------------------------------------------------------------
 
       sumtr = 0.d0
-      do n=1,nspec_gpu
+      do n=1,nspecies_gpu
          sumtr = sumtr + X(n)
       enddo
 
-      aaa = sumtr / dble(nspec_gpu)
+      aaa = sumtr / dble(nspecies_gpu)
 
       wwtr = 0.0d0
-      do n=1,nspec_gpu
+      do n=1,nspecies_gpu
          xtr_gpu(n) = X(n) + sss*(aaa - X(n))
          wwtr = wwtr + xtr_gpu(n) * wt_gpu(n)
       end do
@@ -337,11 +337,11 @@ contains
 !-----------------------------------------------------------------------
 
       aaa = 0.d0
-      do n=1,nspec_gpu
+      do n=1,nspecies_gpu
          ytr_gpu(n) = xtr_gpu(n) * wt_gpu(n) / wwtr
          aaa = aaa + ytr_gpu(n)
       end do
-      do n=1,nspec_gpu
+      do n=1,nspecies_gpu
          aux_gpu(n) = aaa - ytr_gpu(n)
       end do
 
@@ -351,21 +351,21 @@ contains
     !$acc routine seq
     implicit none
     double precision, intent(in) :: T
-    double precision, intent(in) :: cpms(nspec_gpu)
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: eps_gpu(nspec_gpu)
-    double precision, intent(in) :: zrot_gpu(nspec_gpu)
-    integer, intent(in) :: nlin_gpu(nspec_gpu)
-    double precision, intent(in) :: cfe_gpu(no_gpu,nspec_gpu)
-    double precision, intent(in) :: cfd_gpu(no_gpu,nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
-    double precision, intent(out) :: cxi_gpu(nspec_gpu)
-    double precision, intent(out) :: cint_gpu(nspec_gpu)
+    double precision, intent(in) :: cpms(nspecies_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: eps_gpu(nspecies_gpu)
+    double precision, intent(in) :: zrot_gpu(nspecies_gpu)
+    integer, intent(in) :: nlin_gpu(nspecies_gpu)
+    double precision, intent(in) :: cfe_gpu(no_gpu,nspecies_gpu)
+    double precision, intent(in) :: cfd_gpu(no_gpu,nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: fita_gpu(nfit,nspecies_gpu,nspecies_gpu)
+    double precision, intent(out) :: cxi_gpu(nspecies_gpu)
+    double precision, intent(out) :: cint_gpu(nspecies_gpu)
     double precision, intent(out) :: dlt_gpu(6)
-    double precision, intent(out) :: eta_gpu(nspec_gpu)
-    double precision, intent(out) :: etalg_gpu(nspec_gpu)
-    double precision, intent(out) :: bin_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(out) :: A_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: eta_gpu(nspecies_gpu)
+    double precision, intent(out) :: etalg_gpu(nspecies_gpu)
+    double precision, intent(out) :: bin_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(out) :: A_gpu(nspecies_gpu,nspecies_gpu)
 
     integer :: m, n
     double precision :: tmp, crot
@@ -380,14 +380,14 @@ contains
     dlt_gpu(5) = dlt_gpu(4) * dlt_gpu(1)
     dlt_gpu(6) = dlt_gpu(5) * dlt_gpu(1)
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        etalg_gpu(n) = cfe_gpu(1,n) + cfe_gpu(2,n)*dlt_gpu(1) + cfe_gpu(3,n)*dlt_gpu(2) + cfe_gpu(4,n)*dlt_gpu(3)
        eta_gpu(n) = exp(etalg_gpu(n))
     end do
 
     !if (iflag_gpu .le. 1) return
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        do m=1,n-1
           tmp = -(cfd_gpu(1,m,n)+cfd_gpu(2,m,n)*dlt_gpu(1)+cfd_gpu(3,m,n)*dlt_gpu(2) &
                + cfd_gpu(4,m,n)*dlt_gpu(3))
@@ -400,7 +400,7 @@ contains
     !if (iflag_gpu .le. 2) return
 
     !if (iflag_gpu.eq.3 .or. iflag_gpu.eq.5) then
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           do m=1,n-1
              A_gpu(m,n) = fita_gpu(1,m,n) + fita_gpu(2,m,n)*dlt_gpu(1) + fita_gpu(3,m,n)*dlt_gpu(2) &
                   + fita_gpu(4,m,n)*dlt_gpu(3) + fita_gpu(5,m,n)*dlt_gpu(4) &
@@ -419,7 +419,7 @@ contains
 !         AND ALSO THE ROTATIONAL AND INTERNAL PARTS OF SPECIFIC HEAT
 !-----------------------------------------------------------------------
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        select case(nlin_gpu(n))
        case (0)
           crot = 0.d0
@@ -455,17 +455,17 @@ contains
     implicit none
     double precision, intent(in) :: T
     double precision, intent(out) :: mu
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: xtr_gpu(nspec_gpu)
-    double precision, intent(inout) :: beta_gpu(nspec_gpu)
-    double precision, intent(in) :: eta_gpu(nspec_gpu)
-    double precision, intent(inout) :: rn_gpu(nspec_gpu)
-    double precision, intent(inout) :: an_gpu(nspec_gpu)
-    double precision, intent(inout) :: zn_gpu(nspec_gpu)
-    double precision, intent(inout) :: dmi_gpu(nspec_gpu)
-    double precision, intent(inout) :: G_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(inout) :: bin_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(inout) :: A_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: xtr_gpu(nspecies_gpu)
+    double precision, intent(inout) :: beta_gpu(nspecies_gpu)
+    double precision, intent(in) :: eta_gpu(nspecies_gpu)
+    double precision, intent(inout) :: rn_gpu(nspecies_gpu)
+    double precision, intent(inout) :: an_gpu(nspecies_gpu)
+    double precision, intent(inout) :: zn_gpu(nspecies_gpu)
+    double precision, intent(inout) :: dmi_gpu(nspecies_gpu)
+    double precision, intent(inout) :: G_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(inout) :: bin_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(inout) :: A_gpu(nspecies_gpu,nspecies_gpu)
 
     integer :: n
 
@@ -476,7 +476,7 @@ contains
     call EGZCG1_gpu(1, rn_gpu, an_gpu, zn_gpu, dmi_gpu, G_gpu)
 
     mu = 0.d0
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        mu = mu + an_gpu(n) * beta_gpu(n)
     end do
   end subroutine EGZE3_gpu
@@ -485,13 +485,13 @@ contains
     !$acc routine seq
     implicit none
     double precision, intent(in) :: T
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: xtr_gpu(nspec_gpu)
-    double precision, intent(inout) :: beta_gpu(nspec_gpu)
-    double precision, intent(in) :: eta_gpu(nspec_gpu)
-    double precision, intent(inout) :: G_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: bin_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: A_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: xtr_gpu(nspecies_gpu)
+    double precision, intent(inout) :: beta_gpu(nspecies_gpu)
+    double precision, intent(in) :: eta_gpu(nspecies_gpu)
+    double precision, intent(inout) :: G_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: bin_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: A_gpu(nspecies_gpu,nspecies_gpu)
 
     integer ::  m, n
     double precision :: FAC, CCC, wtfac, wtmn, wtnm, aaa
@@ -501,13 +501,13 @@ contains
     FAC = (6.0D0 * RU / ( 5.0D0 * PATMOS )) * T
     CCC = 5.0D0 / 3.0D0
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        G_gpu(n,n) = xtr_gpu(n) * xtr_gpu(n) / eta_gpu(n)
        ! EVALUATE THE RHS BETA
        beta_gpu(n) = xtr_gpu(n)
     end do
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        do m=1,n-1
           wtfac = 1.d0/(wt_gpu(m) + wt_gpu(n))
           wtmn = wt_gpu(m)*(1.d0/wt_gpu(n))
@@ -527,19 +527,19 @@ contains
     !$acc routine seq
     implicit none
     integer, intent(in) :: itmax
-    double precision, intent(inout) :: rn_gpu(nspec_gpu)
-    double precision, intent(inout) :: an_gpu(nspec_gpu)
-    double precision, intent(inout) :: zn_gpu(nspec_gpu)
-    double precision, intent(inout) :: dmi_gpu(nspec_gpu)
-    double precision, intent(in) :: G_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(inout) :: rn_gpu(nspecies_gpu)
+    double precision, intent(inout) :: an_gpu(nspecies_gpu)
+    double precision, intent(inout) :: zn_gpu(nspecies_gpu)
+    double precision, intent(inout) :: dmi_gpu(nspecies_gpu)
+    double precision, intent(in) :: G_gpu(nspecies_gpu,nspecies_gpu)
 
     integer :: niter,  n
-    double precision :: betan, aaa, bbb, ccc, temp(nspec_gpu)
+    double precision :: betan, aaa, bbb, ccc, temp(nspecies_gpu)
 
     aaa = 0.d0
     betan = 0.d0
 
-    do n = 1, nspec_gpu
+    do n = 1, nspecies_gpu
        an_gpu(n) = 0.0d0
        zn_gpu(n) = 0.0d0
        dmi_gpu(n) = 1.0D0 / G_gpu(n,n)
@@ -547,18 +547,18 @@ contains
     enddo
 
     do niter=1, itmax
-       do n=1, nspec_gpu
+       do n=1, nspecies_gpu
           zn_gpu(n) = dmi_gpu(n)*rn_gpu(n) + betan*zn_gpu(n)
        end do
 
        CALL EGZAXS_gpu(G_gpu, zn_gpu, temp)
 
        bbb = 0.d0
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           bbb = bbb + zn_gpu(n) * temp(n)
        end do
 
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           an_gpu(n) = an_gpu(n) + aaa/bbb*zn_gpu(n)
           rn_gpu(n) = rn_gpu(n) - aaa/bbb*temp(n)
        end do
@@ -566,7 +566,7 @@ contains
        if (niter .eq. itmax) exit
 
        ccc = 0.d0
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           ccc = ccc + dmi_gpu(n) * rn_gpu(n)*rn_gpu(n)
        end do
 
@@ -580,14 +580,14 @@ contains
   subroutine EGZAXS_gpu(AA, X, B) ! B = AA.X, AA is symmetric.
     !$acc routine seq
     implicit none
-    double precision, intent(in) :: AA(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: X(nspec_gpu)
-    double precision, intent(out) :: B(nspec_gpu)
+    double precision, intent(in) :: AA(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: X(nspecies_gpu)
+    double precision, intent(out) :: B(nspecies_gpu)
     integer ::  m, n
     B = 0.d0
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        B(n) = 0.d0
-       do m=1,nspec_gpu
+       do m=1,nspecies_gpu
           B(n) = B(n) + AA(m,n) * X(m)
        end do
     end do
@@ -599,15 +599,15 @@ contains
     implicit none
     double precision, intent(in) :: T
     double precision, intent(out) :: VV
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: xtr_gpu(nspec_gpu)
-    double precision, intent(in) :: cxi_gpu(nspec_gpu)
-    double precision, intent(in) :: cint_gpu(nspec_gpu)
-    double precision, intent(inout) :: beta_gpu(nspec_gpu)
-    double precision, intent(in) :: eta_gpu(nspec_gpu)
-    double precision, intent(inout) :: G_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: bin_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: A_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: xtr_gpu(nspecies_gpu)
+    double precision, intent(in) :: cxi_gpu(nspecies_gpu)
+    double precision, intent(in) :: cint_gpu(nspecies_gpu)
+    double precision, intent(inout) :: beta_gpu(nspecies_gpu)
+    double precision, intent(in) :: eta_gpu(nspecies_gpu)
+    double precision, intent(inout) :: G_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: bin_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: A_gpu(nspecies_gpu,nspecies_gpu)
     
     integer ::  m, n
     double precision :: ccc, wtfac, bb
@@ -619,16 +619,16 @@ contains
     !end if
 
     ccc = 0.0d0
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        ccc = ccc + xtr_gpu(n)*cint_gpu(n)
     end do
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        G_gpu(n,n) = 4.d0*cxi_gpu(n)/eta_gpu(n)*xtr_gpu(n)*xtr_gpu(n)
        beta_gpu(n) = -xtr_gpu(n) * cint_gpu(n) / (ccc+1.5d0)          
     end do
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        do m=1,n-1
           wtfac = (1.d0/wt_gpu(m)) + (1.d0/wt_gpu(n))
           bb = xtr_gpu(m)*xtr_gpu(n)*bin_gpu(m,n)*denfac*T*A_gpu(m,n)*wtfac
@@ -640,7 +640,7 @@ contains
     end do
 
     VV = 0.d0
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        if (cxi_gpu(n) .eq. 0.d0) then
           VV = VV + beta_gpu(n) * beta_gpu(n) 
        else
@@ -654,9 +654,9 @@ contains
     !$acc routine seq
     implicit none
     double precision, intent(in) :: alpha
-    double precision, intent(in) :: X(nspec_gpu)
+    double precision, intent(in) :: X(nspecies_gpu)
     double precision, intent(out) :: con
-    double precision, intent(in) :: cfl_gpu(no_gpu,nspec_gpu)
+    double precision, intent(in) :: cfl_gpu(no_gpu,nspecies_gpu)
     double precision, intent(in) :: dlt_gpu(6)
 
     integer ::  n
@@ -664,14 +664,14 @@ contains
 
     asum = 0.d0
     if (alpha .eq. 0.d0) then
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           asum = asum + X(n)*(cfl_gpu(1,n) + cfl_gpu(2,n)*dlt_gpu(1) &
                + cfl_gpu(3,n)*dlt_gpu(2) + cfl_gpu(4,n)*dlt_gpu(3))
        end do
        con = exp(asum) 
     else
        alpha1 = 1.d0 / alpha
-       do n=1,nspec_gpu
+       do n=1,nspecies_gpu
           asum = asum + X(n)*exp(alpha*(cfl_gpu(1,n) + cfl_gpu(2,n)*dlt_gpu(1) &
                + cfl_gpu(3,n)*dlt_gpu(2) + cfl_gpu(4,n)*dlt_gpu(3)))
        end do
@@ -691,25 +691,25 @@ contains
     !$acc routine seq
     implicit none
     double precision, intent(in) :: T
-    double precision, intent(out) :: D(nspec_gpu)
-    double precision, intent(in) :: wt_gpu(nspec_gpu)
-    double precision, intent(in) :: xtr_gpu(nspec_gpu)
-    double precision, intent(in) :: aux_gpu(nspec_gpu)
-    double precision, intent(in) :: bin_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: D(nspecies_gpu)
+    double precision, intent(in) :: wt_gpu(nspecies_gpu)
+    double precision, intent(in) :: xtr_gpu(nspecies_gpu)
+    double precision, intent(in) :: aux_gpu(nspecies_gpu)
+    double precision, intent(in) :: bin_gpu(nspecies_gpu,nspecies_gpu)
 
     integer ::  m, n
     double precision :: fac
 
     D = 0.d0
-    do n=1,nspec_gpu
-       do m=1,nspec_gpu
+    do n=1,nspecies_gpu
+       do m=1,nspecies_gpu
           D(m) = D(m) + xtr_gpu(n)*bin_gpu(m,n)
        end do
     end do
 
     fac = (Patmos/Ru) / T
 
-    do n=1,nspec_gpu
+    do n=1,nspecies_gpu
        D(n) = wt_gpu(n) * fac * aux_gpu(n) / D(n)
     end do
 
@@ -719,8 +719,8 @@ contains
     !$acc routine seq
     implicit none
     double precision, intent(in) :: FA0(nfit)
-    double precision, intent(out) :: FA(nfit,nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: eps2_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: FA(nfit,nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: eps2_gpu(nspecies_gpu,nspecies_gpu)
     integer i,j,k,l,m,mm
     double precision :: SUMA, prod
     DO J = 1, NS
@@ -752,21 +752,21 @@ contains
   subroutine LEVEPS_gpu(eps_gpu, eps2_gpu, dip_gpu, pol_gpu, sig_gpu)
     !$acc routine seq
     implicit none
-    double precision, intent(in) :: eps_gpu(nspec_gpu)
-    double precision, intent(inout) :: eps2_gpu(nspec_gpu,nspec_gpu)
-    double precision, intent(in) :: dip_gpu(nspec_gpu)
-    double precision, intent(in) :: pol_gpu(nspec_gpu)
-    double precision, intent(in) :: sig_gpu(nspec_gpu)
+    double precision, intent(in) :: eps_gpu(nspecies_gpu)
+    double precision, intent(inout) :: eps2_gpu(nspecies_gpu,nspecies_gpu)
+    double precision, intent(in) :: dip_gpu(nspecies_gpu)
+    double precision, intent(in) :: pol_gpu(nspecies_gpu)
+    double precision, intent(in) :: sig_gpu(nspecies_gpu)
 
     double precision, parameter :: pi = 3.1415926535D0, &
          fac = 1.0D-12, dipmin = 1.0D-20, boltz = 1.38056D-16
     integer :: j, k
-    double precision :: rooteps(nspec_gpu)
+    double precision :: rooteps(nspecies_gpu)
 
-    do j=1,nspec_gpu
+    do j=1,nspecies_gpu
        rooteps(j) = sqrt(EPS_gpu(j))
     end do
-    do j=1,nspec_gpu
+    do j=1,nspecies_gpu
        do k=1,j
           IF((DIP_gpu(J).LT.DIPMIN .AND. DIP_gpu(K).GT.DIPMIN)) THEN
 !-----------------------------------------------------------------------
@@ -793,8 +793,8 @@ contains
           eps2_gpu(K,J) = log(rooteps(j)*rooteps(k)* eps2_gpu(K,J)*eps2_gpu(K,J))
        end do
     end do
-    do j=1,nspec_gpu
-       do k=j+1,nspec_gpu
+    do j=1,nspecies_gpu
+       do k=j+1,nspecies_gpu
           eps2_gpu(k,j) = eps2_gpu(j,k)
        end do
     end do
@@ -805,19 +805,19 @@ contains
     !$acc routine seq
     USE fuego_module, ONLY: egtransetWT, egtransetEPS, egtransetZROT, egtransetNLIN, egtransetCOFETA, egtransetCOFLAM, egtransetCOFD, egtransetDIP, egtransetSIG, egtransetPOL
     implicit none
-    double precision, intent(out) :: wt_gpu(nspec_gpu)
-    double precision, intent(out) :: eps_gpu(nspec_gpu)
-    double precision, intent(out) :: sig_gpu(nspec_gpu)
-    double precision, intent(out) :: dip_gpu(nspec_gpu)
-    double precision, intent(out) :: pol_gpu(nspec_gpu)
-    double precision, intent(out) :: zrot_gpu(nspec_gpu)
-    integer, intent(out) :: nlin_gpu(nspec_gpu)
-    double precision, intent(out) :: cfe_gpu(no_gpu,nspec_gpu)
-    double precision, intent(out) :: cfl_gpu(no_gpu,nspec_gpu)
-    double precision, intent(out) :: cfd_gpu(no_gpu,nspec_gpu,nspec_gpu)
-    double precision, intent(out) :: fita_gpu(nfit,nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: wt_gpu(nspecies_gpu)
+    double precision, intent(out) :: eps_gpu(nspecies_gpu)
+    double precision, intent(out) :: sig_gpu(nspecies_gpu)
+    double precision, intent(out) :: dip_gpu(nspecies_gpu)
+    double precision, intent(out) :: pol_gpu(nspecies_gpu)
+    double precision, intent(out) :: zrot_gpu(nspecies_gpu)
+    integer, intent(out) :: nlin_gpu(nspecies_gpu)
+    double precision, intent(out) :: cfe_gpu(no_gpu,nspecies_gpu)
+    double precision, intent(out) :: cfl_gpu(no_gpu,nspecies_gpu)
+    double precision, intent(out) :: cfd_gpu(no_gpu,nspecies_gpu,nspecies_gpu)
+    double precision, intent(out) :: fita_gpu(nfit,nspecies_gpu,nspecies_gpu)
     double precision, intent(in) :: fita0_gpu(nfit)
-    double precision, intent(out) :: eps2_gpu(nspec_gpu,nspec_gpu)
+    double precision, intent(out) :: eps2_gpu(nspecies_gpu,nspecies_gpu)
     call egtransetWT(wt_gpu)
     call egtransetEPS(eps_gpu)
     call egtransetSIG(sig_gpu)

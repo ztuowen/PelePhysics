@@ -64,12 +64,12 @@ contains
        lam,        lam_lo,lam_hi) &
        bind(C, name="get_transport_coeffs")
 
-    !use network, only: nspec
+    !use network, only: nspecies
     !use eos_module
 
     implicit none
 
-    integer, parameter :: nspec=9
+    integer, parameter :: nspecies=9
     integer         , intent(in   ) :: gpustream
     integer         , intent(in   ) ::     lo(3),    hi(3)
     integer         , intent(in   ) ::  mf_lo(3), mf_hi(3)
@@ -87,49 +87,49 @@ contains
     real (amrex_real), intent(inout) :: xi(xi_lo(1):xi_hi(1),xi_lo(2):xi_hi(2),xi_lo(3):xi_hi(3))
     real (amrex_real), intent(inout) :: lam(lam_lo(1):lam_hi(1),lam_lo(2):lam_hi(2),lam_lo(3):lam_hi(3))
 
-    double precision :: trv_eos_state_massfrac(nspec)
-    double precision :: trv_eos_state_molefrac(nspec)
-    double precision :: trv_eos_state_cpi(nspec)
-    double precision :: trv_ddiag(nspec)
+    double precision :: trv_eos_state_massfrac(nspecies)
+    double precision :: trv_eos_state_molefrac(nspecies)
+    double precision :: trv_eos_state_cpi(nspecies)
+    double precision :: trv_ddiag(nspecies)
     double precision :: trv_eos_state_t
     double precision :: trv_eos_state_rho
     double precision :: trv_mu
     double precision :: trv_xi
     double precision :: trv_lam
     integer :: trv_npts
-    double precision :: wt(nspec)
-    double precision :: eps(nspec)
-    double precision :: dip(nspec)
-    double precision :: pol(nspec)
-    double precision :: sig(nspec)
-    double precision :: zrot(nspec)
-    integer :: nlin(nspec)
+    double precision :: wt(nspecies)
+    double precision :: eps(nspecies)
+    double precision :: dip(nspecies)
+    double precision :: pol(nspecies)
+    double precision :: sig(nspecies)
+    double precision :: zrot(nspecies)
+    integer :: nlin(nspecies)
     integer, parameter :: no=4
-    double precision :: cfe(no,nspec)
-    double precision :: cfl(no,nspec)
-    double precision :: cfd(no,nspec,nspec)
+    double precision :: cfe(no,nspecies)
+    double precision :: cfl(no,nspecies)
+    double precision :: cfd(no,nspecies,nspecies)
     integer, parameter :: nfit=7
-    double precision :: fita(nfit,nspec,nspec)
+    double precision :: fita(nfit,nspecies,nspecies)
     double precision :: fita0(nfit) = (/ &
      .1106910525D+01, -.7065517161D-02, -.1671975393D-01, .1188708609D-01, &
      .7569367323D-03, -.1313998345D-02,  .1720853282D-03 /)
-    double precision :: eps2(nspec,nspec)
-    double precision :: xtr(nspec)
-    double precision :: ytr(nspec)
-    double precision :: aux(nspec)
-    double precision :: cxi(nspec)
-    double precision :: cint(nspec)
+    double precision :: eps2(nspecies,nspecies)
+    double precision :: xtr(nspecies)
+    double precision :: ytr(nspecies)
+    double precision :: aux(nspecies)
+    double precision :: cxi(nspecies)
+    double precision :: cint(nspecies)
     double precision :: dlt(6)
-    double precision :: beta(nspec)
-    double precision :: eta(nspec)
-    double precision :: etalg(nspec)
-    double precision :: rn(nspec)
-    double precision :: an(nspec)
-    double precision :: zn(nspec)
-    double precision :: dmi(nspec)
-    double precision :: g(nspec,nspec)
-    double precision :: bin(nspec,nspec)
-    double precision :: a(nspec,nspec)
+    double precision :: beta(nspecies)
+    double precision :: eta(nspecies)
+    double precision :: etalg(nspecies)
+    double precision :: rn(nspecies)
+    double precision :: an(nspecies)
+    double precision :: zn(nspecies)
+    double precision :: dmi(nspecies)
+    double precision :: g(nspecies,nspecies)
+    double precision :: bin(nspecies,nspecies)
+    double precision :: a(nspecies,nspecies)
 
     !! local variables
     integer      :: i, j, k, n, np, lo1, lo2, lo3, hi1, hi2, hi3
@@ -148,7 +148,7 @@ contains
     !   do j = lo(2),hi(2)
 
     !      do i=1,np
-    !         coeff%eos_state(i)%massfrac(1:nspec) = massfrac(lo(1)+i-1,j,k,1:nspec)
+    !         coeff%eos_state(i)%massfrac(1:nspecies) = massfrac(lo(1)+i-1,j,k,1:nspecies)
     !      end do
 
     !      do i=lo(1),hi(1)
@@ -163,7 +163,7 @@ contains
     !         xi(i,j,k)  = coeff %  xi(i-lo(1)+1)
     !         lam(i,j,k) = coeff % lam(i-lo(1)+1)
     !      end do
-    !      do n=1,nspec
+    !      do n=1,nspecies
     !         do i=lo(1),hi(1)
     !            D(i,j,k,n) = coeff % Ddiag(i-lo(1)+1,n)
     !         end do
@@ -191,19 +191,19 @@ contains
     do k = lo3,hi3
        do j = lo2,hi2
           do i = lo1,hi1
-             do n=1,nspec
+             do n=1,nspecies
                 trv_eos_state_massfrac(n) = massfrac(i,j,k,n)
              end do
              trv_eos_state_T = temperature(i,j,k)
              trv_eos_state_rho = density(i,j,k)
 
-             call actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspec, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, fita0, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
+             call actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspecies, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, fita0, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
 
              mu(i,j,k)  = trv_mu
              xi(i,j,k)  = trv_xi
              lam(i,j,k) = trv_lam
 
-             do n=1,nspec
+             do n=1,nspecies
                 D(i,j,k,n) = trv_Ddiag(n)
              end do
           end do

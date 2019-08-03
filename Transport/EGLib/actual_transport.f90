@@ -129,47 +129,47 @@ contains
   end subroutine actual_transport
 
 
-  subroutine actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspec, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, eps2, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
+  subroutine actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspecies, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, eps2, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
 
     !$acc routine seq
 
-    double precision, intent(in) :: trv_eos_state_massfrac(nspec)
-    double precision, intent(inout) :: trv_eos_state_molefrac(nspec)
+    double precision, intent(in) :: trv_eos_state_massfrac(nspecies)
+    double precision, intent(inout) :: trv_eos_state_molefrac(nspecies)
     double precision, intent(in) :: trv_eos_state_T
     double precision, intent(in) :: trv_eos_state_rho
-    double precision, intent(inout) :: trv_eos_state_cpi(nspec)
+    double precision, intent(inout) :: trv_eos_state_cpi(nspecies)
     double precision, intent(inout) :: trv_mu
     double precision, intent(inout) :: trv_xi
     double precision, intent(inout) :: trv_lam
-    double precision, intent(inout) :: trv_ddiag(nspec)
+    double precision, intent(inout) :: trv_ddiag(nspecies)
     integer, intent(in) :: no
-    integer, intent(in) :: nspec
+    integer, intent(in) :: nspecies
     integer, intent(in) :: nfit
-    double precision, intent(in) :: wt(nspec)
-    double precision, intent(in) :: eps(nspec)
-    double precision, intent(in) :: zrot(nspec)
-    integer, intent(in) :: nlin(nspec)
-    double precision, intent(in) :: cfe(no,nspec)
-    double precision, intent(in) :: cfl(no,nspec)
-    double precision, intent(in) :: cfd(no,nspec,nspec)
-    double precision, intent(in) :: fita(nfit,nspec,nspec)
-    double precision, intent(in) :: eps2(nspec,nspec)
-    double precision, intent(inout) :: xtr(nspec)
-    double precision, intent(inout) :: ytr(nspec)
-    double precision, intent(inout) :: aux(nspec)
-    double precision, intent(inout) :: cxi(nspec)
-    double precision, intent(inout) :: cint(nspec)
+    double precision, intent(in) :: wt(nspecies)
+    double precision, intent(in) :: eps(nspecies)
+    double precision, intent(in) :: zrot(nspecies)
+    integer, intent(in) :: nlin(nspecies)
+    double precision, intent(in) :: cfe(no,nspecies)
+    double precision, intent(in) :: cfl(no,nspecies)
+    double precision, intent(in) :: cfd(no,nspecies,nspecies)
+    double precision, intent(in) :: fita(nfit,nspecies,nspecies)
+    double precision, intent(in) :: eps2(nspecies,nspecies)
+    double precision, intent(inout) :: xtr(nspecies)
+    double precision, intent(inout) :: ytr(nspecies)
+    double precision, intent(inout) :: aux(nspecies)
+    double precision, intent(inout) :: cxi(nspecies)
+    double precision, intent(inout) :: cint(nspecies)
     double precision, intent(inout) :: dlt(6)
-    double precision, intent(inout) :: beta(nspec)
-    double precision, intent(inout) :: eta(nspec)
-    double precision, intent(inout) :: etalg(nspec)
-    double precision, intent(inout) :: rn(nspec)
-    double precision, intent(inout) :: an(nspec)
-    double precision, intent(inout) :: zn(nspec)
-    double precision, intent(inout) :: dmi(nspec)
-    double precision, intent(inout) :: g(nspec,nspec)
-    double precision, intent(inout) :: bin(nspec,nspec)
-    double precision, intent(inout) :: a(nspec,nspec)
+    double precision, intent(inout) :: beta(nspecies)
+    double precision, intent(inout) :: eta(nspecies)
+    double precision, intent(inout) :: etalg(nspecies)
+    double precision, intent(inout) :: rn(nspecies)
+    double precision, intent(inout) :: an(nspecies)
+    double precision, intent(inout) :: zn(nspecies)
+    double precision, intent(inout) :: dmi(nspecies)
+    double precision, intent(inout) :: g(nspecies,nspecies)
+    double precision, intent(inout) :: bin(nspecies,nspecies)
+    double precision, intent(inout) :: a(nspecies,nspecies)
 
     !if (iflag > 3) then 
        call eos_cpi_gpu(trv_eos_state_T, trv_eos_state_cpi(:))

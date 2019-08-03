@@ -37,7 +37,7 @@ module eos_module
 
 contains
 
-  subroutine eos_rp_gpu(rho, p, massfrac, e, gam1, cs, nspec)
+  subroutine eos_rp_gpu(rho, p, massfrac, e, gam1, cs, nspecies)
 
     !$acc routine(eos_rp_gpu) seq
     !$acc routine(ckums) seq
@@ -50,10 +50,10 @@ contains
 
     double precision, intent(in) :: rho, p, massfrac(9)
     double precision, intent(out) :: e, gam1, cs
-    integer, intent(in) :: nspec
+    integer, intent(in) :: nspecies
 
     double precision :: wbar, T, cv
-    !double precision :: ei(nspec), cvi(nspec) !Does not work with OpenACC. Why?
+    !double precision :: ei(nspecies), cvi(nspecies) !Does not work with OpenACC. Why?
     double precision :: ei(9), cvi(9)
     double precision, parameter :: inv_mwt(9) = (/ &
         1.d0 / 2.015940d0,  & ! H2
@@ -282,7 +282,7 @@ contains
 !
 !  end subroutine eos_ytx_vec
 
-  subroutine eos_ytx_vec_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, nspec, qfs, qvar)
+  subroutine eos_ytx_vec_gpu(q, x, lo1, lo2, lo3, hi1, hi2, hi3, nspecies, qfs, qvar)
 
     !$acc routine(eos_ytx_vec_gpu) gang
     !$acc routine(ckytx_gpu) seq
@@ -290,11 +290,11 @@ contains
     implicit none
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
-    integer, intent(in) :: nspec
+    integer, intent(in) :: nspecies
     integer, intent(in) :: qvar
     integer, intent(in) :: qfs
     double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
-    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: x
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspecies) :: x
 
     integer :: i, j, k
 
@@ -381,7 +381,7 @@ contains
 !
 !  end subroutine eos_hi_vec
 
-  subroutine eos_hi_vec_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, nspec, qtemp, qvar, qfs)
+  subroutine eos_hi_vec_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, nspecies, qtemp, qvar, qfs)
 
     !$acc routine(eos_hi_vec_gpu) gang
     !$acc routine(ckhms_gpu) seq
@@ -389,9 +389,9 @@ contains
     implicit none
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
-    integer, intent(in) :: nspec, qtemp, qvar, qfs
+    integer, intent(in) :: nspecies, qtemp, qvar, qfs
     double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
-    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: hii
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspecies) :: hii
     
     integer :: i, j, k
 
@@ -399,7 +399,7 @@ contains
     do k = lo3-1, hi3+1
        do j = lo2-1, hi2+1
           do i = lo1-1, hi1+1
-             call ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp, qfs, nspec)
+             call ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp, qfs, nspecies)
           enddo
        enddo
     enddo

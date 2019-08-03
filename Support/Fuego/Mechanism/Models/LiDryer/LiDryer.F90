@@ -977,7 +977,7 @@ subroutine ckhms(T, hms)
 end subroutine
 
 ! Returns enthalpy in mass units (Eq 27.)
-subroutine ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp, qfs, nspec)
+subroutine ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp, qfs, nspecies)
 
     !$acc routine(ckhms_gpu) seq
     !$acc routine(speciesEnthalpy_gpu) seq
@@ -985,9 +985,9 @@ subroutine ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp,
     implicit none
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
-    integer, intent(in) :: i, j, k, qvar, qtemp, qfs, nspec
+    integer, intent(in) :: i, j, k, qvar, qtemp, qfs, nspecies
     double precision, intent(in), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:qvar) :: q
-    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: hii
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspecies) :: hii
 
     double precision :: tT, RT
     double precision :: tc(5), h(9)
@@ -1007,7 +1007,7 @@ subroutine ckhms_gpu(q, hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, qvar, qtemp,
     tc = (/ 0.d0, tT, tT*tT, tT*tT*tT, tT*tT*tT*tT /) ! temperature cache
     RT = 8.31451000d+07 * tT ! R*T
 
-    call speciesEnthalpy_gpu(hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, tc, nspec)
+    call speciesEnthalpy_gpu(hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, tc, nspecies)
 
     do n=1, 9
         hii(i,j,k,n) = hii(i,j,k,n) * (RT * imw(n))
@@ -2413,7 +2413,7 @@ end subroutine
 
 ! compute the h/(RT) at the given temperature (Eq 20)
 ! tc contains precomputed powers of T, tc(1) = log(T)
-subroutine speciesEnthalpy_gpu(hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, tc, nspec)
+subroutine speciesEnthalpy_gpu(hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, tc, nspecies)
 
     !$acc routine(speciesEnthalpy_gpu) seq
 
@@ -2421,8 +2421,8 @@ subroutine speciesEnthalpy_gpu(hii, lo1, lo2, lo3, hi1, hi2, hi3, i, j, k, tc, n
 
     integer, intent(in) :: lo1, lo2, lo3, hi1, hi2, hi3
     double precision, intent(in) :: tc(5)
-    integer, intent(in) :: i, j, k, nspec
-    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspec) :: hii
+    integer, intent(in) :: i, j, k, nspecies
+    double precision, intent(out), dimension(lo1-1:hi1+1, lo2-1:hi2+1, lo3-1:hi3+1, 1:nspecies) :: hii
 
     double precision :: T
     double precision :: invT
