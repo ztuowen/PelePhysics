@@ -314,6 +314,7 @@ contains
   subroutine f_rhs(neq, time, y, ydot, rpar, ipar)
 
     use chemistry_module, only : molecular_weight
+    use fuego_module, only : ckwc
     use eos_module
 
     integer,         intent(in)   :: neq, ipar(*)

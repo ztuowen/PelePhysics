@@ -4,7 +4,8 @@ module actual_transport_module
   use amrex_constants_module
   use eos_type_module
   use transport_type_module
-  use egz_module, only : egz_init, egz_close, egzpar, egze3, egzk3, egzl1, egzvr1, egzini, egzk1, egz_init_gpu, egzpar_gpu, egze3_gpu, egzk3_gpu, egzl1_gpu, egzvr1_gpu
+  use egz_module, only : egz_init, egz_close, egzpar, egze3, egzk3,&
+       egzl1, egzvr1, egzini, egzk1
 
   implicit none
 
@@ -30,6 +31,7 @@ contains
 
   end subroutine actual_transport_init
 
+
   subroutine actual_transport_close
 
     implicit none
@@ -39,6 +41,7 @@ contains
     egz_initialized = .false.
 
   end subroutine actual_transport_close
+
 
   subroutine build_internal(npts)
     integer, intent(in) :: npts
@@ -59,6 +62,7 @@ contains
 
   end subroutine build_internal
 
+
   subroutine destroy_internal
 
     deallocate(Tp)
@@ -70,6 +74,8 @@ contains
     npts_egz = 0
 
   end subroutine destroy_internal
+
+
 
   subroutine actual_transport(which, coeff)
 
@@ -127,68 +133,6 @@ contains
     endif
 
   end subroutine actual_transport
-
-
-  subroutine actual_transport_gpu(trv_eos_state_massfrac, trv_eos_state_molefrac, trv_eos_state_T, trv_eos_state_rho, trv_eos_state_cpi, trv_mu, trv_xi, trv_lam, trv_ddiag, no, nspecies, nfit, wt, eps, zrot, nlin, cfe, cfl, cfd, fita, eps2, xtr, ytr, aux, cxi, cint, dlt, beta, eta, etalg, rn, an, zn, dmi, g, bin, a)
-
-    !$acc routine seq
-
-    double precision, intent(in) :: trv_eos_state_massfrac(nspecies)
-    double precision, intent(inout) :: trv_eos_state_molefrac(nspecies)
-    double precision, intent(in) :: trv_eos_state_T
-    double precision, intent(in) :: trv_eos_state_rho
-    double precision, intent(inout) :: trv_eos_state_cpi(nspecies)
-    double precision, intent(inout) :: trv_mu
-    double precision, intent(inout) :: trv_xi
-    double precision, intent(inout) :: trv_lam
-    double precision, intent(inout) :: trv_ddiag(nspecies)
-    integer, intent(in) :: no
-    integer, intent(in) :: nspecies
-    integer, intent(in) :: nfit
-    double precision, intent(in) :: wt(nspecies)
-    double precision, intent(in) :: eps(nspecies)
-    double precision, intent(in) :: zrot(nspecies)
-    integer, intent(in) :: nlin(nspecies)
-    double precision, intent(in) :: cfe(no,nspecies)
-    double precision, intent(in) :: cfl(no,nspecies)
-    double precision, intent(in) :: cfd(no,nspecies,nspecies)
-    double precision, intent(in) :: fita(nfit,nspecies,nspecies)
-    double precision, intent(in) :: eps2(nspecies,nspecies)
-    double precision, intent(inout) :: xtr(nspecies)
-    double precision, intent(inout) :: ytr(nspecies)
-    double precision, intent(inout) :: aux(nspecies)
-    double precision, intent(inout) :: cxi(nspecies)
-    double precision, intent(inout) :: cint(nspecies)
-    double precision, intent(inout) :: dlt(6)
-    double precision, intent(inout) :: beta(nspecies)
-    double precision, intent(inout) :: eta(nspecies)
-    double precision, intent(inout) :: etalg(nspecies)
-    double precision, intent(inout) :: rn(nspecies)
-    double precision, intent(inout) :: an(nspecies)
-    double precision, intent(inout) :: zn(nspecies)
-    double precision, intent(inout) :: dmi(nspecies)
-    double precision, intent(inout) :: g(nspecies,nspecies)
-    double precision, intent(inout) :: bin(nspecies,nspecies)
-    double precision, intent(inout) :: a(nspecies,nspecies)
-
-    !if (iflag > 3) then 
-       call eos_cpi_gpu(trv_eos_state_T, trv_eos_state_cpi(:))
-    !else
-    !   Cpp2 = 0.d0
-    !endif
-
-    call eos_ytx_gpu(trv_eos_state_massfrac(:), trv_eos_state_molefrac(:))
-    call egzpar_gpu(trv_eos_state_T, trv_eos_state_molefrac(:), trv_eos_state_cpi(:), wt, eps, zrot, nlin, cfe, cfd, fita, xtr, ytr, aux, cxi, cint, dlt, eta, etalg, bin, a)
-    call egze3_gpu(trv_eos_state_T, trv_mu, wt, xtr, beta, eta, rn, an, zn, dmi, g, bin, a)
-    call egzk3_gpu(trv_eos_state_T, trv_xi, wt, xtr, cxi, cint, beta, eta, g, bin, a)
-!   call egzk1(0.75d0,Xp, trv_xi(:))
-    call egzl1_gpu( .25d0, trv_eos_state_molefrac(:), trv_lam, cfl, dlt)
-!   call egzl1( 1.d0, Xp, L1)
-!   call egzl1(-1.d0, Xp, L2)
-!   trv_lam = 0.5d0 * (L1 + L2)
-    call egzvr1_gpu(trv_eos_state_T, trv_Ddiag, wt, xtr, aux, bin)
-
-  end subroutine actual_transport_gpu
 
 end module actual_transport_module
 

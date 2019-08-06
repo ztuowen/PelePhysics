@@ -1,3 +1,8 @@
+#/bin/bash
+
+# Example script for generating Fuego code with Fortran
+# (note the default pickler must be changed to "f" in 
+# Support/Fuego/Pythia/pythia-0.4/packages/fuego/fuego/fmc/FMC.py
 
 CHEMINP=LiDryer.mec
 THERMINP=LiDryer.therm

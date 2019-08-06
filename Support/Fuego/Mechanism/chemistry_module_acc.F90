@@ -1,7 +1,7 @@
 module chemistry_module
 
   use amrex_fort_module, only : amrex_real
-  use fuego_chemistry
+  !use fuego_chemistry
 
 #include "mechanism.h"
 
@@ -24,9 +24,13 @@ module chemistry_module
   real(amrex_real), save :: Ru, Ruc, Patm, rwrk
   integer, save          :: iwrk
 
+  !$acc declare create(ru)
+
 contains
 
   subroutine chemistry_init()
+    use fuego_module, only : ckinit, ckindx, cksyme, cksyms, ckwt, ckrp
+
     integer :: nfit, i, ic, ii
     real(amrex_real) :: T0
     integer :: names(nspecies*L_spec_name)
@@ -60,10 +64,14 @@ contains
 
     chemistry_initialized = .true.
 
+    !$acc update device(ru)
+
   end subroutine chemistry_init
 
 
   subroutine chemistry_close()
+    use fuego_module, only : ckfinalize
+    !deallocate(elem_names,spec_names,molecular_weight,inv_mwt)
     call ckfinalize()
   end subroutine chemistry_close
 

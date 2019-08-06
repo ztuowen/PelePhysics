@@ -295,6 +295,7 @@ module fuego_chemistry
             real(amrex_real), intent(inout) :: y(*)
             real(amrex_real), intent(inout) :: wdot(*)
         end subroutine
+
     end interface
 
 end module fuego_chemistry

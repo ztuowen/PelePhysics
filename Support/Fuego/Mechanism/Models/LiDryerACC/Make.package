@@ -1,6 +1,6 @@
 CEXE_headers+=chemistry_file.H
 
-CEXE_sources+=drm19.cpp
+CEXE_sources+=LiDryerACC2.cpp
 
 LIBRARIES += 
 
@@ -8,3 +8,4 @@ INCLUDE_LOCATIONS += $(CHEM_DIR)
 
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
 
+F90EXE_sources += LiDryerACC.F90

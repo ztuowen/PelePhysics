@@ -1,7 +1,11 @@
 FEXE_headers += vode.H
 fEXE_sources += vode.f LinAlg.f math_d.f 
 ifeq ($(USE_FUEGO), TRUE)
-  f90EXE_sources += egz_module.f90
+  ifeq ($(USE_ACC_FILES), TRUE)
+    f90EXE_sources += egz_module_acc.f90
+  else
+    f90EXE_sources += egz_module.f90
+  endif
 endif
 
 # vode needs work space.  

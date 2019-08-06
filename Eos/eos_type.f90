@@ -21,10 +21,6 @@ module eos_type_module
   real(amrex_real), save :: minh
   real(amrex_real), save :: maxh
 
-  !acc declare &
-  !acc create(mintemp, maxtemp, mindens, maxdens, minmassfrac, maxmassfrac, minye, maxye) &
-  !acc create(mine, maxe, minp, maxp, mins, maxs, minh, maxh)
-
   ! A generic structure holding thermodynamic quantities and their derivatives,
   ! plus some other quantities of interest.
 
@@ -154,8 +150,6 @@ contains
   ! on the composition ... nothing to do here yet
   subroutine composition(state)
 
-    !acc routine seq
-
     implicit none
 
     type (eos_t), intent(inout) :: state
@@ -164,8 +158,6 @@ contains
   
   ! Compute thermodynamic derivatives with respect to massfrac(:)
   subroutine composition_derivatives(state)
-
-    !acc routine seq
 
     implicit none
 
@@ -178,8 +170,6 @@ contains
   ! Normalize the mass fractions: they must be individually positive
   ! and less than one, and they must all sum to unity.
   subroutine normalize_massfracs(state)
-
-    !acc routine seq
 
     use amrex_constants_module, only: ONE
     use extern_probin_module, only: small_massfrac
@@ -196,8 +186,6 @@ contains
   
   ! Ensure that inputs are within reasonable limits.
   subroutine clean_state(state)
-
-    !acc routine seq
 
     implicit none
 
@@ -224,8 +212,6 @@ contains
 
   subroutine eos_get_small_temp(small_temp_out)
 
-    !acc routine seq
-
     implicit none
 
     real(amrex_real), intent(out) :: small_temp_out
@@ -236,8 +222,6 @@ contains
 
 
   subroutine eos_get_small_dens(small_dens_out)
-
-    !acc routine seq
 
     implicit none
 
@@ -251,8 +235,6 @@ contains
 
   subroutine eos_get_max_temp(max_temp_out)
 
-    !acc routine seq
-
     implicit none
 
     real(amrex_real), intent(out) :: max_temp_out
@@ -264,8 +246,6 @@ contains
 
 
   subroutine eos_get_max_dens(max_dens_out)
-
-    !acc routine seq
 
     implicit none
 

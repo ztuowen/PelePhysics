@@ -1,7 +1,7 @@
 
-CHEMINP=drm19.dat
-THERMINP=thermo12.dat
-FINALFILE=drm19.F90
+CHEMINP=LiDryerACC.mec
+THERMINP=LiDryerACC.therm
+FINALFILE=LiDryerACC.F90
 
 FMC=${PELE_PHYSICS_HOME}/Support/Fuego/Pythia/products/bin/fmc.py
 HEADERDIR=${PELE_PHYSICS_HOME}/Support/Fuego/Mechanism/Models/header

@@ -1,11 +1,10 @@
-#CEXE_headers+=chemistry_file.H
+CEXE_headers+=chemistry_file.H
 
-#CEXE_sources+=grimech30.cpp
+CEXE_sources+=grimech30.cpp
 
 LIBRARIES += 
 
 INCLUDE_LOCATIONS += $(CHEM_DIR)
 
-F90EXE_sources += grimech30.F90
 VPATH_LOCATIONS +=  $(CHEM_DIR)/PMFs
 
