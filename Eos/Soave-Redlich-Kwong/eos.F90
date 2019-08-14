@@ -30,6 +30,7 @@ module eos_module
 
   !    real(amrex_real), dimension(:), allocatable :: Pc, Tc, Vc,Zc, omega,Bi, Astari, Fomega
   real(amrex_real), dimension(:), allocatable :: oneOverTc, Tc, Bi, Astari, sqrtAsti, omega, Fomega
+  real(amrex_real), dimension(:,:), allocatable :: oneOnDiagElseTwo
 
   real(amrex_real), parameter :: f0 = 0.48508d0
   real(amrex_real), parameter :: f1 = 1.5517d0
@@ -77,6 +78,8 @@ subroutine actual_eos_init
 !allocate(Pc(nspecies), Tc(nspecies), omega(nspecies), Vc(nspecies),Zc(nspecies),Bi(nspecies),Astari(nspecies),Fomega(nspecies))
 
  allocate( oneOverTc(nspecies), Tc(nspecies), omega(nspecies), Bi(nspecies), Astari(nspecies), sqrtAsti(nspecies), Fomega(nspecies))
+ allocate( oneOnDiagElseTwo(nspecies,nspecies))
+ oneOnDiagElseTwo = 2.0d0
 
  call get_critparams(Tc,Astari,Bi,omega)
   
@@ -87,6 +90,8 @@ subroutine actual_eos_init
      Fomega(i) = f0 + omega(i)*(f1 + f2*omega(i))          
 
      sqrtAsti(i) = sqrt(Astari(i))
+
+     oneOnDiagElseTwo(i,i) = 1.0d0
 
   end do
   
@@ -202,6 +207,12 @@ subroutine eos_cv(state)
  type (eos_t), intent(inout) :: state
 
  ! Construct the EOS for mixture & Calculate mixture Cv accounting for non-ideal effects
+ ! precalculate necessary variables !!! temporary
+ call eos_top(state)
+ call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+ !call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
+ call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
+
  call SRK_Eos_GetMixtureCv(state)
 
 end subroutine eos_cv
@@ -212,7 +223,13 @@ subroutine eos_cp(state)
 
  type (eos_t), intent(inout) :: state
 
- ! Construct the EOS for mixture & Calculate mixture Cp accounting for non-ideal effects
+ ! Construct the EOS for mixture & Calculate mixture Cp accounting for non-ideal effects 
+! precalculate necessary variables !!! temporary
+ call eos_top(state)
+ call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+ call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
+ call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
+
  call SRK_Eos_GetMixtureCp(state)
 
 end subroutine eos_cp
@@ -329,6 +346,9 @@ subroutine eos_bottom(state)
  type (eos_t), intent(inout) :: state
  real(amrex_real) :: dedtau,tau
 
+ ! precalculate the necessary variable
+ call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
+
  call SRK_Eos_GetMixtureCv(state)
  call SRK_Eos_GetMixtureCp(state)
  call SRK_EOS_GetGamma1(state)
@@ -357,6 +377,8 @@ subroutine eos_rt(state)
 
  call MixingRuleAmBm(state%T, state%massFrac, state%am, state%bm)
  call Calc_dAmdT(state%T, state%massFrac, state%damdT)
+ call Calc_dAmdY(state%T, state%massFrac, state%dAmdYk)
+ call Calc_d2AmdTY(state%T, state%massFrac, state%d2amdYkdT)
  call SRK_EOS_GetP_GivenRhoT(state)
  call SRK_EOS_GetE_GivenRhoT(state)
 
@@ -379,7 +401,11 @@ subroutine eos_tp(state)
  call SRK_EOS_Get_rho_GivenTP(state)
  call SRK_EOS_Get_E_GivenTP(state)
 
- ! Populate the eo_state%ei vector
+ ! Populate the eo_state%ei vector - precalculate some stuff !!! temporary
+ call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+ call Calc_dAmdY(state%T, state%massFrac,state%dAmdYk)
+ call Calc_d2AmdTY(state%T, state%massFrac,state%d2amdYkdT)
+ call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
  call SRK_EOS_GetSpeciesE(state)
 
  call eos_bottom(state)
@@ -397,7 +423,11 @@ subroutine eos_rp(state)
  ! (rho, p, massfrac) are inputs, get (T, e)
  call SRK_EOS_Get_TE_GivenRhoP(state)
 
- ! Populate the eo_state%ei vector
+ ! Populate the eo_state%ei vector - precalculate some stuff !!! temporary
+ call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+ call Calc_dAmdY(state%T, state%massFrac,state%dAmdYk)
+ call Calc_d2AmdTY(state%T, state%massFrac,state%d2amdYkdT)
+ call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
  call SRK_EOS_GetSpeciesE(state)
 
  call eos_bottom(state)
@@ -535,14 +565,14 @@ subroutine MixingRuleAmBm(T,massFrac,am,bm)
 
   enddo
 
-  do j = 1, nspecies
-     do i = 1, nspecies
+   do j = 1, nspecies
+     do i = j, nspecies
         
-        am = am + massFrac(i)*massFrac(j)*amloc(i)*amloc(j)
+        am = am + oneOnDiagElseTwo(i,j)* massFrac(i)*massFrac(j)*amloc(i)*amloc(j)
 
      end do
   end do
- 
+
 end subroutine MixingRuleAmBm
 !==================================!
 !  Compute Am, Bm for the mixture  !
@@ -568,9 +598,9 @@ subroutine MixingRuleAm(T,massFrac,am)
   enddo
 
   do j = 1, nspecies
-     do i = 1, nspecies
+     do i = j, nspecies
         
-        am = am + massFrac(i)*massFrac(j)*amloc(i)*amloc(j)
+        am = am + oneOnDiagElseTwo(i,j)*massFrac(i)*massFrac(j)*amloc(i)*amloc(j)
 
      end do
   end do
@@ -620,11 +650,11 @@ subroutine Calc_dAmdT(T,massFrac,dAmdT)
   enddo
 
   do j = 1, nspecies
-     do i = 1, nspecies
+     do i = j, nspecies
         
-        dAmdT =  dAmdT +massFrac(i)*massFrac(j)*(amloc(i)*amlocder(j)+amloc(j)*amlocder(i))
+        dAmdT =  dAmdT + oneOnDiagElseTwo(i,j)*massFrac(i)*massFrac(j)*(amloc(i)*amlocder(j)+amloc(j)*amlocder(i))
 
-     end do
+    end do
   end do
 
 end subroutine Calc_dAmdT
@@ -754,17 +784,24 @@ subroutine Calc_d2AmdT2(T,massFrac,d2AmdT2)
      amlocder(i) = -0.5d0*Fomega(i)*sqrtAsti(i)*oneOverT*oneOverTc(i)*sqrt(T*Tc(i))
   enddo
 
-  do j = 1, nspecies-1
-     do i = j+1, nspecies
-        d2AmdT2 = d2AmdT2+tmp1*massFrac(i)*massFrac(j)*(-4.0d0*T*amlocder(i)*amlocder(j)+amloc(i)*amlocder(j)+amloc(j)*amlocder(i))
+  do j = 1, nspecies
+     do i = j, nspecies
+        d2AmdT2 = d2AmdT2 + oneOnDiagElseTwo(i,j)*tmp1*massFrac(i)*massFrac(j)*(-4.0d0*T*amlocder(i)*amlocder(j)+amloc(i)*amlocder(j)+amloc(j)*amlocder(i))
      end do
   end do
 
-  d2AmdT2 = 2.0d0*d2AmdT2
+  ! Old way to accomplish the same thing
+  ! do j = 1, nspecies-1
+  !    do i = j+1, nspecies
+  !       d2AmdT2 = d2AmdT2+tmp1*massFrac(i)*massFrac(j)*(-4.0d0*T*amlocder(i)*amlocder(j)+amloc(i)*amlocder(j)+amloc(j)*amlocder(i))
+  !    end do
+  ! end do
 
-  do i = 1, nspecies
-     d2AmdT2 = d2AmdT2+tmp1*massFrac(i)*massFrac(i)*(-4.0d0*T*amlocder(i)*amlocder(i)+amloc(i)*amlocder(i)+amloc(i)*amlocder(i))
-  end do
+  ! d2AmdT2 = 2.0d0*d2AmdT2
+
+  ! do i = 1, nspecies
+  !    d2AmdT2 = d2AmdT2+tmp1*massFrac(i)*massFrac(i)*(-4.0d0*T*amlocder(i)*amlocder(i)+amloc(i)*amlocder(i)+amloc(i)*amlocder(i))
+  ! end do
 
 end subroutine Calc_d2AmdT2
 !=============================================!
@@ -1512,9 +1549,11 @@ subroutine SRK_EOS_GetMixtureCv(state)
   type (eos_t), intent(inout) :: state
   real(amrex_real) :: tau, K1
 
-  state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+  ! precalculate am,bm,d2amdt2, wbar
 
-  call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+  !state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+
+  !call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
 
   tau = 1.0d0/state%rho
 
@@ -1522,7 +1561,7 @@ subroutine SRK_EOS_GetMixtureCv(state)
   ! call Calc_dAmdT(state%T,state%massFrac,state%am,state%dAmdT)
   
   ! Second Derivative of the EOS AM w.r.t Temperature - needed for calculating enthalpy, Cp, Cv and internal energy
-  call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
+  !call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
 
   ! Ideal gas specific heat at constant volume
   call ckcvbs(state%T, state % massfrac, state % cv)
@@ -1545,17 +1584,18 @@ subroutine SRK_EOS_GetMixtureCp(state)
   real(amrex_real) :: dhmdT,dhmdtau
   real(amrex_real) :: Rm
 
-  state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+  ! precalculate wbar, ambm, damdt, d2amdt2
+  ! state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
 
-  call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+  !call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
 
   tau = 1.0d0/state%rho
   
   ! Derivative of the EOS AM w.r.t Temperature - needed for calculating enthalpy, Cp, Cv and internal energy
-  call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
+  !call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
   
   ! Second Derivative of the EOS AM w.r.t Temperature - needed for calculating enthalpy, Cp, Cv and internal energy
-  call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
+  !call Calc_d2AmdT2(state%T,state%massFrac,state%d2AmdT2)
   
   K1 = (1.0d0/state%bm)*log(1.0d0+state%bm/tau)
 
@@ -1831,19 +1871,21 @@ subroutine SRK_EOS_GetSpeciesE(state)
 
 !  assumes T, rho and massFrac known
 
-  state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+! wbar, am, bm, damdy, d2amdty, damdt should all be pre-calculated
 
-  call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
+  !state % wbar = 1.d0 / sum(state % massfrac(:) * inv_mwt(:))
+
+  !call MixingRuleAmBm(state%T,state%massFrac,state%am,state%bm)
 
   ! Derivative of am w.r.t to Yk, species k massfraction
-  call Calc_dAmdY(state%T, state%massFrac,state%dAmdYk)
+  !call Calc_dAmdY(state%T, state%massFrac,state%dAmdYk)
   
-  call Calc_d2AmdTY(state%T, state%massFrac,state%d2amdYkdT)
+  !call Calc_d2AmdTY(state%T, state%massFrac,state%d2amdYkdT)
 
   tau = 1.0d0/state%rho
   
   ! Derivative of the EOS AM w.r.t Temperature - needed for calculating enthalpy, Cp, Cv and internal energy
-  call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
+  !call Calc_dAmdT(state%T,state%massFrac,state%dAmdT)
   
   K1 = (1.0d0/state%bm)*log(1.0d0+state%bm/tau)
   
