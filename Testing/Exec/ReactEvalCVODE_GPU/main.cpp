@@ -118,8 +118,12 @@ main (int   argc,
     bath_idx  = N2_ID;
     extern_init(&(probin_file_name[0]),&probin_file_length,&fuel_idx,&oxy_idx,&bath_idx,&cvode_iE);
 
+    BL_PROFILE_VAR("reactor_info()", reactInfo);
+
     /* Initialize D/CVODE reactor */
     reactor_info(&cvode_iE, &cvode_ncells);
+
+    BL_PROFILE_VAR_STOP(reactInfo);
 
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
@@ -163,6 +167,8 @@ main (int   argc,
 
     IntVect tilesize(D_DECL(10240,8,32));
 
+    BL_PROFILE_VAR("initialize_data()", InitData);
+
     int count_mf = 0;
     /* INITIALIZE DATA */
     for (MFIter mfi(mf,false); mfi.isValid(); ++mfi ){
@@ -177,9 +183,13 @@ main (int   argc,
         amrex::Print() << "Treating box: " << count_mf<< "\n";
     }
 
+    BL_PROFILE_VAR_STOP(InitData);
+
     timer_init = amrex::second() - timer_init; 
 
     timer_print = amrex::second();
+
+    BL_PROFILE_VAR("PlotFileFromMF()", PlotFile);
 
     ParmParse ppa("amr");
     ppa.query("plot_file",pltfile);
@@ -187,10 +197,20 @@ main (int   argc,
     // Specs
     PlotFileFromMF(mf,outfile);
 
+    BL_PROFILE_VAR_STOP(PlotFile);
+
     timer_print = amrex::second() - timer_print;
      
     /* EVALUATE */
     amrex::Print() << " \n STARTING THE ADVANCE \n";
+
+    BL_PROFILE_VAR("Malloc()", Allocs);
+    BL_PROFILE_VAR_STOP(Allocs);
+
+    BL_PROFILE_VAR("React()", ReactInLoop);
+    BL_PROFILE_VAR_STOP(ReactInLoop);
+
+    BL_PROFILE_VAR("advance()", Advance);
 
     timer_advance = amrex::second();
 
@@ -229,11 +249,13 @@ main (int   argc,
 	// rhoE/rhoH
         amrex::Real *tmp_vect_energy;
 	amrex::Real *tmp_src_vect_energy;
-
+        
+	BL_PROFILE_VAR_START(Allocs);
         cudaMallocManaged(&tmp_vect, (Ncomp+1)*ncells*sizeof(amrex::Real));
         cudaMallocManaged(&tmp_src_vect, Ncomp*ncells*sizeof(amrex::Real));
         cudaMallocManaged(&tmp_vect_energy, ncells*sizeof(amrex::Real));
         cudaMallocManaged(&tmp_src_vect_energy, ncells*sizeof(amrex::Real));
+	BL_PROFILE_VAR_STOP(Allocs);
 
         /* Packing of data */
         /* SECOND VERSION */
@@ -254,6 +276,7 @@ main (int   argc,
         
 
         /* Solve */
+        BL_PROFILE_VAR_START(ReactInLoop);
 	time = 0.0;
 	for (int ii = 0; ii < ndt; ++ii) {
 	    fc_pt = react(tmp_vect, tmp_src_vect,
@@ -262,6 +285,7 @@ main (int   argc,
                             &cvode_iE, &ncells, amrex::Gpu::gpuStream());
 	    dt_incr =  dt/ndt;
         }
+        BL_PROFILE_VAR_STOP(ReactInLoop);
 
         /* Unpacking of data */
 	amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
@@ -288,14 +312,20 @@ main (int   argc,
 
     }
 
+    BL_PROFILE_VAR_STOP(Advance);
+
     timer_advance = amrex::second() - timer_advance;
 
 
     timer_print_tmp = amrex::second();
 
+    BL_PROFILE_VAR_START(PlotFile);
+
     outfile = Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
     // Specs
     PlotFileFromMF(mf,outfile);
+
+    BL_PROFILE_VAR_STOP(PlotFile);
 
     timer_print = amrex::second() - timer_print_tmp + timer_print;
     
