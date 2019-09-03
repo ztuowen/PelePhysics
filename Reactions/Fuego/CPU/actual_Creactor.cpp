@@ -57,8 +57,10 @@ int reactor_init(const int* cvode_iE, const int* Ncells) {
 	if (check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
 
         /* Does not work for more than 1 cell right now */
+	BL_PROFILE_VAR("AllocsInCVODE", AllocsCVODE);
 	data = AllocUserData(*cvode_iE, *Ncells);
 	if(check_flag((void *)data, "AllocUserData", 2)) return(1);
+	BL_PROFILE_VAR_STOP(AllocsCVODE)
 
 	/* Nb of species and cells in mechanism */
 #ifdef _OPENMP
@@ -259,10 +261,12 @@ int reactor_init(const int* cvode_iE, const int* Ncells) {
 	flag = CVodeSetMaxStepsBetweenJac(cvode_mem, 100);
 	if(check_flag(&flag, "CVodeSetMaxStepsBetweenJac", 1)) return(1);
 
+	BL_PROFILE_VAR_START(AllocsCVODE);
 	/* Define vectors to be used later in creact */
 	rhoX_init = (double *) malloc(data->ncells*sizeof(double));
 	rhoXsrc_ext = (double *) malloc( data->ncells*sizeof(double));
 	rYsrc       = (double *)  malloc((data->ncells*NUM_SPECIES)*sizeof(double));
+	BL_PROFILE_VAR_STOP(AllocsCVODE);
 
 	/* Free the atol vector */
 	N_VDestroy(atol); 
@@ -335,9 +339,14 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	}
 
 	/* ReInit CVODE is faster */
+	BL_PROFILE_VAR("AroundReInit", CuSolverInit);
 	CVodeReInit(cvode_mem, time_init, y);
+	BL_PROFILE_VAR_STOP(CuSolverInit)
+
+	BL_PROFILE_VAR("AroundCVODE", AroundCVODE);
 
 	flag = CVode(cvode_mem, time_out, y, &dummy_time, CV_NORMAL);
+	BL_PROFILE_VAR_STOP(AroundCVODE);
 	/* ONE STEP MODE FOR DEBUGGING */
 	//flag = CVode(cvode_mem, time_out, y, &dummy_time, CV_ONE_STEP);
 	if (check_flag(&flag, "CVode", 1)) return(1);
@@ -384,11 +393,13 @@ int react(realtype *rY_in, realtype *rY_src_in,
 int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in, 
 		void *user_data){
 
+	BL_PROFILE_VAR("fKernelSpec()", fKernelSpec);
 	realtype *y_d      = N_VGetArrayPointer(y_in);
 	realtype *ydot_d   = N_VGetArrayPointer(ydot_in);
 
         fKernelSpec(&t, y_d, ydot_d, 
 		    user_data);
+	BL_PROFILE_VAR_STOP(fKernelSpec);
 
 	return(0);
 }
@@ -455,7 +466,9 @@ void fKernelSpec(realtype *dt, realtype *yvec_d, realtype *ydot_d,
           eos.eos_TY2Cp(temp, massfrac, &cX);
           eos.eos_T2HI(temp, Xi);
       }
+      BL_PROFILE_VAR("eos_RTY2W()", eos_RTY2W);
       eos.eos_RTY2W(rho, temp, massfrac, cdot);
+      BL_PROFILE_VAR_STOP(eos_RTY2W);
 
       /* Fill ydot vect */
       ydot_d[offset + NUM_SPECIES] = rhoXsrc_ext[tid];
@@ -699,6 +712,8 @@ int jtv(N_Vector v, N_Vector Jv, realtype t, N_Vector u, N_Vector fu,
 int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok, 
 		booleantype *jcurPtr, realtype gamma, void *user_data)
 {
+
+  BL_PROFILE_VAR("cusolverPrecond", Precond);
   /* Make local copies of pointers to input data (big M) */
   realtype *udata   = N_VGetArrayPointer(u);
   /* Make local copies of pointers in user_data (cell M)*/
@@ -803,6 +818,7 @@ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
       }
       data_wk->FirstTimePrecond = false;
   }
+  BL_PROFILE_VAR_STOP(Precond);
 
   return(0);
 }
@@ -814,6 +830,7 @@ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok, 
 		booleantype *jcurPtr, realtype gamma, void *user_data)
 {
+  BL_PROFILE_VAR("cusolverPrecond", Precond);
   /* Make local copies of pointers to input data (big M) */
   realtype *udata = N_VGetArrayPointer(u);
 
@@ -836,6 +853,7 @@ int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
   /* MW CGS */
   CKWT(molecular_weight);
 
+  BL_PROFILE_VAR("fKernelComputeAJ()", fKernelComputeAJ);
   if (jok) {
       /* jok = SUNTRUE: Copy Jbd to P */
       denseCopy(Jbd[0][0], P[0][0], NUM_SPECIES+1, NUM_SPECIES+1);
@@ -890,7 +908,10 @@ int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
   
   /* Add identity matrix and do LU decompositions on blocks in place. */
   denseAddIdentity(P[0][0], NUM_SPECIES+1);
+  BL_PROFILE_VAR_STOP(fKernelComputeAJ);
+
   ierr = denseGETRF(P[0][0], NUM_SPECIES+1, NUM_SPECIES+1, pivot[0][0]);
+  BL_PROFILE_VAR_STOP(Precond);
   if (ierr != 0) return(1);
   
   return(0);
@@ -903,6 +924,8 @@ int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                   realtype gamma, realtype delta, int lr, void *user_data)
 {
+
+  BL_PROFILE_VAR("cusolverPsolve()", cusolverPsolve);
   /* Make local copies of pointers in user_data */
   UserData data_wk;
   data_wk = (UserData) user_data;
@@ -924,6 +947,7 @@ int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
       std::memcpy(zdata+offset_beg, zdata_cell, (NUM_SPECIES+1)*sizeof(realtype));
   }
 
+  BL_PROFILE_VAR_STOP(cusolverPsolve);
   return(0);
 }
 
