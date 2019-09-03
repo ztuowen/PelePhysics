@@ -11,7 +11,7 @@ cvode_iE = 1
 ns.cvode_iDense = 99
 
 
-max_grid_size = 128
+max_grid_size = 512
 
 # Choose name of output pltfile
 amr.plot_file       = plt
