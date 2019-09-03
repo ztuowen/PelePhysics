@@ -368,6 +368,9 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
 		}
         }); 
 
+        cuda_status = cudaStreamSynchronize(udata->stream);  
+        assert(cuda_status == cudaSuccess);
+
 	BL_PROFILE_VAR_STOP(fKernelSpec);
 	
 	return(0);
@@ -493,6 +496,9 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 
         assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
+        cuda_status = cudaDeviceSynchronize();  
+        assert(cuda_status == cudaSuccess);
+
 	BL_PROFILE_VAR_STOP(Precond);
 
 	return(0);
@@ -525,6 +531,8 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                                udata->info,
                                udata->buffer_qr);
 
+        cuda_status = cudaDeviceSynchronize();  
+        assert(cuda_status == cudaSuccess);
 	BL_PROFILE_VAR_STOP(cusolverPsolve);
 
 
