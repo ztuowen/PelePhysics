@@ -123,7 +123,7 @@ contains
              x = plo(1) + (i+HALF)*dx(1)
 
              eos_state % p        = pressure
-             eos_state % T        = Temp_lo + (Temp_hi-Temp_lo)*y_var/L(2) + dTemp*SIN(TWO*M_PI*y_var/P(2))
+             eos_state % T        = 2000.d0 !Temp_lo + (Temp_hi-Temp_lo)*y_var/L(2) + dTemp*SIN(TWO*M_PI*y_var/P(2))
 
              !eos_state % massfrac(nspecies) = ONE - sum(eos_state % massfrac(1:nspecies-1))
 
