@@ -192,7 +192,8 @@ gpu_CopyTMP2ORI(int i, int j, int k,
 		amrex::Array4<amrex::Real> const& rho,
 		amrex::Array4<amrex::Real> const& temp,
 		amrex::Array4<amrex::Real> const& nrgy,
-		amrex::Array4<amrex::Real> const& mf) noexcept
+		amrex::Array4<amrex::Real> const& mf,
+		amrex::Real time) noexcept
 {
 	/* RHS is y_k */
 	for (int n = 0; n < NUM_SPECIES; n++) {
@@ -201,7 +202,9 @@ gpu_CopyTMP2ORI(int i, int j, int k,
 	temp(i,j,k) = temp_t(i,j,k);
 	nrgy(i,j,k) = nrgy_t(i,j,k);
 	rho(i,j,k)  = rho_t(i,j,k);
-        //printf("i,j,k, T, rho, E %d %d %d %14.6e %14.6e %14.6e\n", i, j, k, temp(i,j,k), rho(i,j,k), nrgy(i,j,k));
+	if ((i == 0) && (j == 0) && (k == 0)) {
+            printf("time, T, rho, E %14.6e %14.6e %14.6e %14.6e\n", time, temp(i,j,k), rho(i,j,k), nrgy(i,j,k));
+	}
 }
 
 AMREX_GPU_DEVICE

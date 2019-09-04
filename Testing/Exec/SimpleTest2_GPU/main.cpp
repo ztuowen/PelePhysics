@@ -227,6 +227,7 @@ main (int   argc,
         cudaStat1 = cudaMalloc((void**)&buffer_qr, workspaceInBytes);
         assert(cudaStat1 == cudaSuccess);
 
+	Real time_output = 0.0;
         for (int stp = 0; stp < ndt; stp++) {
 	        /* Copy init guess into q_k = q_0 */
 	        amrex::ParallelFor(box,
@@ -403,10 +404,11 @@ main (int   argc,
 	        } //( not newton_solved );
 
 	        /* Copy q_tmp into q_(k+1) = iterations successful or other out criterion */
+	        time_output = time_output + dt;
 	        amrex::ParallelFor(box,
 	            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
 	            {
-	        	gpu_CopyTMP2ORI(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, rho, temp, nrgy, mf);
+	        	gpu_CopyTMP2ORI(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, rho, temp, nrgy, mf, time_output);
 	            });
         }
 

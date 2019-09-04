@@ -189,6 +189,7 @@ main (int   argc,
 		Numeric[i]   = klu_factor(csr_col_count, csr_row_index, csr_val_cell, Symbolic[i], &Common[i]); 
   	}
 
+	Real time_output = 0.0;
         for (int stp = 0; stp < ndt; stp++) {
 	        /* Copy init guess into q_k = q_0 */
 	        amrex::ParallelFor(box,
@@ -235,7 +236,7 @@ main (int   argc,
 	        int newton_ite = 0;
 	        //while (!newton_solved) {
 	        while (newton_ite < 10) {
-                        printf("Ite number %d \n", newton_ite);
+                        //printf("Ite number %d \n", newton_ite);
 	        	newton_ite += 1;
 	                /* Compute initial newton_update (delta q_k+1) */
 			icell = 0;
@@ -332,10 +333,11 @@ main (int   argc,
 	        } //( not newton_solved );
 
 	        /* Copy q_tmp into q_(k+1) = iterations successful or other out criterion */
+	        time_output = time_output + dt;
 	        amrex::ParallelFor(box,
 	            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
 	            {
-	        	gpu_CopyTMP2ORI(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, rho, temp, nrgy, mf);
+	        	gpu_CopyTMP2ORI(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, rho, temp, nrgy, mf, time_output);
 	            });
         }
 
