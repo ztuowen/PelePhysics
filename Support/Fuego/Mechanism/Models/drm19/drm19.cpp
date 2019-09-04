@@ -23,7 +23,7 @@ namespace thermo
     int is_PD_DEF[84], troe_len_DEF[84], sri_len_DEF[84], nTB_DEF[84], *TBid_DEF[84];
     double *TB_DEF[84];
     std::vector<int> rxn_map;
-};
+}
 
 using namespace thermo;
 #endif
@@ -6104,6 +6104,116 @@ void CKEQXR(double *  rho, double *  T, double *  x, double *  eqcon)
 }
 
 #ifdef AMREX_USE_CUDA
+//AMREX_GPU_DEVICE double W_spec_d(double Q[84], int ispec)
+//{
+//    double W = 0;
+//    for (int j=0; j<84; ++j) {
+//        W += NuVals_d[j*21 + ispec] * Q[j];
+//    }
+//return W;
+//}
+//
+//AMREX_GPU_DEVICE double Q_reac_d(double rho, double T, double Y[21], int idx)
+//{
+//    double qf, qr, C[21], g_RT[21];
+//    double tc[] = { 0, T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
+//    double invT = 1.0 / T;
+//
+//    gibbs(g_RT, tc);
+//    CKYTCR(&rho, &T, Y, C);
+//
+//    /* Kc */
+//    double k_c = 0;
+//    int expon = 0;
+//    for (int j = 0; j<21; ++j) {
+//        k_c += NuVals_d[idx*21 + j] * g_RT[j];
+//        expon += NuVals_d[idx*21 + j];
+//    }
+//    k_c = exp(k_c);
+//
+//    if (expon > 0) {
+//        double refC = 101325 / 8.31451 * invT;
+//        k_c *= refC;
+//    } else if (expon < 0) {
+//        double refC = 8.31451 / 101325 * tc[0];
+//        k_c *= refC;
+//    }
+//
+//
+//    /* qf, qr */
+//    qf = 1;
+//    qr = 1;
+//    for (int j = 0; j<21; ++j) {
+//        if (NuVals_d[idx*21 + j] < 0) {
+//            qf *=  - NuVals_d[idx*21 + j] * C[j];
+//        } else {
+//            qr *=  + NuVals_d[idx*21 + j] * C[j];
+//        }
+//    }
+//
+//    /* mixture */
+//    double mixture = 0.0;
+//    for (int i = 0; i < 21; ++i) {
+//        mixture += C[i];
+//    }
+//
+//    bool is_TB = nTB_d[idx] > 0;
+//    bool is_PD = is_PD_d[idx] == 1;
+//    bool is_troe = is_PD && troe_len_d[idx] > 0;
+//    bool is_sri = is_PD && !is_troe;
+//
+//    double uc = prefactor_units_d[idx];
+//    double aeuc = activation_units_d[idx];
+//    double RcInv = 0.503217;
+//
+//    double k_f = uc * fwd_A_d[idx]
+//        * exp(fwd_beta_d[idx] * tc[0] - aeuc*RcInv * fwd_Ea_d[idx] * invT);
+//
+//    // Add enhancement here
+//    double eff = 1.0;
+//
+//    double Corr = 1.0;
+//    if (!is_TB) { // !PD, !TB
+//        qf *= k_f;
+//    } else if (!is_PD) { // !PD, TB
+//        Corr = eff;
+//        qf *= Corr * k_f;
+//    } else { // PD, TB
+//        Corr = eff;
+//        double redP = Corr / k_f * phase_units_d[idx] * low_A_d[idx]
+//            * exp(low_beta_d[idx]  * tc[0] - aeuc * RcInv  * low_Ea_d[idx] *invT);
+//
+//        if (is_troe) {
+//            double F = redP / (1.0 + redP);
+//            double logPred = log10(redP);
+//            double A = (abs(troe_Ts_d[idx])  > 1.e-100) ? (1.-troe_a_d[idx])*exp(-tc[1] / troe_Ts_d[idx]) : 0;
+//            double B = (abs(troe_Tss_d[idx]) > 1.e-100) ? troe_a_d[idx] * exp(-tc[1]/troe_Tss_d[idx])      : 0;
+//            double C = (troe_len_d[idx] == 4)           ? exp(-(troe_Tsss_d[idx]) * invT) : 0;
+//            double logFcent = log10(A + B + C);
+//            double troe_c = -.4 - .67 * logFcent;
+//            double troe_n = .75 - 1.27 * logFcent;
+//            double troe = (troe_c + logPred) / (troe_n - .14*(troe_c + logPred));
+//            double F_troe = pow(10., logFcent / (1.0 + troe*troe));
+//            Corr = F * F_troe;
+//            qf *= Corr * k_f;
+//        } else if (is_sri) {
+//            double F = redP / (1.0 + redP);
+//            double logPred = log10(redP);
+//            double X = 1.0 / (1.0 + logPred*logPred);
+//            double A = sri_a_d[idx] * exp(-sri_b_d[idx]*invT);
+//            double B = sri_b_d[idx] > 1.e-100  ?       exp(tc[0]/sri_c_d[idx])        : 0;
+//            double C = sri_len_d[idx] > 3      ? sri_c_d[idx]*exp(sri_d_d[idx]*tc[0]) : 1.0;
+//            double F_sri = exp(X * log(A + B * C));
+//            Corr = F * F_sri;
+//            qf *= Corr * k_f;
+//        } // lindemann not implemented
+//    }
+//
+//    qr = Corr * k_f / k_c;
+//    return qf - qr;
+//}
+//
+
 /*GPU version of productionRate: no more use of thermo namespace vectors */
 /*compute the production rate for each species */
 AMREX_GPU_HOST_DEVICE inline void  productionRate(double * wdot, double * sc, double T)
