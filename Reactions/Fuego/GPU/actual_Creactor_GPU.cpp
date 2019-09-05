@@ -34,7 +34,7 @@ int reactor_info(const int* cvode_iE,const int* Ncells){
             if (*cvode_iE == 1) {
                 HP = 0;
             } else {
-	        amrex::Abort("\n--> Only type of reactor implemented is UV ...\n");
+                HP = 1;
             }
             /* Precond data */ 
             SPARSITY_INFO_PRECOND(&nJdata,&HP);
@@ -110,7 +110,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
                 HP = 1;
             }
             // Find sparsity pattern to fill structure of sparse matrix
-	    BL_PROFILE_VAR("Sparsity", SparsityStuff);
+	    BL_PROFILE_VAR("SparsityFuegoStuff", SparsityStuff);
             SPARSITY_INFO_PRECOND(&(user_data->NNZ),&HP);
 	    BL_PROFILE_VAR_STOP(SparsityStuff);
 
@@ -414,12 +414,19 @@ fKernelSpec(int icell, void *user_data,
 
   /* temp */
   temp_pt = yvec_d[offset + NUM_SPECIES];
-  eos.eos_EY2T(massfrac.arr, nrg_pt, temp_pt);
 
   /* Additional var needed */
-  /* TODO HP */
-  eos.eos_T2EI(temp_pt, ei_pt.arr);
-  eos.eos_TY2Cv(temp_pt, massfrac.arr, &Cv_pt);
+  if (udata->flagP == 1){
+      /* UV REACTOR */
+      eos.eos_EY2T(massfrac.arr, nrg_pt, temp_pt);
+      eos.eos_T2EI(temp_pt, ei_pt.arr);
+      eos.eos_TY2Cv(temp_pt, massfrac.arr, &Cv_pt);
+  }else {
+      /* HP REACTOR */
+      eos.eos_HY2T(massfrac.arr, nrg_pt, temp_pt);
+      eos.eos_TY2Cp(temp_pt, massfrac.arr, &Cv_pt);
+      eos.eos_T2HI(temp_pt, ei_pt.arr);
+  }
 
   eos.eos_RTY2W(rho_pt, temp_pt, massfrac.arr, cdots_pt.arr);
 
@@ -436,7 +443,7 @@ fKernelSpec(int icell, void *user_data,
 static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
                booleantype *jcurPtr, realtype gamma, void *user_data) {
 
-	BL_PROFILE_VAR("cusolverPrecond", Precond);
+	BL_PROFILE_VAR("Precond()", Precond);
 
         cudaError_t cuda_status = cudaSuccess;
         size_t workspaceInBytes, internalDataInBytes;
@@ -483,6 +490,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         }
 	BL_PROFILE_VAR_STOP(fKernelComputeAJ);
 
+	BL_PROFILE_VAR("InfoBatched(inPrecond)", InfoBatched);
         cusolver_status = cusolverSpDcsrqrBufferInfoBatched(udata->cusolverHandle,udata->neqs_per_cell[0]+1,udata->neqs_per_cell[0]+1, 
                                 (udata->NNZ),
                                 udata->descrA,
@@ -499,6 +507,8 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
         cuda_status = cudaDeviceSynchronize();  
         assert(cuda_status == cudaSuccess);
 
+	BL_PROFILE_VAR_STOP(InfoBatched);
+
 	BL_PROFILE_VAR_STOP(Precond);
 
 	return(0);
@@ -509,6 +519,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                   realtype gamma, realtype delta, int lr, void *user_data)
 {
+	BL_PROFILE_VAR("Psolve()", cusolverPsolve);
 
         cudaError_t cuda_status = cudaSuccess;
         cusolverStatus_t cusolver_status = CUSOLVER_STATUS_SUCCESS;
@@ -518,7 +529,6 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
         realtype *z_d      = N_VGetDeviceArrayPointer_Cuda(z);
         realtype *r_d      = N_VGetDeviceArrayPointer_Cuda(r);
 
-	BL_PROFILE_VAR("cusolverPsolve()", cusolverPsolve);
         cusolver_status = cusolverSpDcsrqrsvBatched(udata->cusolverHandle,udata->neqs_per_cell[0]+1,udata->neqs_per_cell[0]+1,
                                (udata->NNZ),
                                udata->descrA,
@@ -533,6 +543,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 
         cuda_status = cudaDeviceSynchronize();  
         assert(cuda_status == cudaSuccess);
+
 	BL_PROFILE_VAR_STOP(cusolverPsolve);
 
 
@@ -616,14 +627,12 @@ fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, do
   eos.eos_RTY2C(rho_pt, temp_pt, massfrac.arr, activity.arr);
 
   /* Additional var needed */
-  /* TODO HP */
   int consP;
   if (udata->flagP == 1){
       consP = 0 ;
   } else {
       consP = 1;
   }
-  //eos.eos_RTY2JAC(rho_pt, temp_pt, massfrac.arr, Jmat_pt.arr, consP);
   DWDOT_PRECOND(Jmat_pt.arr, activity.arr, &temp_pt, &consP);
 
   /* renorm the DenseMat */

@@ -344,7 +344,6 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	BL_PROFILE_VAR_STOP(CuSolverInit)
 
 	BL_PROFILE_VAR("AroundCVODE", AroundCVODE);
-
 	flag = CVode(cvode_mem, time_out, y, &dummy_time, CV_NORMAL);
 	BL_PROFILE_VAR_STOP(AroundCVODE);
 	/* ONE STEP MODE FOR DEBUGGING */
@@ -713,7 +712,7 @@ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 		booleantype *jcurPtr, realtype gamma, void *user_data)
 {
 
-  BL_PROFILE_VAR("cusolverPrecond", Precond);
+  BL_PROFILE_VAR("Precond_sparse()", PrecondS);
   /* Make local copies of pointers to input data (big M) */
   realtype *udata   = N_VGetArrayPointer(u);
   /* Make local copies of pointers in user_data (cell M)*/
@@ -818,7 +817,7 @@ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
       }
       data_wk->FirstTimePrecond = false;
   }
-  BL_PROFILE_VAR_STOP(Precond);
+  BL_PROFILE_VAR_STOP(PrecondS);
 
   return(0);
 }
@@ -830,7 +829,7 @@ int Precond_sparse(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok, 
 		booleantype *jcurPtr, realtype gamma, void *user_data)
 {
-  BL_PROFILE_VAR("cusolverPrecond", Precond);
+  BL_PROFILE_VAR("Precond()", Precond);
   /* Make local copies of pointers to input data (big M) */
   realtype *udata = N_VGetArrayPointer(u);
 
@@ -925,7 +924,7 @@ int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                   realtype gamma, realtype delta, int lr, void *user_data)
 {
 
-  BL_PROFILE_VAR("cusolverPsolve()", cusolverPsolve);
+  BL_PROFILE_VAR("PSolve_sparse()", cusolverPsolve);
   /* Make local copies of pointers in user_data */
   UserData data_wk;
   data_wk = (UserData) user_data;
@@ -956,6 +955,9 @@ int PSolve_sparse(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
                   realtype gamma, realtype delta, int lr, void *user_data)
 {
+
+  BL_PROFILE_VAR("PSolve()", Psolve);
+
   /* Make local copies of pointers to input data (big M) */
   realtype *zdata = N_VGetArrayPointer(z);
 
@@ -973,6 +975,8 @@ int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
      in P and pivot data in pivot, and return the solution in z. */
   realtype *v = zdata;
   denseGETRS(P[0][0], NUM_SPECIES+1, pivot[0][0], v);
+
+  BL_PROFILE_VAR_STOP(Psolve);
 
   return(0);
 }
