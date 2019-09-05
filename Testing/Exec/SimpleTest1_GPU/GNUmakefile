@@ -15,7 +15,7 @@ FUEGO_GAS  = TRUE
 
 USE_CUDA   = TRUE
 
-TINY_PROFILE = TRUE
+TINY_PROFILE = FALSE
 
 # define the location of the PELE_PHYSICS top directory
 PELE_PHYSICS_HOME    := ../../..
@@ -27,6 +27,7 @@ ifeq ($(FUEGO_GAS), TRUE)
   #Chemistry_Model = grimech12
   #Chemistry_Model = grimech30
   Chemistry_Model = dodecane_wang
+  #Chemistry_Model = Aromatic_KrNara
   Reactions_dir   = Fuego
   Transport_dir   = Simple
 else
