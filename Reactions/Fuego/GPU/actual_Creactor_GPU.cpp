@@ -428,9 +428,7 @@ fKernelSpec(int icell, void *user_data,
       eos.eos_T2HI(temp_pt, ei_pt.arr);
   }
 
-  BL_PROFILE_VAR("eos_RTY2W()", eos_RTY2W);
   eos.eos_RTY2W(rho_pt, temp_pt, massfrac.arr, cdots_pt.arr);
-  BL_PROFILE_VAR_STOP(eos_RTY2W);
 
   /* Fill ydot vect */
   ydot_d[offset + NUM_SPECIES] = rhoesrc_ext[icell];
