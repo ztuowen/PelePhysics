@@ -6014,9 +6014,12 @@ class CPickler(CMill):
         self._write('double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */')
         self._write('double invT = 1.0 / tc[1];')
         
-        self._write()
-        self._write('double qdot, q_f[%d], q_r[%d];' % (nReactions,nReactions))
-        self._write('comp_qfqr(q_f, q_r, sc, tc, invT);');
+        if (nReactions == 0):
+            self._write()
+        else:
+            self._write()
+            self._write('double qdot, q_f[%d], q_r[%d];' % (nReactions,nReactions))
+            self._write('comp_qfqr(q_f, q_r, sc, tc, invT);');
 
         self._write()
         self._write('for (int i = 0; i < %d; ++i) {' % nSpecies)
