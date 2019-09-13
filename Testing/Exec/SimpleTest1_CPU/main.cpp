@@ -21,7 +21,19 @@ main (int   argc,
       char* argv[])
 {
     Initialize(argc,argv);
+
+    BL_PROFILE_VAR("main()", pmain);
+
+    Real timer_tot = amrex::second();
+
+    Real timer_init = 0.;
+    Real timer_advance = 0.;
+    Real timer_print = 0.;
+    Real timer_print_tmp = 0.;
+
     {
+
+      timer_init = amrex::second();
 
       ParmParse pp;
     
@@ -70,6 +82,8 @@ main (int   argc,
       MultiFab density(ba,dm,1,num_grow);
 
       IntVect tilesize(D_DECL(10240,8,32));
+
+      BL_PROFILE_VAR("initialize_data()", InitData);
     
       int box_count =0;
       for (MFIter mfi(mass_frac,tilesize); mfi.isValid(); ++mfi) {
@@ -81,13 +95,24 @@ main (int   argc,
 			&(dx[0]), &(plo[0]), &(phi[0]));
 	box_count +=1;
       }
+
+      BL_PROFILE_VAR_STOP(InitData);
+
       printf("That many boxes: %d \n", box_count);
 
+      timer_init = amrex::second() - timer_init;
+
+      timer_print = amrex::second();
       ParmParse ppa("amr");
       std::string pltfile("plt");  
       ppa.query("plot_file",pltfile);
       std::string outfile = amrex::Concatenate(pltfile,0); // Need a number other than zero for reg test to pass
       PlotFileFromMF(temperature,outfile);
+      timer_print = amrex::second() - timer_print;
+
+      BL_PROFILE_VAR("advance()", Advance);
+
+      timer_advance = amrex::second();
 
       MultiFab wdots(ba,dm,num_spec,num_grow);
     
@@ -112,13 +137,30 @@ main (int   argc,
 
       }
 
+      BL_PROFILE_VAR_STOP(Advance);
 
+      timer_advance = amrex::second() - timer_advance;
+
+      timer_print_tmp = amrex::second();
       outfile = amrex::Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
       PlotFileFromMF(wdots,outfile);
+      timer_print = amrex::second() - timer_print_tmp + timer_print;
 
       extern_close();
 
     }
+
+    timer_tot = amrex::second() - timer_tot;
+
+    ParallelDescriptor::ReduceRealMax({timer_tot, timer_init, timer_advance, timer_print},
+                                     ParallelDescriptor::IOProcessorNumber());
+
+    amrex::Print() << "Run Time total        = " << timer_tot     << "\n"
+                   << "Run Time init         = " << timer_init    << "\n"
+                   << "Run Time advance      = " << timer_advance << "\n"
+                   << "Run Time print plt    = " << timer_print << "\n";
+
+    BL_PROFILE_VAR_STOP(pmain);
 
     Finalize();
 

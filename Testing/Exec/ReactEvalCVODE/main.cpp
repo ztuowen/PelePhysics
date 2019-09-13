@@ -166,6 +166,8 @@ main (int   argc,
 
     IntVect tilesize(D_DECL(10240,8,32));
 
+    BL_PROFILE_VAR("initialize_data()", InitData);
+
     /* INITIALIZE DATA */
 #ifdef _OPENMP
 #pragma omp parallel 
@@ -180,9 +182,13 @@ main (int   argc,
 			&(dx[0]), &(plo[0]), &(phi[0]));
     }
 
+    BL_PROFILE_VAR_STOP(InitData);
+
     timer_init = amrex::second() - timer_init; 
 
     timer_print = amrex::second();
+
+    BL_PROFILE_VAR("PlotFileFromMF()", PlotFile);
 
     ParmParse ppa("amr");
     ppa.query("plot_file",pltfile);
@@ -190,10 +196,18 @@ main (int   argc,
     // Specs
     PlotFileFromMF(mf,outfile);
 
+    BL_PROFILE_VAR_STOP(PlotFile);
+
     timer_print = amrex::second() - timer_print;
      
     /* EVALUATE */
     amrex::Print() << " \n STARTING THE ADVANCE \n";
+
+
+    BL_PROFILE_VAR("React()", ReactInLoop);
+    BL_PROFILE_VAR_STOP(ReactInLoop);
+
+    BL_PROFILE_VAR("advance()", Advance);
 
     timer_advance = amrex::second();
 
@@ -296,14 +310,20 @@ main (int   argc,
 	}
     }
 
+    BL_PROFILE_VAR_STOP(Advance);
+
     timer_advance = amrex::second() - timer_advance;
 
 
     timer_print_tmp = amrex::second();
 
+    BL_PROFILE_VAR_START(PlotFile);
+
     outfile = Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
     // Specs
     PlotFileFromMF(mf,outfile);
+
+    BL_PROFILE_VAR_STOP(PlotFile);
 
     timer_print = amrex::second() - timer_print_tmp + timer_print;
     
