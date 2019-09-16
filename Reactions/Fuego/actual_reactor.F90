@@ -31,6 +31,7 @@ contains
     use extern_probin_module, only : new_Jacobian_each_cell
     use amrex_omp_module
 
+    implicit none
     integer(c_int),  intent(in   ) :: iE_in
     integer(c_int),  intent(in   ), optional :: Ncells
     integer :: verbose, itol, order, maxstep
@@ -59,7 +60,7 @@ contains
     if (isio) then
        print *,"Using good ol' dvode"
        print *,"--> DENSE solver without Analytical J"
-       print *,"--> Always new analytical Jac ? ",always_new_j_loc
+       print *,"--> Always new J ? ",always_new_j_loc
     endif
     iE = iE_in
     if (iE == 1) then
@@ -79,17 +80,18 @@ contains
 !*** REACTION ROUTINES ***!
   ! Original DVODE version
   !function react(react_state_in, react_state_out, dt_react, time) bind(C, name="react") result(stat)
-  function react(rY_in,rY_src_in,rX_in,rX_src_in,P_in,dt_react,time,Init) bind(C, name="react") result(cost_value)
+  function react(rY_in,rY_src_in,rX_in,rX_src_in,P_in,dt_react,time) bind(C, name="react") result(cost_value)
     
     use amrex_error_module
     use vode_module, only : verbose, itol, rtol, atol, vode_MF=>MF, always_new_j, &
          voderwork, vodeiwork, lvoderwork, lvodeiwork, voderpar, vodeipar
     use eos_module
 
+    implicit none
     real(amrex_real),   intent(inout) :: rY_in(nspecies+1),rY_src_in(nspecies)
     real(amrex_real),   intent(inout) :: rX_in,rX_src_in,P_in
     real(amrex_real),   intent(inout) :: dt_react, time
-    integer                           :: Init, cost_value
+    integer                           :: cost_value
     
     ! For compatibility to remove later
     type(react_t) :: react_state_in
@@ -316,6 +318,7 @@ contains
     use chemistry_module, only : molecular_weight
     use eos_module
 
+    implicit none
     integer,         intent(in)   :: neq, ipar(*)
     real(amrex_real), intent(in)  :: y(neq), time, rpar(*)
     real(amrex_real), intent(out) :: ydot(neq)
@@ -379,6 +382,7 @@ contains
   subroutine f_jac(neq, npt, y, t, pd)
     use amrex_error_module
 
+    implicit none
     integer,        intent(in)  :: neq, npt
     real(amrex_real),intent(in)  :: y(neq,npt), t
     real(amrex_real),intent(inout) :: pd(neq,neq)
@@ -390,6 +394,7 @@ contains
 !*** FINALIZE ROUTINES ***!
   subroutine reactor_close() bind(C, name="reactor_close")
 
+    implicit none
     call destroy(eos_state)
 
     reactor_initialized = .false.

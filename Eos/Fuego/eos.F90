@@ -9,7 +9,8 @@ module eos_module
   use amrex_constants_module
   use eos_type_module
   use fuego_chemistry
-  use chemistry_module, only : nspecies, Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
+  use network, only : nspecies
+  use chemistry_module, only : Ru, inv_mwt, chemistry_init, chemistry_initialized, spec_names, elem_names
 
   implicit none
   character (len=64) :: eos_name = "fuego"
@@ -27,6 +28,7 @@ module eos_module
   interface
      subroutine amrex_array_init_snan (p, nelem) bind(C,name="amrex_array_init_snan")
        use iso_c_binding, only : c_double, c_size_t
+       implicit none
        real(c_double),intent(inout) :: p
        integer (kind=c_size_t),intent(in),value :: nelem
      end subroutine amrex_array_init_snan
@@ -530,6 +532,34 @@ contains
     call bl_error('EOS: eos_mui is not supported in this EOS.')
 
   end subroutine eos_mui
+
+  subroutine eos_re_ext(rho,Y,T,e,ei,cv) bind(C, name="eos_re_ext")   
+
+    implicit none
+
+    type (eos_t) :: eos_state
+
+    real(amrex_real), intent(in   ) :: rho, e
+    real(amrex_real), intent(in   ) :: Y(nspecies)
+    real(amrex_real), intent(inout) :: T,cv
+    real(amrex_real), intent(inout) :: ei(nspecies)
+
+    call build(eos_state)
+
+    eos_state % rho               = rho
+    eos_state % massfrac          = Y
+    eos_state % T                 = T
+    eos_state % e                 = e
+
+    call eos_re(eos_state)
+    
+    T                             = eos_state % T
+    ei                            = eos_state % ei
+    cv                            = eos_state % cv
+
+    call destroy(eos_state)
+
+  end subroutine eos_re_ext
 
 end module eos_module
 

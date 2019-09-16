@@ -5,6 +5,7 @@ module actual_transport_module
   use transport_type_module
   use fuego_chemistry
   use chemistry_module, only : Ru
+  use network, only : nspecies
 
   implicit none
 
@@ -44,8 +45,12 @@ contains
 
     integer :: n,i,j
     integer :: iH2O
-    
-    call egtransetKK(nspecies)
+    integer :: nspecies_tran
+
+    call egtransetKK(nspecies_tran)
+    if (nspecies_tran .ne. nspecies) then
+       call bl_pd_abort('Incompatible transport database')
+    endif 
     call egtransetNO(nfit)
 
     if(.not.allocated(wt)) then
@@ -173,6 +178,7 @@ contains
 
 
   subroutine build_internal(npts)
+    implicit none
     integer, intent(in) :: npts
 
     if (npts_smp .ne. npts .and. npts.gt.0) then
@@ -198,6 +204,8 @@ contains
 
   subroutine destroy_internal
 
+    implicit none
+
     deallocate(Tloc)
     deallocate(rholoc)
     deallocate(Yloc)
@@ -218,6 +226,8 @@ contains
   subroutine actual_transport(which, coeff)
 
     use amrex_error_module
+
+    implicit none
 
     type (wtr_t), intent(in   ) :: which
     type (trv_t), intent(inout) :: coeff

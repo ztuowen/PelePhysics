@@ -146,7 +146,7 @@ class CPickler(CMill):
         self._indent()
         self._write('for (int i=0; i<%d; ++i) {' % (nReactions))
         self._indent()        
-        self._write('rmap[i] = rxn_map[i];')
+        self._write('rmap[i] = rxn_map[i] + 1;')
         self._outdent()
         self._write('}')
         self._outdent()
@@ -335,8 +335,6 @@ class CPickler(CMill):
         self._write('namespace thermo')
         self._write('{')
         self._indent()
-        self._write(self.line(' Inverse molecular weights'))
-        self._write('std::vector<double> imw;')
         self._write('double fwd_A[%d], fwd_beta[%d], fwd_Ea[%d];' 
                     % (nReactions,nReactions,nReactions))
         self._write('double low_A[%d], low_beta[%d], low_Ea[%d];' 
@@ -353,6 +351,9 @@ class CPickler(CMill):
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('double *TB[%d];' 
                     % (nReactions))
+
+        self._write('std::vector<std::vector<int>> kiv(%d); ' % (nReactions))
+        self._write('std::vector<std::vector<int>> nuv(%d); ' % (nReactions))
 
         self._write()
         self._write('double fwd_A_DEF[%d], fwd_beta_DEF[%d], fwd_Ea_DEF[%d];' 
@@ -386,7 +387,7 @@ class CPickler(CMill):
 
         self._write(self.line(' Inverse molecular weights'))
         self._write(self.line(' TODO: check necessity on CPU'))
-        self._write('static AMREX_GPU_DEVICE_MANAGED double inv_molecular_weights[%d] = {' %nSpecies )
+        self._write('static AMREX_GPU_DEVICE_MANAGED double imw[%d] = {' %nSpecies )
         self._indent()
         for i in range(0,self.nSpecies):
             species = self.species[i]
@@ -418,7 +419,7 @@ class CPickler(CMill):
         self._write('void get_imw(double imw_new[]){')
         ##self._write('#pragma unroll')
         self._indent()
-        self._write('for(int i = 0; i<%d; ++i) imw_new[i] = inv_molecular_weights[i];' %nSpecies )
+        self._write('for(int i = 0; i<%d; ++i) imw_new[i] = imw[i];' %nSpecies )
         self._outdent()
         self._write('}')
         self._write()
@@ -580,6 +581,7 @@ class CPickler(CMill):
         self._ckqxr(mechanism)
 
         self._cknu(mechanism)
+        self._ckinu(mechanism)
         self._ckncf(mechanism)
         
         self._ckabe(mechanism)
@@ -611,7 +613,6 @@ class CPickler(CMill):
         self._progressRateFR(mechanism)
         self._equilibriumConstants(mechanism)
         self._thermo_GPU(mechanism)
-        self._molecularWeight(mechanism)
         self._atomicWeight(mechanism)
         self._T_given_ey(mechanism)
         self._T_given_hy(mechanism)
@@ -846,7 +847,7 @@ class CPickler(CMill):
         self._write('/* Species */')
         nb_spec = 0
         for species in mechanism.species():
-            self._write('#define %s_ID %d' % (species.symbol, species.id) )
+            self._write('#define %s_ID %d' % (((species.symbol).replace("*","D")).replace("-",""), species.id) )
             nb_spec += 1
         self._write()
         self._write("#define NUM_ELEMENTS %d" % (nb_elem))
@@ -875,8 +876,6 @@ class CPickler(CMill):
 
         self._indent()
 
-        self._write('extern std::vector<double> imw;')
-
         nReactions = len(mechanism.reaction())
         self._write()
         self._write('extern double fwd_A[%d], fwd_beta[%d], fwd_Ea[%d];' 
@@ -895,6 +894,9 @@ class CPickler(CMill):
                     % (nReactions,nReactions,nReactions,nReactions,nReactions))
         self._write('extern double *TB[%d];' 
                     % (nReactions))
+
+        self._write('extern std::vector<std::vector<int>> kiv; ')
+        self._write('extern std::vector<std::vector<int>> nuv; ')
 
         self._write()
         self._write('extern double fwd_A_DEF[%d], fwd_beta_DEF[%d], fwd_Ea_DEF[%d];' 
@@ -977,7 +979,7 @@ class CPickler(CMill):
             'void CKMMWC'+sym+'(double *  c, double *  wtm);',
             'AMREX_GPU_HOST_DEVICE void CKYTX'+sym+'(double *  y, double *  x);',
             'void CKYTCP'+sym+'(double *  P, double *  T, double *  y, double *  c);',
-            'void CKYTCR'+sym+'(double *  rho, double *  T, double *  y, double *  c);',
+            'AMREX_GPU_HOST_DEVICE void CKYTCR'+sym+'(double *  rho, double *  T, double *  y, double *  c);',
             'void CKXTY'+sym+'(double *  x, double *  y);',
             'void CKXTCP'+sym+'(double *  P, double *  T, double *  x, double *  c);',
             'void CKXTCR'+sym+'(double *  rho, double *  T, double *  x, double *  c);',
@@ -1004,12 +1006,12 @@ class CPickler(CMill):
             'void CKSMS'+sym+'(double *  T, double *  sms);',
             
             'void CKCPBL'+sym+'(double *  T, double *  x, double *  cpbl);',
-            'void CKCPBS'+sym+'(double *  T, double *  y, double *  cpbs);',
+            'AMREX_GPU_HOST_DEVICE void CKCPBS'+sym+'(double *  T, double *  y, double *  cpbs);',
             'void CKCVBL'+sym+'(double *  T, double *  x, double *  cpbl);',
             'AMREX_GPU_HOST_DEVICE void CKCVBS'+sym+'(double *  T, double *  y, double *  cpbs);',
             
             'void CKHBML'+sym+'(double *  T, double *  x, double *  hbml);',
-            'void CKHBMS'+sym+'(double *  T, double *  y, double *  hbms);',
+            'AMREX_GPU_HOST_DEVICE void CKHBMS'+sym+'(double *  T, double *  y, double *  hbms);',
             'void CKUBML'+sym+'(double *  T, double *  x, double *  ubml);',
             'AMREX_GPU_HOST_DEVICE void CKUBMS'+sym+'(double *  T, double *  y, double *  ubms);',
             'void CKSBML'+sym+'(double *  P, double *  T, double *  x, double *  sbml);',
@@ -1020,7 +1022,7 @@ class CPickler(CMill):
             'void CKABMS'+sym+'(double *  P, double *  T, double *  y, double *  abms);',
 
             
-            'void CKWC'+sym+'(double *  T, double *  C, double *  wdot);',
+            'AMREX_GPU_HOST_DEVICE void CKWC'+sym+'(double *  T, double *  C, double *  wdot);',
             'void CKWYP'+sym+'(double *  P, double *  T, double *  y, double *  wdot);',
             'void CKWXP'+sym+'(double *  P, double *  T, double *  x, double *  wdot);',
             'AMREX_GPU_HOST_DEVICE void CKWYR'+sym+'(double *  rho, double *  T, double *  y, double *  wdot);',
@@ -1035,6 +1037,9 @@ class CPickler(CMill):
             'void CKQXR'+sym+'(double *  rho, double *  T, double *  x, double *  qdot);',
             
             'void CKNU'+sym+'(int * kdim, int * nuki);',
+            '#ifndef AMREX_USE_CUDA',
+            'void CKINU'+sym+'(int * i, int * nspec, int * ki, int * nu);',
+            '#endif',
             'void CKNCF'+sym+'(int * mdim, int * ncf);',
             
             'void CKABE'+sym+'(double *  a, double *  b, double *  e );',
@@ -1058,7 +1063,7 @@ class CPickler(CMill):
             'AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T, int HP);',
             'AMREX_GPU_HOST_DEVICE void dcvpRdT(double *  species, double *  tc);',
             'AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_EY(double *  e, double *  y, double *  t, int *ierr);',
-            'void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);',
+            'AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int *ierr);',
             'void GET_CRITPARAMS(double *  Tci, double *  ai, double *  bi, double *  acentric_i);',
             self.line('vector version'),
             'void VCKYTX'+sym+'(int *  np, double *  y, double *  x);',
@@ -1187,6 +1192,7 @@ class CPickler(CMill):
             '#define CKQYR CKQYR',
             '#define CKQXR CKQXR',
             '#define CKNU CKNU',
+            '#define CKINU CKINU',
             '#define CKNCF CKNCF',
             '#define CKABE CKABE',
             '#define CKEQC CKEQC',
@@ -1282,6 +1288,7 @@ class CPickler(CMill):
             '#define CKQYR ckqyr',
             '#define CKQXR ckqxr',
             '#define CKNU cknu',
+            '#define CKINU ckinu',
             '#define CKNCF ckncf',
             '#define CKABE ckabe',
             '#define CKEQC ckeqc',
@@ -1377,6 +1384,7 @@ class CPickler(CMill):
             '#define CKQYR ckqyr_',
             '#define CKQXR ckqxr_',
             '#define CKNU cknu_',
+            '#define CKINU ckinu_',
             '#define CKNCF ckncf_',
             '#define CKABE ckabe_',
             '#define CKEQC ckeqc_',
@@ -1518,6 +1526,7 @@ class CPickler(CMill):
             'void CKQXR'+sym+'(double *  rho, double *  T, double *  x, double *  qdot);',
             
             'void CKNU'+sym+'(int * kdim, int * nuki);',
+            'void CKINU'+sym+'(int * i, int * nspec, int * ki, int * nu);',
             'void CKNCF'+sym+'(int * mdim, int * ncf);',
             
             'void CKABE'+sym+'(double *  a, double *  b, double *  e );',
@@ -1700,6 +1709,21 @@ class CPickler(CMill):
             reaction = mechanism.reaction()[rmap[j]]
             id = reaction.id - 1
 
+            ki = []
+            nu = []
+            for symbol, coefficient in reaction.reactants:
+                ki.append(mechanism.species(symbol).id)
+                nu.append(-coefficient)
+            for symbol, coefficient in reaction.products:
+                ki.append(mechanism.species(symbol).id)
+                nu.append(coefficient)
+
+            self._write("// (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
+            kistr = "{" + ','.join(str(x) for x in ki) + "}"
+            nustr = "{" + ','.join(str(x) for x in nu) + "}"
+            self._write("kiv[%d] = %s;" % (id,kistr))
+            self._write("nuv[%d] = %s;" % (id,nustr))
+
             A, beta, E = reaction.arrhenius
             self._write("// (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
             self._write("fwd_A[%d]     = %.17g;" % (id,A))
@@ -1796,19 +1820,7 @@ class CPickler(CMill):
 
         self._indent()
 
-        self._write(self.line(' Inverse molecular weights'))
-        self._write('imw = {')
-        self._indent()
-        for i in range(0,self.nSpecies):
-            species = self.species[i]
-            text = '1.0 / %f' % (species.weight)
-            if (i<self.nSpecies-1):
-               text += ',  '
-            else:
-               text += '};  '
-            self._write(text + self.line('%s' % species.symbol))
-        self._outdent()
-        self._write()
+
 
         # build reverse reaction map
         rmap = {}
@@ -1822,6 +1834,21 @@ class CPickler(CMill):
         for j in range(nReactions):
             reaction = mechanism.reaction()[rmap[j]]
             id = reaction.id - 1
+
+            ki = []
+            nu = []
+            for symbol, coefficient in reaction.reactants:
+                ki.append(mechanism.species(symbol).id)
+                nu.append(-coefficient)
+            for symbol, coefficient in reaction.products:
+                ki.append(mechanism.species(symbol).id)
+                nu.append(coefficient)
+
+            self._write("// (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
+            kistr = "{" + ','.join(str(x) for x in ki) + "}"
+            nustr = "{" + ','.join(str(x) for x in nu) + "}"
+            self._write("kiv[%d] = %s;" % (id,kistr))
+            self._write("nuv[%d] = %s;" % (id,nustr))
 
             A, beta, E = reaction.arrhenius
             self._write("// (%d):  %s" % (reaction.orig_id - 1, reaction.equation()))
@@ -1907,7 +1934,7 @@ class CPickler(CMill):
         self._indent()
         self._write('for (int i=0; i<%d; ++i) {' % (nReactions))
         self._indent()        
-        self._write('rmap[i] = rxn_map[i];')
+        self._write('rmap[i] = rxn_map[i] + 1;')
         self._outdent()
         self._write('}')
         self._outdent()
@@ -2669,7 +2696,7 @@ class CPickler(CMill):
         self._indent()
 
         # call molecularWeight
-        self._write('molecularWeight(wt);')
+        self._write('get_mw(wt);')
         
         self._outdent()
 
@@ -3318,7 +3345,7 @@ class CPickler(CMill):
         self._write()
         self._write()
         self._write(self.line('Returns the mean specific heat at CP (Eq. 34)'))
-        self._write('void CKCPBS'+sym+'(double *  T, double *  y,  double *  cpbs)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKCPBS'+sym+'(double *  T, double *  y,  double *  cpbs)')
         self._write('{')
         self._indent()
 
@@ -3493,7 +3520,7 @@ class CPickler(CMill):
         self._write()
         self._write()
         self._write(self.line('Returns mean enthalpy of mixture in mass units'))
-        self._write('void CKHBMS'+sym+'(double *  T, double *  y,  double *  hbms)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKHBMS'+sym+'(double *  T, double *  y,  double *  hbms)')
         self._write('{')
         self._indent()
 
@@ -3964,7 +3991,7 @@ class CPickler(CMill):
         self._write()
         self._write()
         self._write(self.line('compute the production rate for each species'))
-        self._write('void CKWC'+sym+'(double *  T, double *  C,  double *  wdot)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKWC'+sym+'(double *  T, double *  C,  double *  wdot)')
         self._write('{')
         self._indent()
 
@@ -4287,6 +4314,57 @@ class CPickler(CMill):
         return
 
 
+    def _ckinu(self, mechanism):
+
+        nSpecies  = len(mechanism.species())
+        nReaction = len(mechanism.reaction())
+
+        self._write()
+        self._write()
+        self._write('#ifndef AMREX_USE_CUDA')
+        self._write(self.line('Returns a count of species in a reaction, and their indices'))
+        self._write(self.line('and stoichiometric coefficients. (Eq 50)'))
+        self._write('void CKINU'+sym+'(int * i, int * nspec, int * ki, int * nu)')
+        self._write('{')
+        self._indent()
+
+        self._write("if (*i < 1) {")
+        self._indent()
+
+        maxsp = 0
+        for reaction in mechanism.reaction():
+            maxsp = max(maxsp,len(reaction.reactants) + len(reaction.products))
+
+        self._write(self.line('Return max num species per reaction'))
+        self._write("*nspec = %d;" % (maxsp))
+        self._outdent()
+        self._write("} else {")
+        self._indent()
+        self._write("if (*i > %d) {" % (nReaction))
+        self._indent()
+        self._write("*nspec = -1;")
+        self._outdent()
+        self._write("} else {")
+        self._indent()
+        self._write("*nspec = kiv[*i-1].size();")
+        self._write("for (int j=0; j<*nspec; ++j) {")
+        self._indent()
+        self._write("ki[j] = kiv[*i-1][j] + 1;")
+        self._write("nu[j] = nuv[*i-1][j];")
+        self._outdent()
+        self._write("}")
+        self._outdent()
+        self._write("}")
+        self._outdent()
+        self._write("}")
+        # done
+        self._outdent()
+        self._write('}')
+        self._write('#endif')
+
+        return
+
+
     def _ckncf(self, mechanism):
 
         nSpecies  = len(mechanism.species())
@@ -4603,7 +4681,7 @@ class CPickler(CMill):
         self._write()
         self._write(self.line(
             'convert y[species] (mass fracs) to c[species] (molar conc)'))
-        self._write('void CKYTCR'+sym+'(double *  rho, double *  T, double *  y,  double *  c)')
+        self._write('AMREX_GPU_HOST_DEVICE void CKYTCR'+sym+'(double *  rho, double *  T, double *  y,  double *  c)')
         self._write('{')
         self._indent()
         species = self.species
@@ -6907,7 +6985,7 @@ class CPickler(CMill):
         self._write('double J[%d];' % ((nSpecies+1) * (nSpecies+1)))
         self._write('double mwt[%d];' % (nSpecies))
         self._write()
-        self._write('molecularWeight(mwt);')
+        self._write('get_mw(mwt);')
         self._write()
         self._write('for (int k=0; k<%d; k++) {' % nSpecies)
         self._indent()
@@ -7546,7 +7624,7 @@ class CPickler(CMill):
                     self._write("    -Fcent1/%.17g"
                                 % troe[1] )
                 else:
-                    self._write("    0.")
+                    self._write("    +0.")
                 if (abs(troe[2]) > 1.e-100):
                     self._write("    -Fcent2/%.17g"
                                 % troe[2] )
@@ -9581,7 +9659,7 @@ class CPickler(CMill):
 
         self._write('egtransetEPS(EPS);')
         self._write('egtransetSIG(SIG);')
-        self._write('molecularWeight(wt);')
+        self._write('get_mw(wt);')
 
 
         for species in mechanism.species():
@@ -11938,7 +12016,7 @@ class CPickler(CMill):
 
     def _T_given_hy(self, mechanism):
         self._write(self.line(' get temperature given enthalpy in mass units and mass fracs'))
-        self._write('void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)')
+        self._write('AMREX_GPU_HOST_DEVICE void GET_T_GIVEN_HY(double *  h, double *  y, double *  t, int * ierr)')
         self._write('{')
         self._write('#ifdef CONVERGENCE')
         self._indent()
