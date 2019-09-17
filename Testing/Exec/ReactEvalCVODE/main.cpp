@@ -118,18 +118,22 @@ main (int   argc,
     bath_idx  = N2_ID;
     extern_init(&(probin_file_name[0]),&probin_file_length,&fuel_idx,&oxy_idx,&bath_idx,&cvode_iE);
 
+    BL_PROFILE_VAR("reactor_info()", reactInfo);
+
     /* Initialize D/CVODE reactor */
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
     reactor_init(&cvode_iE, &cvode_ncells);
 
+    BL_PROFILE_VAR_STOP(reactInfo);
+
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
     for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 2;
+	npts[i] = 8;
     }
-    npts[1] = 128;
+    npts[1] = 64;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";
@@ -164,15 +168,16 @@ main (int   argc,
     MultiFab temperature(ba,dm,1,0);
     MultiFab fctCount(ba,dm,1,0);
 
-    IntVect tilesize(D_DECL(10240,8,32));
+    //IntVect tilesize(D_DECL(10240,8,32));
 
     BL_PROFILE_VAR("initialize_data()", InitData);
 
+    int count_mf = 0;
     /* INITIALIZE DATA */
-#ifdef _OPENMP
-#pragma omp parallel 
-#endif
-    for (MFIter mfi(mf,tilesize); mfi.isValid(); ++mfi ){
+//#ifdef _OPENMP
+//#pragma omp parallel 
+//#endif
+    for (MFIter mfi(mf,false); mfi.isValid(); ++mfi ){
         const Box& box = mfi.tilebox();
         initialize_data(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
                		BL_TO_FORTRAN_N_3D(mf[mfi],0),
@@ -180,9 +185,12 @@ main (int   argc,
 		        BL_TO_FORTRAN_N_3D(mfE[mfi],0),
 		        BL_TO_FORTRAN_N_3D(rY_source_energy_ext[mfi],0),
 			&(dx[0]), &(plo[0]), &(phi[0]));
+	count_mf = count_mf + 1;
     }
 
     BL_PROFILE_VAR_STOP(InitData);
+
+    amrex::Print() << "That many boxes: " << count_mf<< "\n";
 
     timer_init = amrex::second() - timer_init; 
 
@@ -194,7 +202,7 @@ main (int   argc,
     ppa.query("plot_file",pltfile);
     std::string outfile = Concatenate(pltfile,0); // Need a number other than zero for reg test to pass
     // Specs
-    PlotFileFromMF(mf,outfile);
+    //PlotFileFromMF(mf,outfile);
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
@@ -211,10 +219,10 @@ main (int   argc,
 
     timer_advance = amrex::second();
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    for ( MFIter mfi(mf,tilesize); mfi.isValid(); ++mfi )
+//#ifdef _OPENMP
+//#pragma omp parallel
+//#endif
+    for ( MFIter mfi(mf,false); mfi.isValid(); ++mfi )
     {
 	/* Prints to follow the computation */
         /* ADVANCE */
@@ -222,7 +230,6 @@ main (int   argc,
         Real dt_incr   = dt/ndt;
 
         const Box& box = mfi.tilebox();
-	//int ncells = box.numPts();
 
 	FArrayBox& Fb     = mf[mfi];
 	FArrayBox& Fbsrc  = rY_source_ext[mfi];
@@ -321,7 +328,7 @@ main (int   argc,
 
     outfile = Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
     // Specs
-    PlotFileFromMF(mf,outfile);
+    //PlotFileFromMF(mf,outfile);
 
     BL_PROFILE_VAR_STOP(PlotFile);
 

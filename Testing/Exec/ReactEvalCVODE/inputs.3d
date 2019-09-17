@@ -1,5 +1,5 @@
 dt = 1.e-05
-ndt = 400
+ndt = 5
 
 # Select CVODE Jacobian eval: 0=FD 1=AJ
 ns.cvode_iJac = 1
@@ -8,9 +8,10 @@ ns.cvode_iJac = 1
 cvode_iE = 1
 
 # Choose between sparse (5) dense (1) or iterative (99) solver
-ns.cvode_iDense = 1
+ns.cvode_iDense = 99
 
-max_grid_size = 16
+
+max_grid_size = 8
 
 # Choose name of output pltfile
 amr.plot_file       = plt

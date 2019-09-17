@@ -1,18 +1,19 @@
 PRECISION  = DOUBLE
 PROFILE    = FALSE
 
-DEBUG      = TRUE
+DEBUG      = FALSE
 
-DIM        = 2
+DIM        = 3
 
 COMP	   = gcc
 FCOMP	   = gfortran
 
-USE_MPI    = FALSE
 USE_MPI    = TRUE
-USE_OMP    = TRUE
+USE_OMP    = FALSE
 
 FUEGO_GAS  = TRUE
+
+TINY_PROFILE = TRUE
 
 # define the location of the PELE_PHYSICS top directory
 PELE_PHYSICS_HOME    := ../../..
@@ -22,10 +23,10 @@ PELE_PHYSICS_HOME    := ../../..
 DEFINES  += -DMOD_REACTOR
 
 # use CVODE
-CVODE_LIB_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/sundials/instdir/lib/
+#CVODE_LIB_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/sundials/instdir/lib/
 USE_SUNDIALS_PP = TRUE
 
-SUITESPARSE_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/SuiteSparse/
+#SUITESPARSE_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/SuiteSparse/
 USE_KLU_PP = TRUE
 
 #######################
