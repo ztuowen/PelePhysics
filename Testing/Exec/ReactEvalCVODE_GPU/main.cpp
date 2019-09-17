@@ -172,7 +172,6 @@ main (int   argc,
     int count_mf = 0;
     /* INITIALIZE DATA */
     for (MFIter mfi(mf,false); mfi.isValid(); ++mfi ){
-        count_mf = count_mf + 1;	
         const Box& box = mfi.tilebox();
         initialize_data(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
                		BL_TO_FORTRAN_N_3D(mf[mfi],0),
@@ -180,10 +179,12 @@ main (int   argc,
 		        BL_TO_FORTRAN_N_3D(mfE[mfi],0),
 		        BL_TO_FORTRAN_N_3D(rY_source_energy_ext[mfi],0),
 			&(dx[0]), &(plo[0]), &(phi[0]));
-        amrex::Print() << "Treating box: " << count_mf<< "\n";
+        count_mf = count_mf + 1;	
     }
 
     BL_PROFILE_VAR_STOP(InitData);
+
+    amrex::Print() << "That many boxes: " << count_mf<< "\n";
 
     timer_init = amrex::second() - timer_init; 
 
@@ -195,7 +196,7 @@ main (int   argc,
     ppa.query("plot_file",pltfile);
     std::string outfile = Concatenate(pltfile,0); // Need a number other than zero for reg test to pass
     // Specs
-    PlotFileFromMF(mf,outfile);
+    //PlotFileFromMF(mf,outfile);
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
@@ -209,6 +210,9 @@ main (int   argc,
 
     BL_PROFILE_VAR("React()", ReactInLoop);
     BL_PROFILE_VAR_STOP(ReactInLoop);
+
+    BL_PROFILE_VAR("(un)flatten()", FlatStuff);
+    BL_PROFILE_VAR_STOP(FlatStuff);
 
     BL_PROFILE_VAR("advance()", Advance);
 
@@ -257,6 +261,7 @@ main (int   argc,
         cudaMallocManaged(&tmp_src_vect_energy, ncells*sizeof(amrex::Real));
 	BL_PROFILE_VAR_STOP(Allocs);
 
+        BL_PROFILE_VAR_START(FlatStuff);
         /* Packing of data */
         /* SECOND VERSION */
 	amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
@@ -273,6 +278,7 @@ main (int   argc,
                                             tmp_vect, tmp_src_vect, tmp_vect_energy, tmp_src_vect_energy);
             }
         });
+	BL_PROFILE_VAR_STOP(FlatStuff);
         
 
         /* Solve */
@@ -283,10 +289,12 @@ main (int   argc,
 	                    tmp_vect_energy, tmp_src_vect_energy,
 	                    &dt_incr, &time,
                             &cvode_iE, &ncells, amrex::Gpu::gpuStream());
+	    //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
 	    dt_incr =  dt/ndt;
         }
         BL_PROFILE_VAR_STOP(ReactInLoop);
 
+        BL_PROFILE_VAR_START(FlatStuff);
         /* Unpacking of data */
 	amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	[=] AMREX_GPU_DEVICE () noexcept {
@@ -302,6 +310,7 @@ main (int   argc,
                                             tmp_vect, tmp_vect_energy);
             }
         });
+        BL_PROFILE_VAR_STOP(FlatStuff);
 
         cudaFree(tmp_vect);
         cudaFree(tmp_src_vect);
