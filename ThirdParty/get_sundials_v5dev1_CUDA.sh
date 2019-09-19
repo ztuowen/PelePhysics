@@ -10,8 +10,8 @@ if [ ! -d sundials ]; then
   git clone https://github.com/LLNL/sundials
   cd sundials/
   git checkout develop
-  git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators.patch
-  git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators_part2.patch
+  #git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators.patch
+  #git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators_part2.patch
 else
   cd sundials/
 fi

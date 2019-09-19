@@ -26,16 +26,21 @@ main (int   argc,
 
     BL_PROFILE_VAR("main()", pmain);
 
-    Real timer_tot = amrex::second();
-    Real timer_init = 0.;
-    Real timer_advance = 0.;
-    Real timer_print = 0.;
-    Real timer_print_tmp = 0.;
-
+    const int IOProc = ParallelDescriptor::IOProcessorNumber();
+    //TOTAL TIME
+    Real timer_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_init,IOProc);
+    Real timer_tot = 0.;
+    //INITIALIZATIOn
+    Real timer_initializ_stop = 0.;
+    // ADVANCE
+    Real timer_adv_init = 0.;
+    Real timer_adv_stop = 0.;
+    //Print
+    Real timer_print_init = 0.;
+    Real timer_print_stop = 0.;
 
     {
-
-    timer_init = amrex::second();
 
     int max_grid_size = 16;
     std::string probin_file="probin";
@@ -111,8 +116,8 @@ main (int   argc,
         fuel_idx  = H2_ID;
     } else if (fuel_name == "CH4") {
         fuel_idx  = CH4_ID;
-    } else if (fuel_name == "NC12H26") {
-        fuel_idx  = NC12H26_ID;
+    //} else if (fuel_name == "NC12H26") {
+    //    fuel_idx  = NC12H26_ID;
     }
     oxy_idx   = O2_ID;
     bath_idx  = N2_ID;
@@ -128,9 +133,9 @@ main (int   argc,
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
     for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 2;
+	npts[i] = 16;
     }
-    npts[1] = 512;
+    npts[1] = 64;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";
@@ -165,7 +170,7 @@ main (int   argc,
     MultiFab temperature(ba,dm,1,0);
     MultiFab fctCount(ba,dm,1,0);
 
-    IntVect tilesize(D_DECL(10240,8,32));
+    //IntVect tilesize(D_DECL(10240,8,32));
 
     BL_PROFILE_VAR("initialize_data()", InitData);
 
@@ -179,16 +184,18 @@ main (int   argc,
 		        BL_TO_FORTRAN_N_3D(mfE[mfi],0),
 		        BL_TO_FORTRAN_N_3D(rY_source_energy_ext[mfi],0),
 			&(dx[0]), &(plo[0]), &(phi[0]));
-        count_mf = count_mf + 1;	
+	count_mf = count_mf + 1;
     }
 
     BL_PROFILE_VAR_STOP(InitData);
 
     amrex::Print() << "That many boxes: " << count_mf<< "\n";
 
-    timer_init = amrex::second() - timer_init; 
+    timer_initializ_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_initializ_stop,IOProc);
 
-    timer_print = amrex::second();
+    //timer_print_init = ParallelDescriptor::second();
+    //ParallelDescriptor::ReduceRealMax(timer_print_init,IOProc);
 
     BL_PROFILE_VAR("PlotFileFromMF()", PlotFile);
 
@@ -200,7 +207,8 @@ main (int   argc,
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
-    timer_print = amrex::second() - timer_print;
+    //timer_print_stop = ParallelDescriptor::second();
+    //ParallelDescriptor::ReduceRealMax(timer_print_stop,IOProc);
      
     /* EVALUATE */
     amrex::Print() << " \n STARTING THE ADVANCE \n";
@@ -216,7 +224,8 @@ main (int   argc,
 
     BL_PROFILE_VAR("advance()", Advance);
 
-    timer_advance = amrex::second();
+    timer_adv_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_adv_init,IOProc);
 
     for ( MFIter mfi(mf,false); mfi.isValid(); ++mfi )
     {
@@ -323,10 +332,12 @@ main (int   argc,
 
     BL_PROFILE_VAR_STOP(Advance);
 
-    timer_advance = amrex::second() - timer_advance;
+    timer_adv_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_adv_stop,IOProc);
 
 
-    timer_print_tmp = amrex::second();
+    timer_print_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_print_init,IOProc);
 
     BL_PROFILE_VAR_START(PlotFile);
 
@@ -336,21 +347,21 @@ main (int   argc,
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
-    timer_print = amrex::second() - timer_print_tmp + timer_print;
+    timer_print_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_print_stop,IOProc);
     
     extern_close();
 
     }
 
-    timer_tot = amrex::second() - timer_tot;
+    timer_tot = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_tot,IOProc);
 
-    ParallelDescriptor::ReduceRealMax({timer_tot, timer_init, timer_advance, timer_print},
-                                     ParallelDescriptor::IOProcessorNumber());
 
-    amrex::Print() << "Run Time total        = " << timer_tot     << "\n"
-                   << "Run Time init         = " << timer_init    << "\n"
-                   << "Run Time advance      = " << timer_advance << "\n"
-                   << "Run Time print plt    = " << timer_print << "\n";
+    amrex::Print() << "Run Time total        = " << timer_tot            - timer_init    << "\n"
+                   << "Run Time init         = " << timer_initializ_stop - timer_init    << "\n"
+                   << "Run Time advance      = " << timer_adv_stop       - timer_adv_init << "\n"
+                   << "Run Time print plt    = " << timer_print_stop     - timer_print_init << "\n";
 
     BL_PROFILE_VAR_STOP(pmain);
 

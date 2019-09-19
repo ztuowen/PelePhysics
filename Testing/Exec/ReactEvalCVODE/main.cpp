@@ -29,16 +29,21 @@ main (int   argc,
 
     BL_PROFILE_VAR("main()", pmain);
 
-    Real timer_tot = amrex::second();
-    Real timer_init = 0.;
-    Real timer_advance = 0.;
-    Real timer_print = 0.;
-    Real timer_print_tmp = 0.;
-
+    const int IOProc = ParallelDescriptor::IOProcessorNumber();
+    //TOTAL TIME
+    Real timer_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_init,IOProc);
+    Real timer_tot = 0.;
+    //INITIALIZATIOn
+    Real timer_initializ_stop = 0.;
+    // ADVANCE
+    Real timer_adv_init = 0.;
+    Real timer_adv_stop = 0.;
+    //Print
+    Real timer_print_init = 0.;
+    Real timer_print_stop = 0.;
 
     {
-
-    timer_init = amrex::second();
 
     int max_grid_size = 16;
     std::string probin_file="probin";
@@ -111,8 +116,8 @@ main (int   argc,
         fuel_idx  = H2_ID;
     } else if (fuel_name == "CH4") {
         fuel_idx  = CH4_ID;
-    } else if (fuel_name == "NC12H26") {
-        fuel_idx  = NC12H26_ID;
+    //} else if (fuel_name == "NC12H26") {
+    //    fuel_idx  = NC12H26_ID;
     }
     oxy_idx   = O2_ID;
     bath_idx  = N2_ID;
@@ -131,7 +136,7 @@ main (int   argc,
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
     for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 8;
+	npts[i] = 16;
     }
     npts[1] = 64;
 
@@ -174,9 +179,6 @@ main (int   argc,
 
     int count_mf = 0;
     /* INITIALIZE DATA */
-//#ifdef _OPENMP
-//#pragma omp parallel 
-//#endif
     for (MFIter mfi(mf,false); mfi.isValid(); ++mfi ){
         const Box& box = mfi.tilebox();
         initialize_data(ARLIM_3D(box.loVect()), ARLIM_3D(box.hiVect()),
@@ -192,9 +194,11 @@ main (int   argc,
 
     amrex::Print() << "That many boxes: " << count_mf<< "\n";
 
-    timer_init = amrex::second() - timer_init; 
+    timer_initializ_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_initializ_stop,IOProc);
 
-    timer_print = amrex::second();
+    //timer_print_init = ParallelDescriptor::second();
+    //ParallelDescriptor::ReduceRealMax(timer_print_init,IOProc);
 
     BL_PROFILE_VAR("PlotFileFromMF()", PlotFile);
 
@@ -206,7 +210,8 @@ main (int   argc,
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
-    timer_print = amrex::second() - timer_print;
+    //timer_print_stop = ParallelDescriptor::second();
+    //ParallelDescriptor::ReduceRealMax(timer_print_stop,IOProc);
      
     /* EVALUATE */
     amrex::Print() << " \n STARTING THE ADVANCE \n";
@@ -217,7 +222,8 @@ main (int   argc,
 
     BL_PROFILE_VAR("advance()", Advance);
 
-    timer_advance = amrex::second();
+    timer_adv_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_adv_init,IOProc);
 
 //#ifdef _OPENMP
 //#pragma omp parallel
@@ -248,105 +254,85 @@ main (int   argc,
 
         /* Pack the data */
 	// rhoY,T
-	double tmp_vect[cvode_ncells*(Ncomp+1)];
+	double tmp_vect[Ncomp+1];
 	// rhoY_src_ext
-	double tmp_src_vect[cvode_ncells*(Ncomp)];
+	double tmp_src_vect[Ncomp];
 	// rhoE/rhoH
-	double tmp_vect_energy[cvode_ncells];
-	double tmp_src_vect_energy[cvode_ncells];
-
-	int indx_i[cvode_ncells];
-	int indx_j[cvode_ncells];
-	int indx_k[cvode_ncells];
+	double tmp_vect_energy[1];
+	double tmp_src_vect_energy[1];
 	
-	int nc = 0;
 	int num_cell_cvode_int = 0;
 	for         (int k = 0; k < len.z; ++k) {
 	    for         (int j = 0; j < len.y; ++j) {
 	        for         (int i = 0; i < len.x; ++i) {
 		    /* Fill the vectors */
 	            for (int sp=0;sp<Ncomp; sp++){
-	                tmp_vect[nc*(Ncomp+1) + sp]   = rhoY(i,j,k,sp);
-		        tmp_src_vect[nc*Ncomp + sp]   = frcExt(i,j,k,sp);
+	                tmp_vect[sp]       = rhoY(i,j,k,sp);
+		        tmp_src_vect[sp]   = frcExt(i,j,k,sp);
 		    }
-		    tmp_vect[nc*(Ncomp+1) + Ncomp]    = rhoY(i,j,k,Ncomp);
-		    tmp_vect_energy[nc]               = rhoE(i,j,k,0);
-		    tmp_src_vect_energy[nc]           = frcEExt(i,j,k,0);
+		    tmp_vect[Ncomp]         = rhoY(i,j,k,Ncomp);
+		    tmp_vect_energy[0]      = rhoE(i,j,k,0);
+		    tmp_src_vect_energy[0]  = frcEExt(i,j,k,0);
 		    //
-		    indx_i[nc] = i;
-		    indx_j[nc] = j;
-		    indx_k[nc] = k;
-		    //
-		    nc = nc+1;
-		    //
-		    num_cell_cvode_int = num_cell_cvode_int + 1;
-		    if (nc == cvode_ncells) {
-			time = 0.0;
-			dt_incr =  dt/ndt;
-			for (int ii = 0; ii < ndt; ++ii) {
+		    time = 0.0;
+		    dt_incr =  dt/ndt;
+		    for (int ii = 0; ii < ndt; ++ii) {
 #ifdef USE_SUNDIALS_PP
-	                    fc(i,j,k) = react(tmp_vect, tmp_src_vect,
-		                tmp_vect_energy, tmp_src_vect_energy,
-		                &dt_incr, &time);
+	                fc(i,j,k) = react(tmp_vect, tmp_src_vect,
+		            tmp_vect_energy, tmp_src_vect_energy,
+		            &dt_incr, &time);
 #else
-                            double pressure = 1013250.0;
-	                    fc(i,j,k) = react(tmp_vect, tmp_src_vect,
+                        double pressure = 1013250.0;
+	                fc(i,j,k) = react(tmp_vect, tmp_src_vect,
 		                tmp_vect_energy, tmp_src_vect_energy,
 				&pressure,
 		                &dt_incr, &time);
 #endif
-		            dt_incr =  dt/ndt;
-			    //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
-			}
-		        nc = 0;
-		        for (int l = 0; l < cvode_ncells ; ++l){
-		            for (int sp=0;sp<Ncomp; sp++){
-		                rhoY(indx_i[l],indx_j[l],indx_k[l],sp) = tmp_vect[l*(Ncomp+1) + sp];
-		            }
-		            rhoY(indx_i[l],indx_j[l],indx_k[l],Ncomp)  = tmp_vect[l*(Ncomp+1) + Ncomp];
-		            rhoE(indx_i[l],indx_j[l],indx_k[l],0)      = tmp_vect_energy[l];
-		        }
+		        dt_incr =  dt/ndt;
+		        //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
+	            }
+		    for (int sp=0;sp<Ncomp; sp++){
+		        rhoY(i,j,k,sp)  = tmp_vect[sp];
 		    }
+		    rhoY(i,j,k,Ncomp)   = tmp_vect[Ncomp];
+		    rhoE(i,j,k,0)       = tmp_vect_energy[0];
 		}
 	    }
-	}
-	if (nc != 0) {
-		printf(" WARNING !! Not enough cells (%d) to fill %d \n", nc, cvode_ncells);
-	} else {
-		printf(" Integrated %d cells \n",num_cell_cvode_int);
 	}
     }
 
     BL_PROFILE_VAR_STOP(Advance);
 
-    timer_advance = amrex::second() - timer_advance;
+    timer_adv_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_adv_stop,IOProc);
 
 
-    timer_print_tmp = amrex::second();
+    timer_print_init = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_print_init,IOProc);
 
     BL_PROFILE_VAR_START(PlotFile);
 
     outfile = Concatenate(pltfile,1); // Need a number other than zero for reg test to pass
     // Specs
-    //PlotFileFromMF(mf,outfile);
+    PlotFileFromMF(mf,outfile);
 
     BL_PROFILE_VAR_STOP(PlotFile);
 
-    timer_print = amrex::second() - timer_print_tmp + timer_print;
+    timer_print_stop = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_print_stop,IOProc);
     
     extern_close();
 
     }
 
-    timer_tot = amrex::second() - timer_tot;
+    timer_tot = ParallelDescriptor::second();
+    ParallelDescriptor::ReduceRealMax(timer_tot,IOProc);
 
-    ParallelDescriptor::ReduceRealMax({timer_tot, timer_init, timer_advance, timer_print},
-                                     ParallelDescriptor::IOProcessorNumber());
 
-    amrex::Print() << "Run Time total        = " << timer_tot     << "\n"
-                   << "Run Time init         = " << timer_init    << "\n"
-                   << "Run Time advance      = " << timer_advance << "\n"
-                   << "Run Time print plt    = " << timer_print << "\n";
+    amrex::Print() << "Run Time total        = " << timer_tot            - timer_init    << "\n"
+                   << "Run Time init         = " << timer_initializ_stop - timer_init    << "\n"
+                   << "Run Time advance      = " << timer_adv_stop       - timer_adv_init << "\n"
+                   << "Run Time print plt    = " << timer_print_stop     - timer_print_init << "\n";
 
     BL_PROFILE_VAR_STOP(pmain);
 
