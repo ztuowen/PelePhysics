@@ -9,9 +9,10 @@ extern "C" {
 int reactor_init(const int* cvode_iE, const int* Ncells);
 
 int react(amrex::Real *rY_in, amrex::Real *rY_src_in, 
-		amrex::Real *rX_in, amrex::Real *rX_src_in, 
-		amrex::Real *P_in, 
-		amrex::Real *dt_react, amrex::Real *time);
+          amrex::Real *rX_in, amrex::Real *rX_src_in, 
+          amrex::Real *P_in, 
+          amrex::Real *dt_react, amrex::Real *time,
+          int *i, int *j, int *k);
 
 }
 #endif 

@@ -199,6 +199,8 @@ C          output.
 C IER    = The error flag, returned with the value
 C          IER = 0  if no trouble occurred, or
 C          IER = -1 if TOUT and T0 are considered too close to proceed.
+C          IER = -2 if mass fraction too negative
+C          IER = -3 if temperature too low
 C-----------------------------------------------------------------------
 C
 C Type declarations for local variables --------------------------------
@@ -245,7 +247,10 @@ C Estimate the second derivative as a difference quotient in f. --------
       T1 = T0 + HG
       DO 60 I = 1, N
  60     Y(I) = Y0(I) + HG*YDOT(I)
-      CALL F (N, T1, Y, TEMP, RPAR, IPAR)
+      CALL F (N, T1, Y, TEMP, RPAR, IPAR, IER)
+      IF (IER .NE. 0) THEN
+         GO TO 100
+      ENDIF
       DO 70 I = 1, N
  70     TEMP(I) = (TEMP(I) - YDOT(I))/HG
       YDDNRM = DVNORM (N, TEMP, EWT)
@@ -281,8 +286,14 @@ C Iteration done.  Apply bounds, bias factor, and sign.  Then exit. ----
       NITER = ITER
       IER = 0
       RETURN
-C Error return for TOUT - T0 too small. --------------------------------
- 100  IER = -1
+C Error return for error code, -1 means TOUT - T0 too small. -----------
+ 100  IF (IER .EQ. 1) THEN
+         IER = -2
+      ELSE IF (IER .EQ. 2) THEN
+         IER = -3
+      ELSE
+      IER = -1
+      ENDIF
       END
 
       SUBROUTINE DVINDY (T, K, YH, LDYH, DKY, IFLAG)
@@ -433,7 +444,8 @@ C JAC        = Dummy name for the user supplied Jacobian subroutine.
 C RPAR, IPAR = Dummy names for user's real and integer work arrays.
 C RL1        = 1/EL(2) (input).
 C IERPJ      = Output error flag,  = 0 if no trouble, 1 if the P
-C              matrix is found to be singular.
+C              matrix is found to be singular. 2 if mass frac got
+C              too small, 3 if temperature too small
 C JCUR       = Output flag to indicate whether the Jacobian matrix
 C              (or approximation) is now current.
 C              JCUR = 0 means J is not current.
@@ -493,7 +505,15 @@ c        R = MAX(SRUR*ABS(YJ),R0/EWT(J))
         R = ONE / EWT(j)
         Y(J) = Y(J) + R
         FAC = ONE/R
-        CALL F (N, TN, Y, FTEM, RPAR, IPAR)
+        CALL F (N, TN, Y, FTEM, RPAR, IPAR, IER)
+        IF (IER .NE. 0) THEN
+           IF (IER .EQ. 1) THEN
+              IERPJ = 2
+           ELSE IF (IEF .EQ. 2) THEN
+              IERPJ = 3
+           ENDIF
+           RETURN
+        ENDIF
         DO 220 I = 1,N
  220      WM(I+J1) = (FTEM(I) - SAVF(I))*FAC
         Y(J) = YJ
@@ -535,8 +555,16 @@ C If MITER = 3, construct a diagonal approximation to J and P. ---------
       R = RL1*PT1
       DO 310 I = 1,N
  310    Y(I) = Y(I) + R*(H*SAVF(I) - YH(I,2))
-      CALL F (N, TN, Y, WM(3), RPAR, IPAR)
+      CALL F (N, TN, Y, WM(3), RPAR, IPAR, IER)
       NFE = NFE + 1
+      IF (IER .NE. 0) THEN
+         IF (IER .EQ. 1) THEN
+            IERPJ = 2
+         ELSE IF (IEF .EQ. 2) THEN
+            IERPJ = 3
+         ENDIF
+         RETURN
+      ENDIF
       DO 320 I = 1,N
         R0 = H*SAVF(I) - YH(I,2)
         DI = PT1*R0 - H*(WM(I+2) - SAVF(I))
@@ -587,7 +615,15 @@ C If MITER = 5, make N calls to F to approximate the Jacobian. ---------
           YI = Y(I)
           R = MAX(SRUR*ABS(YI),R0/EWT(I))
  530      Y(I) = Y(I) + R
-        CALL F (N, TN, Y, FTEM, RPAR, IPAR)
+        CALL F (N, TN, Y, FTEM, RPAR, IPAR, IER)
+        IF (IER .NE. 0) THEN
+           IF (IER .EQ. 1) THEN
+              IERPJ = 2
+           ELSE IF (IEF .EQ. 2) THEN
+              IERPJ = 3
+           ENDIF
+           RETURN
+        ENDIF
         DO 550 JJ = J,N,MBAND
           Y(JJ) = YH(JJ,1)
           YJJ = Y(JJ)
@@ -809,8 +845,8 @@ C                  0 successful completion of nonlinear solver.
 C                 -1 convergence failure or singular matrix.
 C                 -2 unrecoverable error in matrix preprocessing
 C                    (cannot occur here).
-C                 -3 unrecoverable error in solution (cannot occur
-C                    here).
+C                 -3 unrecoverable error in solution (temperature
+C                    or mass densities too low)
 C RPAR, IPAR = Dummy names for user's real and integer work arrays.
 C
 C IPUP       = Own variable flag with values and meanings as follows..
@@ -875,8 +911,9 @@ C-----------------------------------------------------------------------
       DELP = ZERO
 
       CALL DCOPY (N, YH(1,1), 1, Y, 1 )
-      CALL F (N, TN, Y, SAVF, RPAR, IPAR)
+      CALL F (N, TN, Y, SAVF, RPAR, IPAR, IER)
       NFE = NFE + 1
+      IF (IER .NE. 0) GO TO 430
       IF (IPUP .LE. 0) GO TO 250
 C-----------------------------------------------------------------------
 C If indicated, the matrix P = I - h*rl1*J is reevaluated and
@@ -893,7 +930,11 @@ C-----------------------------------------------------------------------
       DRC = ZERO
       CRATE = ONE
       NSLP = NST
-C If matrix is singular, take error return to force cut in step size. --
+C     If matrix is singular, take error return to force cut in step size. --
+      IF (IERPJ .EQ. 2 .OR. IERPJ .EQ. 3) THEN
+         NFLAG = -3
+         RETURN
+      ENDIF
       IF (IERPJ .NE. 0) GO TO 430
  250  DO 260 I = 1,N
  260    ACOR(I) = ZERO
@@ -950,8 +991,9 @@ c 400  IF (M .NE. 0) CRATE = MAX(CRDOWN*CRATE,DEL/DELP)
       IF (M .EQ. MAXCOR) GO TO 410
       IF (M .GE. 2 .AND. DEL .GT. RDIV*DELP) GO TO 410
       DELP = DEL
-      CALL F (N, TN, Y, SAVF, RPAR, IPAR)
+      CALL F (N, TN, Y, SAVF, RPAR, IPAR, IER)
       NFE = NFE + 1
+      IF (IER .NE. 0) GO TO 430
       GO TO 270
 C
  410  IF (MITER .EQ. 0 .OR. JCUR .EQ. 1) GO TO 430
@@ -960,6 +1002,10 @@ C
       GO TO 220
 C
  430  CONTINUE
+      IF (IER .NE. 0) THEN
+         NFLAG = -2
+         RETURN
+      ENDIF
       NFLAG = -1
       ICF = 2
       IPUP = MITER
@@ -1183,7 +1229,8 @@ C          -5 means repeated convergence failures. (Perhaps bad
 C             Jacobian supplied or wrong choice of MF or tolerances.)
 C          -6 means error weight became zero during problem. (Solution
 C             component i vanished, and ATOL or ATOL(i) = 0.)
-C
+C          -7 state became too low
+C     
 C F. To continue the integration after a successful return, simply
 C reset TOUT and call DVODE again.  No other parameters need be reset.
 C
@@ -2300,7 +2347,15 @@ c 100  UROUND = EPSILON(UROUND)
       NQU = 0
 C     Initial call to F.  (LF0 points to YH(*,2).) -------------------------
       LF0 = LYH + NYH
-      CALL F (N, T, Y, RWORK(LF0), RPAR, IPAR)
+      CALL F (N, T, Y, RWORK(LF0), RPAR, IPAR, IER)
+      IF (IER .NE. 0) THEN
+         IF (IER .EQ. 1) THEN
+            ISTATE = -7
+         ELSE IF (IEF .EQ. 2) THEN
+            ISTATE = -7
+         ENDIF
+         RETURN
+      ENDIF
       NFE = 1
 C Load the initial value vector in YH. ---------------------------------
       CALL DCOPY (N, Y, 1, RWORK(LYH), 1)
@@ -2406,7 +2461,7 @@ C-----------------------------------------------------------------------
       KGO = 1 - KFLAG
 C Branch on KFLAG.  Note..In this version, KFLAG can not be set to -3.
 C  KFLAG .eq. 0,   -1,  -2
-      GO TO (300, 530, 540), KGO
+      GO TO (300, 530, 540, 545), KGO
 C-----------------------------------------------------------------------
 C Block F.
 C The following block handles the case of a successful return from the
@@ -2510,6 +2565,12 @@ C KFLAG = -2.  Convergence failed repeatedly or with abs(H) = HMIN. ----
       MSG = '      or with abs(H) = HMIN   '
       CALL XERRWD (MSG, 30, 205, 1, 0, 0, 0, 2, TN, H)
       ISTATE = -5
+C KFLAG = -3.  mass density or temperature out of bounds ----
+ 545  MSG = 'DVODE--  At T (=R1) and step size H (=R2), the    '
+      CALL XERRWD (MSG, 50, 205, 1, 0, 0, 0, 0, ZERO, ZERO)
+      MSG = '      state became unacceptable                   '
+      CALL XERRWD (MSG, 50, 205, 1, 0, 0, 0, 0, ZERO, ZERO)
+      ISTATE = -6
 C Compute IMXER if relevant. -------------------------------------------
  560  BIG = ZERO
       IMXER = 1
@@ -3219,8 +3280,12 @@ C-----------------------------------------------------------------------
       H = H*ETA
       HSCAL = H
       TAU(1) = H
-      CALL F (N, TN, Y, SAVF, RPAR, IPAR)
+      CALL F (N, TN, Y, SAVF, RPAR, IPAR, IER)
       NFE = NFE + 1
+      IF (IER .NE. 0) THEN
+         NFLAG = -3
+         GO TO 680
+      ENDIF
       DO 550 I = 1, N
  550    YH(I,2) = H*SAVF(I)
       NQWAIT = 10

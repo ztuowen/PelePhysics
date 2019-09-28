@@ -2,6 +2,7 @@ PRECISION  = DOUBLE
 PROFILE    = FALSE
 
 DEBUG      = TRUE
+DEBUG      = FALSE
 
 DIM        = 2
 
@@ -11,6 +12,8 @@ FCOMP	   = gfortran
 USE_MPI    = FALSE
 USE_MPI    = TRUE
 USE_OMP    = FALSE
+
+EBASE      = onePt
 
 FUEGO_GAS  = TRUE
 
@@ -30,7 +33,8 @@ PELE_PHYSICS_HOME    := ../../..
 ifeq ($(FUEGO_GAS), TRUE)
   Eos_dir         = Fuego
   #Chemistry_Model = chem-H
-  Chemistry_Model = LiDryer
+  #Chemistry_Model = LiDryer
+  Chemistry_Model = FFCM1_Red
   #Chemistry_Model = BurkeDryer_mod
   #Chemistry_Model = BurkeDryer
   #Chemistry_Model = air

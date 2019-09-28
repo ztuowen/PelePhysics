@@ -1,0 +1,30 @@
+#ifndef _main_F_H_
+#define _main_F_H_
+
+#include <AMReX_BLFort.H>
+
+extern "C"
+{
+    void extern_init
+    (const int* name, const int* namlen);
+
+    void extern_init_reactor();
+
+    void extern_close();
+
+    void react_state
+    (const int* lo, const int* hi,
+     const BL_FORT_FAB_ARG_3D(rYo),
+     const BL_FORT_FAB_ARG_3D(eo),
+     const BL_FORT_FAB_ARG_3D(To),
+     const BL_FORT_FAB_ARG_3D(rYn),
+     const BL_FORT_FAB_ARG_3D(en),
+     const BL_FORT_FAB_ARG_3D(Tn),
+     const BL_FORT_FAB_ARG_3D(rY_src_ext),
+     const BL_FORT_FAB_ARG_3D(re_src_ext),
+     const BL_FORT_IFAB_ARG_3D(mask),
+     const BL_FORT_FAB_ARG_3D(cost),
+     const Real* time, const Real* dt);
+}
+
+#endif // _main_F_H_

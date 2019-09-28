@@ -14,6 +14,7 @@ module eos_module
 
   implicit none
   character (len=64) :: eos_name = "fuego"
+  integer :: eos_verbose = 0
   logical, save, private :: initialized = .false.
 
   real(amrex_real), save, public :: smallT = 1.d-50
@@ -415,7 +416,7 @@ contains
     call eos_wb(state)
 
     call get_T_given_eY(state % e, state % massfrac, state % T, lierr)
-    if (lierr .ne. 0) then
+    if (lierr .ne. 0 .and. eos_verbose .gt. 0) then
        print *, 'EOS: get_T_given_eY failed, T, e, Y = ', &
             state % T, state % e, state % massfrac
     end if
@@ -448,7 +449,7 @@ contains
     call eos_wb(state)
 
     call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
-    if (lierr .ne. 0) then
+    if (lierr .ne. 0 .and. eos_verbose .gt. 0) then
             print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
                     state % T, state % h, state % massfrac
     end if
@@ -481,7 +482,7 @@ contains
     call eos_wb(state)
 
     call get_T_given_hY(state % h, state % massfrac, state % T, lierr)
-    if (lierr .ne. 0) then
+    if (lierr .ne. 0 .and. eos_verbose .gt. 0) then
             print *, 'EOS: get_T_given_hY failed, T, h, Y = ', &
                     state % T, state % h, state % massfrac
     end if
