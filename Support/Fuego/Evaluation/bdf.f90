@@ -452,8 +452,6 @@ contains
   !
   subroutine bdf_dump(ts)
     type(bdf_ts), intent(inout) :: ts
-    integer :: i, m, p
-
     if (.not. ts%debug) return
     write(ts%dump_unit,*) ts%t, ts%z(:,:,0)
   end subroutine bdf_dump
