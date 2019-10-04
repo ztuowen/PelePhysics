@@ -301,6 +301,9 @@ contains
        low_Y_test = 0
        low_T_test = 0
        strang_fix = 0
+
+       call setfirst(.true.)
+
        call dvode(f_rhs, neq, vodeVec(:), vodeTime, vodeEndTime,&
             itol, rtol, atol, itask, istate, iopt, voderwork, lvoderwork, &
             vodeiwork, lvodeiwork, f_jac, MF, voderpar, vodeipar)
