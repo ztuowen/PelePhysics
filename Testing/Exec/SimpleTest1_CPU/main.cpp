@@ -45,7 +45,7 @@ main (int   argc,
       for (int i = 0; i < probin_file_length; i++)
 	probin_file_name[i] = probin_file[i];
 
-      int fuel_idx = CH4_ID;
+      int fuel_idx = NC12H26_ID;
       int oxy_idx  = O2_ID;
       int bath_idx = N2_ID;
 
@@ -53,9 +53,9 @@ main (int   argc,
     
       std::vector<int> npts(3,1);
       for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 128;
+	npts[i] = 8;
       }
-      npts[1] = 256;
+      npts[1] = 32;
     
       Box domain(IntVect(D_DECL(0,0,0)),
                  IntVect(D_DECL(npts[0]-1,npts[1]-1,npts[2]-1)));
@@ -66,7 +66,7 @@ main (int   argc,
 	dx[i] = (phi[i] - plo[i])/domain.length(i);
       }
     
-      int max_size = 32;
+      int max_size = 8;
       pp.query("max_size",max_size);
       BoxArray ba(domain);
       ba.maxSize(max_size);

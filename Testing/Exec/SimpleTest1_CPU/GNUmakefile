@@ -3,17 +3,19 @@ PROFILE    = FALSE
 
 DEBUG      = FALSE
 
-DIM        = 2
+DIM        = 3
 
 COMP	   = gcc
 FCOMP	   = gfortran
 
 USE_MPI    = TRUE
-USE_OMP    = TRUE
+USE_OMP    = FALSE
 
 FUEGO_GAS  = TRUE
 
 USE_CUDA   = FALSE
+
+TINY_PROFILE = TRUE
 
 # define the location of the PELE_PHYSICS top directory
 PELE_PHYSICS_HOME    := ../../..
