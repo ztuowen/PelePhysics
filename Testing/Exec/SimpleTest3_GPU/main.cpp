@@ -172,9 +172,6 @@ main (int   argc,
           [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
           {
             Real wtmp[21];
-            for (int m=0; m<21; ++m) {
-              wtmp[m] = -1.e10;
-            }
             W_spec_d(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,wtmp);
 
 #ifdef AMREX_USE_GPU
@@ -190,7 +187,6 @@ main (int   argc,
 #endif
             int num_threads = block_dim_x * block_dim_y * block_dim_z;
             for (int sid = idx; sid < num_spec; sid+=num_threads) {
-              assert(wtmp[sid] > -1.e-10);
               w(i,j,k,sid) = wtmp[sid];
             }
           });
