@@ -1021,4 +1021,46 @@ AMREX_GPU_DEVICE void W_spec(Real rho,
   }
 }
 
+AMREX_GPU_DEVICE void W_specMAX(Real rho,
+                                Real T,
+                                Real * Y, int strideY,
+                                Real * wdot)
+{
+  double logT = log(T);
+  double invT = 1.0 / T;
+
+  int num_spec = 21;
+  int num_reac = 84;
+  
+  for (int ispec=0; ispec<num_spec; ++ispec) {
+    wdot[ispec] = 0;
+  }
+
+  for (int ireac=0; ireac<num_reac; ++ireac)
+  {
+    Real Q = prefactor_units[ireac] * fwd_A[ireac]
+      * exp(fwd_beta[ireac] * logT - activation_units[ireac] * fwd_Ea[ireac] * invT);
+
+    size_t offset = ireac*5;
+    for (int j=0; j<5; ++j) {
+      int nu = nu2D[offset+j];
+      if (nu<0) {
+        int ki = ki2D[offset+j];
+        int p = -nu;
+        for (int k=0; k<p; ++k) {
+          Q *= Y[strideY*ki] * rho * imw[ki];
+        }
+      }
+    }
+    
+    for (int j=0; j<5; ++j) {
+      int nu = nu2D[offset+j];
+      int ki = ki2D[offset+j];
+      if (nu<0) {
+        wdot[ki] += Q * nu;
+      }
+    }
+  }
+}
+
 

@@ -18,6 +18,7 @@ void ForMarc (Box const& box, int nc, L f) noexcept
 #ifdef AMREX_USE_GPU
     Gpu::ExecutionConfig ec;
     ec.numBlocks.x = 2560;
+    ec.numBlocks.x = 5120;
     ec.numBlocks.y = 1;
     ec.numBlocks.z = 1;
     ec.numThreads.x = nc;
@@ -154,12 +155,23 @@ main (int   argc,
 
       kinit();
 
+      #ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+      {
+        BL_PROFILE("PREFETCH");
+        for (MFIter mfi(mass_frac,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+          temperature.prefetchToDevice(mfi);
+          density.prefetchToDevice(mfi);
+          mass_frac.prefetchToDevice(mfi);
+        }
+      }
+
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
       {
         BL_PROFILE("COMPUTE_W");
-        FArrayBox Q;
         for (MFIter mfi(mass_frac,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
           const Box& box = mfi.tilebox();
           const auto& temp = temperature.array(mfi);
@@ -168,7 +180,7 @@ main (int   argc,
           const auto& w    = wdot.array(mfi);
           int numPts = box.numPts();
 
-          ForMarc(box, 32,
+          ForMarc(box, 84,
           [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
           {
             Real wtmp[21];
@@ -200,7 +212,6 @@ main (int   argc,
 #endif
       {
         BL_PROFILE("COMPUTE_W1");
-        FArrayBox Q;
         for (MFIter mfi(mass_frac,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
           const Box& box = mfi.tilebox();
           const auto& temp = temperature.array(mfi);
@@ -222,6 +233,34 @@ main (int   argc,
       }
 
       VisMF::Write(wdot,"WDOT1");
+
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+      {
+        BL_PROFILE("COMPUTE_W_MAX");
+        for (MFIter mfi(mass_frac,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+          const Box& box = mfi.tilebox();
+          const auto& temp = temperature.array(mfi);
+          const auto& Y    = mass_frac.array(mfi);
+          const auto& rho  = density.array(mfi);
+          const auto& w    = wdot.array(mfi);
+          int numPts = box.numPts();
+
+          For(box,
+          [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          {
+            Real wtmp[21];
+            W_specMAX(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,wtmp);
+            for (int n=0; n<num_spec; ++n) {
+              w(i,j,k,n) = wtmp[n];
+            }
+          });
+        }
+      }
+
+      VisMF::Write(wdot,"WDOTM");
+
 #endif
     }
 
