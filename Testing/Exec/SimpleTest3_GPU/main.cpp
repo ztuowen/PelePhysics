@@ -134,6 +134,34 @@ main (int   argc,
 
       VisMF::Write(wdot,"WDOT");
 
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+      {
+        BL_PROFILE("COMPUTE_W1");
+        FArrayBox Q;
+        for (MFIter mfi(mass_frac,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+          const Box& box = mfi.tilebox();
+          const auto& temp = temperature.array(mfi);
+          const auto& Y    = mass_frac.array(mfi);
+          const auto& rho  = density.array(mfi);
+          const auto& w    = wdot.array(mfi);
+          int numPts = box.numPts();
+
+          For(box,
+          [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          {
+            Real wtmp[21];
+            W_spec(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,wtmp);
+            for (int n=0; n<num_spec; ++n) {
+              w(i,j,k,n) = wtmp[n];
+            }
+          });
+        }
+      }
+
+      VisMF::Write(wdot,"WDOT1");
+
     }
 
     Finalize();

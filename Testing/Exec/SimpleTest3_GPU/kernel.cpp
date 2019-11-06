@@ -988,15 +988,8 @@ AMREX_GPU_DEVICE void W_spec(Real rho,
                              Real * Y, int strideY,
                              Real * wdot)
 {
-#ifdef AMREX_USE_GPU
-  __shared__ Real Q_s[84];
-  __shared__ Real C_s[21];
-  int idx = threadIdx.x;
-#else
   Real Q_s[84];
   Real C_s[21];
-  int idx = 0;
-#endif
 
   double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
   double invT = 1.0 / tc[1];
@@ -1004,35 +997,30 @@ AMREX_GPU_DEVICE void W_spec(Real rho,
   int num_spec = 21;
   int num_reac = 84;
   
-  if (idx < num_spec) {
+  for (int idx=0; idx<num_spec; ++idx) {
     C_s[idx] = Y[strideY*idx] * rho * imw[idx];
   }
 
-#ifdef AMREX_USE_GPU
-  __syncthreads();
-#endif
-  
-  Q_s[idx] = prefactor_units[idx] * fwd_A[idx]
-    * exp(fwd_beta[idx] * tc[0] - activation_units[idx] * fwd_Ea[idx] * invT);
+  for (int idx=0; idx<num_reac; ++idx)
+  {
+    Q_s[idx] = prefactor_units[idx] * fwd_A[idx]
+      * exp(fwd_beta[idx] * tc[0] - activation_units[idx] * fwd_Ea[idx] * invT);
 
-  size_t offset = idx*5;
-  for (int j=0; j<5; ++j) {
-    int nu = nu2D[offset+j];
-    if (nu<0) {
-      int ki = ki2D[offset+j];
-      int p = -nu;
-      for (int k=0; k<p; ++k) {
-        Q_s[idx] *= C_s[ki];
+    size_t offset = idx*5;
+    for (int j=0; j<5; ++j) {
+      int nu = nu2D[offset+j];
+      if (nu<0) {
+        int ki = ki2D[offset+j];
+        int p = -nu;
+        for (int k=0; k<p; ++k) {
+          Q_s[idx] *= C_s[ki];
+        }
       }
     }
   }
 
-#ifdef AMREX_USE_GPU
-  __syncthreads();
-#endif
-  
-  if (idx<num_spec) {
-    *wdot = 0;
+  for (int idx=0; idx<num_spec; ++idx) {
+    wdot[idx] = 0;
     size_t offset = idx*5;
     for (int i=0; i<84; ++i) {
       size_t offset = i*5;
@@ -1040,7 +1028,7 @@ AMREX_GPU_DEVICE void W_spec(Real rho,
         int nu = nu2D[offset+j];
         int ki = ki2D[offset+j];
         if (nu<0 && ki==idx) {
-          *wdot += Q_s[i] * nu;
+          wdot[idx] += Q_s[i] * nu;
         }
       }
     }
