@@ -918,12 +918,8 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
   int num_threads = block_dim_x * block_dim_y * block_dim_z;
   
   {
-    int npass = (num_spec + num_threads - 1) / num_threads;
-    for (int pass = 0; pass<npass; ++pass) {
-      int sid = pass*num_threads + idx;
-      if (sid < num_spec) {
-        C_s[sid] = Y[strideY*sid] * rho * imw[sid];
-      }
+    for (int sid=idx; sid<num_spec; sid+=num_threads) {
+      C_s[sid] = Y[strideY*sid] * rho * imw[sid];
     }
   }
 
@@ -932,24 +928,19 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
 #endif
   
   {
-    int npass = (num_reac + num_threads - 1) / num_threads;
     size_t offset = idx*5;
-
-    for (int pass = 0; pass<npass; ++pass) {
-      int rid = pass*num_threads + idx;
-      if (rid < num_reac) {
+    for (int rid=idx; rid<num_reac; rid+=num_threads) {
  
-        Q_s[rid] = prefactor_units[rid] * fwd_A[rid]
-          * exp(fwd_beta[rid] * tc[0] - activation_units[rid] * fwd_Ea[rid] * invT);
+      Q_s[rid] = prefactor_units[rid] * fwd_A[rid]
+        * exp(fwd_beta[rid] * tc[0] - activation_units[rid] * fwd_Ea[rid] * invT);
 
-        for (int j=0; j<5; ++j) {
-          int nu = nu2D[offset+j];
-          if (nu<0) {
-            int ki = ki2D[offset+j];
-            int p = -nu;
-            for (int k=0; k<p; ++k) {
-              Q_s[rid] *= C_s[ki];
-            }
+      for (int j=0; j<5; ++j) {
+        int nu = nu2D[offset+j];
+        if (nu<0) {
+          int ki = ki2D[offset+j];
+          int p = -nu;
+          for (int k=0; k<p; ++k) {
+            Q_s[rid] *= C_s[ki];
           }
         }
       }
@@ -962,22 +953,17 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
 #endif
   
   {
-    int npass = (num_spec + num_threads - 1) / num_threads;
-    for (int pass = 0; pass<npass; ++pass) {
-      int sid = pass*num_threads + idx;
-
-      if (sid<num_spec) {
-	*wdot = 0;
-	for (int i=0; i<84; ++i) {
-	  size_t offset = i*5;
-	  for (int j=0; j<5; ++j) {
-	    int nu = nu2D[offset+j];
-	    int ki = ki2D[offset+j];
-	    if (nu<0 && ki==sid) {
-	      *wdot += Q_s[i] * nu;
-	    }
-	  }
-	}
+    for (int sid=idx; sid<num_spec; sid+=num_threads) {
+      wdot[sid] = 0;
+      for (int i=0; i<84; ++i) {
+        size_t offset = i*5;
+        for (int j=0; j<5; ++j) {
+          int nu = nu2D[offset+j];
+          int ki = ki2D[offset+j];
+          if (nu<0 && ki==sid) {
+            wdot[sid] += Q_s[i] * nu;
+          }
+        }
       }
     }
   }

@@ -17,7 +17,7 @@ void ForMarc (Box const& box, int nc, L f) noexcept
     const auto len = amrex::length(box);
 #ifdef AMREX_USE_GPU
     Gpu::ExecutionConfig ec;
-    ec.numBlocks.x = 1920;
+    ec.numBlocks.x = 2560;
     ec.numBlocks.y = 1;
     ec.numBlocks.z = 1;
     ec.numThreads.x = nc;
@@ -50,6 +50,51 @@ void ForMarc (Box const& box, int nc, L f) noexcept
 #endif
 }
 
+void checker(int idx,
+             int block_dim_x,
+             int block_dim_y,
+             int block_dim_z)
+{  
+
+  int num_spec = 21;
+  int num_reac = 84;
+  int num_threads = block_dim_x * block_dim_y * block_dim_z;
+  
+  {
+    int npass = (num_spec + num_threads - 1) / num_threads;
+    for (int pass = 0; pass<npass; ++pass) {
+      int sid = pass*num_threads + idx;
+      if (sid < num_spec) {
+        Print() << "C  idx, sid: " << idx << " ," << sid << std::endl;
+      }
+    }
+  }
+
+  {
+    int npass = (num_reac + num_threads - 1) / num_threads;
+
+    for (int pass = 0; pass<npass; ++pass) {
+      int rid = pass*num_threads + idx;
+      if (rid < num_reac) {
+        Print() << "Q  idx, rid: " << idx << " ," << rid << std::endl;
+      }
+    }
+  }
+
+  {
+    int npass = (num_spec + num_threads - 1) / num_threads;
+    for (int pass = 0; pass<npass; ++pass) {
+      int sid = pass*num_threads + idx;
+
+      if (sid<num_spec) {
+        Print() << "W  idx, rid: " << idx << " ," << sid << std::endl;
+      }
+    }
+  }
+}
+
+
+
 int
 main (int   argc,
       char* argv[])
@@ -78,6 +123,9 @@ main (int   argc,
       MultiFab mass_frac(ba,dm,num_spec,num_grow);
       MultiFab temperature(ba,dm,1,num_grow);
       MultiFab density(ba,dm,1,num_grow);
+
+      //checker(0,32,1,1);
+#if 1
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -123,10 +171,27 @@ main (int   argc,
           ForMarc(box, 32,
           [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
           {
-            Real wtmp;
-            W_spec_d(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,&wtmp);
-            if (n<num_spec) {
-              w(i,j,k,n) = wtmp;
+            Real wtmp[21];
+            for (int m=0; m<21; ++m) {
+              wtmp[m] = -1.e10;
+            }
+            W_spec_d(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,wtmp);
+
+#ifdef AMREX_USE_GPU
+            int idx = threadIdx.x;
+            int block_dim_x = blockDim.x;
+            int block_dim_y = blockDim.y;
+            int block_dim_z = blockDim.z;
+#else
+            int idx = 0;
+            int block_dim_x = 1;
+            int block_dim_y = 1;
+            int block_dim_z = 1;
+#endif
+            int num_threads = block_dim_x * block_dim_y * block_dim_z;
+            for (int sid = idx; sid < num_spec; sid+=num_threads) {
+              assert(wtmp[sid] > -1.e-10);
+              w(i,j,k,sid) = wtmp[sid];
             }
           });
         }
@@ -161,7 +226,7 @@ main (int   argc,
       }
 
       VisMF::Write(wdot,"WDOT1");
-
+#endif
     }
 
     Finalize();
