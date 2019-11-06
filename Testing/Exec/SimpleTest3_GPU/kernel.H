@@ -11,6 +11,10 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
                                Real temp,
                                Real * Y, int strideY,
                                Real * wdot);
+AMREX_GPU_DEVICE void W_spec(Real rho,
+                             Real temp,
+                             Real * Y, int strideY,
+                             Real * wdot);
 void kinit();
 
 #endif

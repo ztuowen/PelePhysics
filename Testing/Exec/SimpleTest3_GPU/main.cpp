@@ -15,8 +15,9 @@ void ForMarc (Box const& box, int nc, L f) noexcept
     int ncells = box.numPts();
     const auto lo  = amrex::lbound(box);
     const auto len = amrex::length(box);
+#ifdef AMREX_USE_GPU
     Gpu::ExecutionConfig ec;
-    ec.numBlocks.x = 256;
+    ec.numBlocks.x = 1920;
     ec.numBlocks.y = 1;
     ec.numBlocks.z = 1;
     ec.numThreads.x = nc;
@@ -24,7 +25,15 @@ void ForMarc (Box const& box, int nc, L f) noexcept
     ec.numThreads.z = 1;
     amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
     [=] AMREX_GPU_DEVICE () noexcept {
-      for (int icell = blockIdx.x, stride = gridDim.x; icell < ncells; icell += stride)
+      int block_idx_x = blockIdx.x;
+      int grid_dim_x = gridDim.x;
+      int thread_idx_x = threadIdx.x;
+#else
+      int block_idx_x = 0;
+      int grid_dim_x = 1;
+      int thread_idx_x = 0;
+#endif
+      for (int icell = block_idx_x, stride = grid_dim_x; icell < ncells; icell += stride)
       {
         int k =  icell /   (len.x*len.y);
         int j = (icell - k*(len.x*len.y)) /   len.x;
@@ -32,11 +41,13 @@ void ForMarc (Box const& box, int nc, L f) noexcept
         i += lo.x;
         j += lo.y;
         k += lo.z;
-        int n = threadIdx.x;
+        int n = thread_idx_x;
         f(i,j,k,n);
       }
+#ifdef AMREX_USE_GPU
     });
     AMREX_GPU_ERROR_CHECK();
+#endif
 }
 
 int
@@ -47,7 +58,9 @@ main (int   argc,
     {
       ParmParse pp;
 
-      Vector<int> n_cells(BL_SPACEDIM,256);
+      int nc=256;
+      pp.query("nc",nc);
+      Vector<int> n_cells(BL_SPACEDIM,nc);
       Box domain(IntVect(D_DECL(0,0,0)),
                  IntVect(D_DECL(n_cells[0]-1,n_cells[1]-1,n_cells[2]-1)));
 
@@ -107,10 +120,11 @@ main (int   argc,
           const auto& w    = wdot.array(mfi);
           int numPts = box.numPts();
 
-          ForMarc(box, num_reac,
+          ForMarc(box, 32,
           [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
           {
-            Real wtmp; W_spec_d(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,&wtmp);
+            Real wtmp;
+            W_spec_d(rho(i,j,k),temp(i,j,k),&(Y(i,j,k,0)),numPts,&wtmp);
             if (n<num_spec) {
               w(i,j,k,n) = wtmp;
             }
@@ -118,7 +132,7 @@ main (int   argc,
         }
       }
 
-      //VisMF::Write(wdot,"WDOT");
+      VisMF::Write(wdot,"WDOT");
 
     }
 
