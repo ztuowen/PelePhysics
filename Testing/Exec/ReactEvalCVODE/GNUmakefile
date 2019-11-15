@@ -1,7 +1,7 @@
 PRECISION  = DOUBLE
 PROFILE    = FALSE
 
-DEBUG      = TRUE
+DEBUG      = FALSE
 
 DIM        = 2
 
@@ -9,8 +9,7 @@ COMP	   = gcc
 FCOMP	   = gfortran
 
 USE_MPI    = FALSE
-USE_MPI    = TRUE
-USE_OMP    = TRUE
+USE_OMP    = FALSE
 
 FUEGO_GAS  = TRUE
 

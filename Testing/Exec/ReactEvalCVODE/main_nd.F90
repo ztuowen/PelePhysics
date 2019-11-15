@@ -107,6 +107,7 @@ contains
     if (nspecies.lt.3) then
        stop 'This step assumes that there are at least 3 species'
     endif
+    print *, 'Fuel id ', fuel_ID, 'bath_id ', bath_ID, 'oxy_ID ', oxy_ID
     eos_state%molefrac = 0.d0
     eos_state%molefrac(oxy_ID)  = 0.2d0
     eos_state%molefrac(fuel_ID) = 0.1d0
@@ -126,7 +127,7 @@ contains
              x = plo(1) + (i+HALF)*dx(1)
 
              eos_state % p        = pressure
-             eos_state % T        = Temp_lo + (Temp_hi-Temp_lo)*y/L(2) + dTemp*SIN(TWO*M_PI*y/P(2)) !+ (Temp_hi-Temp_lo)*x/L(1) + (Temp_hi-Temp_lo)*z/L(3) 
+             eos_state % T        = Temp_hi !+ (Temp_hi-Temp_lo)*y/L(2) + dTemp*SIN(TWO*M_PI*y/P(2)) !+ (Temp_hi-Temp_lo)*x/L(1) + (Temp_hi-Temp_lo)*z/L(3) 
 
              call eos_tp(eos_state)
 
