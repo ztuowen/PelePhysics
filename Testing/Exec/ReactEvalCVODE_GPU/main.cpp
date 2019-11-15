@@ -116,8 +116,9 @@ main (int   argc,
         fuel_idx  = H2_ID;
     } else if (fuel_name == "CH4") {
         fuel_idx  = CH4_ID;
-    //} else if (fuel_name == "NC12H26") {
-    //    fuel_idx  = NC12H26_ID;
+    } else if (fuel_name == "NC12H26") {
+	amrex::Print() << "FOUND MY FUEL " << std::endl; 
+        fuel_idx  = NC12H26_ID;
     }
     oxy_idx   = O2_ID;
     bath_idx  = N2_ID;
@@ -133,9 +134,8 @@ main (int   argc,
     /* make domain and BoxArray */
     std::vector<int> npts(3,1);
     for (int i = 0; i < BL_SPACEDIM; ++i) {
-	npts[i] = 16;
+	npts[i] = 1;
     }
-    npts[1] = 64;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";
@@ -298,7 +298,7 @@ main (int   argc,
 	                    tmp_vect_energy, tmp_src_vect_energy,
 	                    &dt_incr, &time,
                             &cvode_iE, &ncells, amrex::Gpu::gpuStream());
-	    //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
+	    printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp]);
 	    dt_incr =  dt/ndt;
         }
         BL_PROFILE_VAR_STOP(ReactInLoop);
