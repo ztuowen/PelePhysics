@@ -468,7 +468,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 	    [=] AMREX_GPU_DEVICE () noexcept {
 	            for (int icell = blockDim.x*blockIdx.x+threadIdx.x, stride = blockDim.x*gridDim.x;
 	    	    icell < udata->ncells_d[0]; icell += stride) {
-	    	    fKernelComputeAJ(icell, user_data, u_d, udot_d, udata->csr_val_d);
+	    	    fKernelComputeAJsys(icell, user_data, u_d, udot_d, udata->csr_val_d);
 	    	}
             }); 
             cuda_status = cudaStreamSynchronize(udata->stream);  
@@ -480,7 +480,7 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 	    [=] AMREX_GPU_DEVICE () noexcept {
 	            for (int icell = blockDim.x*blockIdx.x+threadIdx.x, stride = blockDim.x*gridDim.x;
 	    	    icell < udata->ncells_d[0]; icell += stride) {
-	    	    fKernelComputeAJ(icell, user_data, u_d, udot_d, udata->csr_val_d);
+	    	    fKernelComputeallAJ(icell, user_data, u_d, udot_d, udata->csr_val_d);
 	    	}
             }); 
             //cuda_status = cudaDeviceSynchronize();  
@@ -588,7 +588,7 @@ static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, N_Vector z,
 AMREX_GPU_DEVICE
 inline
 void 
-fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
+fKernelComputeallAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
 {
   UserData udata = static_cast<CVodeUserData*>(user_data);
 
@@ -657,6 +657,35 @@ fKernelComputeAJ(int ncell, void *user_data, realtype *u_d, realtype *udot_d, do
     	      } else {
                   csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (udata->gamma_d) * Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
                   csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = Jmat_pt[ idx * (udata->neqs_per_cell[0]+1) + i-1 ]; 
+    	      }
+      }
+  }
+
+}
+
+AMREX_GPU_DEVICE
+inline
+void 
+fKernelComputeAJsys(int ncell, void *user_data, realtype *u_d, realtype *udot_d, double * csr_val_arg)
+{
+  UserData udata = static_cast<CVodeUserData*>(user_data);
+
+  int jac_offset = ncell * (udata->NNZ); 
+
+  realtype* csr_jac_cell = udata->csr_jac_d + jac_offset;
+  realtype* csr_val_cell = csr_val_arg + jac_offset;
+  
+  int nbVals;
+  for (int i = 1; i < udata->neqs_per_cell[0]+2; i++) {
+      nbVals = udata->csr_row_count_d[i]-udata->csr_row_count_d[i-1];
+      for (int j = 0; j < nbVals; j++) {
+    	      int idx = udata->csr_col_index_d[ udata->csr_row_count_d[i-1] + j - 1 ] - 1;
+              /* Scale by -gamma */
+              /* Add identity matrix */
+    	      if (idx == (i-1)) {
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = 1.0 - (udata->gamma_d) * csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ];
+    	      } else {
+                  csr_val_cell[ udata->csr_row_count_d[i-1] + j - 1 ] = - (udata->gamma_d) * csr_jac_cell[ udata->csr_row_count_d[i-1] + j - 1 ];
     	      }
       }
   }
