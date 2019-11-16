@@ -315,18 +315,22 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	cudaFree(user_data->rhoe_init);
         cudaFree(user_data->rhoesrc_ext);
 	cudaFree(user_data->rYsrc);
-	cudaFree(user_data->csr_row_count_d);
-	cudaFree(user_data->csr_col_index_d);
-	cudaFree(user_data->csr_jac_d);
-	cudaFree(user_data->csr_val_d);
 
-        cusolver_status = cusolverSpDestroy(user_data->cusolverHandle);
-        assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+        if (iJac_Creact == 1) { 
+	    cudaFree(user_data->csr_row_count_d);
+	    cudaFree(user_data->csr_col_index_d);
 
-        cusolver_status = cusolverSpDestroyCsrqrInfo(user_data->info);
-        assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+	    cudaFree(user_data->csr_jac_d);
+	    cudaFree(user_data->csr_val_d);
+
+            cusolver_status = cusolverSpDestroy(user_data->cusolverHandle);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
+
+            cusolver_status = cusolverSpDestroyCsrqrInfo(user_data->info);
+            assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
  
-	cudaFree(user_data->buffer_qr);
+   	    cudaFree(user_data->buffer_qr);
+	}
 
 	cudaFree(user_data);
 
