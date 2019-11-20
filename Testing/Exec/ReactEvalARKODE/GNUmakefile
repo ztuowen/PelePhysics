@@ -21,12 +21,12 @@ PELE_PHYSICS_HOME    := ../../..
 DEFINES  += -DMOD_REACTOR
 
 # use CVODE
-CVODE_LIB_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/sundials/instdir/lib/
+#CVODE_LIB_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/sundials/instdir/lib/
 USE_SUNDIALS_PP = TRUE
 
 USE_ARKODE_PP = TRUE
 
-SUITESPARSE_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/SuiteSparse/
+#SUITESPARSE_DIR=$(PELE_PHYSICS_HOME)/ThirdParty/SuiteSparse/
 USE_KLU_PP = FALSE
 
 #######################
