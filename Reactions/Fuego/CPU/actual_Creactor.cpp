@@ -134,7 +134,7 @@ int reactor_init(const int* cvode_iE, const int* Ncells) {
 	    	amrex::Print() << "\n--> Using a Direct Sparse Solver\n";    
 	    }
 	    /* Create sparse SUNMatrix for use in linear solves */
-	    A = SUNSparseMatrix(neq_tot, neq_tot, (data->NNZ)*data->ncells, CSC_MAT);
+	    A = SUNSparseMatrix(neq_tot, neq_tot, (data->NNZ), CSC_MAT);
             if(check_flag((void *)A, "SUNSparseMatrix", 0)) return(1);
 
 	    /* Create KLU solver object for use by CVode */
