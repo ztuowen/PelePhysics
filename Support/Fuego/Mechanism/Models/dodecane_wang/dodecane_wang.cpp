@@ -29811,40 +29811,6 @@ void SPARSITY_PREPROC_PRECOND(int * rowVals, int * colPtrs, int * indx, int * co
 
     return;
 }
-#else
-
-/*compute the sparsity pattern of the simplified precond Jacobian on GPU */
-AMREX_GPU_HOST_DEVICE void SPARSITY_PREPROC_PRECOND(int * rowPtr, int * colIndx, int * consP)
-{
-    double c[56];
-    double J[3249];
-
-    for (int k=0; k<56; k++) {
-        c[k] = 1.0/ 56.000000 ;
-    }
-
-    aJacobian_precond(J, c, 1500.0, *consP);
-
-    rowPtr[0] = 1;
-    int nJdata_tmp = 1;
-    for (int l=0; l<57; l++) {
-        for (int k=0; k<57; k++) {
-            if (k == l) {
-                colIndx[nJdata_tmp-1] = l+1; 
-                nJdata_tmp = nJdata_tmp + 1; 
-            } else {
-                if(J[57*k + l] != 0.0) {
-                    colIndx[nJdata_tmp-1] = k+1; 
-                    nJdata_tmp = nJdata_tmp + 1; 
-                }
-            }
-        }
-        rowPtr[l+1] = nJdata_tmp;
-    }
-
-    return;
-}
-#endif
 
 /*compute the sparsity pattern of the Jacobian */
 AMREX_GPU_HOST_DEVICE void SPARSITY_PREPROC(int *  rowVals, int *  colPtrs, int * consP, int NCELLS)
@@ -29878,6 +29844,75 @@ AMREX_GPU_HOST_DEVICE void SPARSITY_PREPROC(int *  rowVals, int *  colPtrs, int 
 
     return;
 }
+
+#else
+
+/*compute the sparsity pattern of the simplified precond Jacobian on GPU */
+AMREX_GPU_HOST_DEVICE void SPARSITY_PREPROC_PRECOND(int * rowPtr, int * colIndx, int * consP)
+{
+    double c[56];
+    double J[3249];
+
+    for (int k=0; k<56; k++) {
+        c[k] = 1.0/ 56.000000 ;
+    }
+
+    aJacobian_precond(J, c, 1500.0, *consP);
+
+    rowPtr[0] = 1;
+    int nJdata_tmp = 1;
+    for (int l=0; l<57; l++) {
+        for (int k=0; k<57; k++) {
+            if (k == l) {
+                colIndx[nJdata_tmp-1] = l+1; 
+                nJdata_tmp = nJdata_tmp + 1; 
+            } else {
+                if(J[57*k + l] != 0.0) {
+                    colIndx[nJdata_tmp-1] = k+1; 
+                    nJdata_tmp = nJdata_tmp + 1; 
+                }
+            }
+        }
+        rowPtr[l+1] = nJdata_tmp;
+    }
+
+    return;
+}
+
+/*compute the sparsity pattern of the Jacobian */
+AMREX_GPU_HOST_DEVICE void SPARSITY_PREPROC(int *  rowPtr, int *  colIndx, int * consP, int NCELLS)
+{
+    double c[56];
+    double J[3249];
+    int offset_row;
+    int offset_col;
+
+    for (int k=0; k<56; k++) {
+        c[k] = 1.0/ 56.000000 ;
+    }
+
+    aJacobian(J, c, 1500.0, *consP);
+
+    rowPtr[0] = 0;
+    int nJdata_tmp = 0;
+    for (int nc=0; nc<NCELLS; nc++) {
+        offset_row = nc * 57;
+        offset_col = nc * 57;
+        for (int l=0; l<57; l++) {
+            for (int k=0; k<57; k++) {
+                if(J[57*k + l] != 0.0) {
+                    colIndx[nJdata_tmp] = k + offset_row; 
+                    nJdata_tmp = nJdata_tmp + 1; 
+                }
+            }
+            rowPtr[offset_col + (l + 1)] = nJdata_tmp;
+        }
+    }
+
+    return;
+}
+
+#endif
 
 
 #ifdef AMREX_USE_CUDA

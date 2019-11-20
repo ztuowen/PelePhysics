@@ -7,19 +7,15 @@
 
 #include <cvode/cvode.h>               /* prototypes for CVODE fcts., consts.  */
 #include <nvector/nvector_serial.h>    /* access to serial N_Vector            */
-#include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
-#include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
+//#include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
+#include <nvector/nvector_cuda.h>
+#include <sunmatrix/sunmatrix_sparse.h>
 #include <sunlinsol/sunlinsol_spgmr.h> /* access to SPGMR SUNLinearSolver     */
-#include <cvode/cvode_direct.h>        /* access to CVDls interface            */
-#include <cvode/cvode_spils.h>         /* access to CVSpils interface */
+#include <sunlinsol/sunlinsol_cusolversp_batchqr.h>
+//#include <cvode/cvode_spils.h>         /* access to CVSpils interface */
 #include <sundials/sundials_types.h>   /* defs. of realtype, sunindextype      */
 #include <sundials/sundials_math.h>
 
-#include <nvector/nvector_cuda.h>
-
-//#include <cusolver/cvode_cusolver_spqr.h>
-
-#include <sunmatrix/sunmatrix_sparse.h>
 #include <AMReX_Print.H>
 
 #include <cuda_runtime.h>
@@ -42,6 +38,8 @@ typedef struct CVodeUserData {
     int flagP;
     /* Are we using a AJ */
     int iJac;
+    /* Are we using a IS or DS */
+    int iDense;
     /* energy related variables */
     double *rhoe_init = NULL;
     double *rhoesrc_ext = NULL;
@@ -55,6 +53,7 @@ typedef struct CVodeUserData {
     int* csr_col_index_d;
     double* csr_val_d;
     double* csr_jac_d;
+    SUNMatrix R = NULL;
     /* CUDA cusolver */
     void *buffer_qr = NULL;
     csrqrInfo_t info;
@@ -80,6 +79,9 @@ static int Precond(realtype tn, N_Vector u, N_Vector fu, booleantype jok,
 
 static int PSolve(realtype tn, N_Vector u, N_Vector fu, N_Vector r, 
 		N_Vector z, realtype gamma, realtype delta, int lr, void *user_data);
+
+static int cJac(realtype t, N_Vector y, N_Vector fy, SUNMatrix J,
+		void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 void reactor_close();
 
@@ -113,10 +115,16 @@ AMREX_GPU_DEVICE
 inline
 void 
 fKernelComputeallAJ(int ncells, void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
+
 AMREX_GPU_DEVICE
 inline
 void 
 fKernelComputeAJsys(int ncells, void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
+
+AMREX_GPU_DEVICE
+inline
+void 
+fKernelComputeAJchem(int ncells, void *user_data, realtype *u_d, realtype *udot_d, realtype *csr_val);
 
 //__global__ void fKernelFillJB(void *user_data, realtype *gamma);
 
