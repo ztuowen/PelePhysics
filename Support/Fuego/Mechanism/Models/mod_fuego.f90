@@ -274,6 +274,11 @@ module fuego_chemistry
             real(amrex_real), intent(inout) :: wt(*)
         end subroutine
 
+        subroutine ckawt(awt) bind(c,name='CKAWT')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(inout) :: awt(*)
+        end subroutine
+
         subroutine ckwc(T,c,wdot) bind(c,name='CKWC')
             use amrex_fort_module, only : amrex_real
             real(amrex_real), intent(in   ) :: T
@@ -315,6 +320,11 @@ module fuego_chemistry
 
         subroutine GET_REACTION_MAP(rmap) bind(c,name='GET_REACTION_MAP')
             integer, intent(inout) :: rmap(*)
+        end subroutine
+
+        subroutine get_imw(imw) bind(c,name='get_imw')
+            use amrex_fort_module, only : amrex_real
+            real(amrex_real), intent(inout) :: imw(*)
         end subroutine
 
     end interface
