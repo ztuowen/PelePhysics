@@ -24,6 +24,12 @@ extern "C"
      const BL_FORT_FAB_ARG_3D(energy_src_ext),
      const Real* dx, const Real* plo, const Real* phi);
 
+    void explicit_react
+        (const int *nc,const int *nspecies,Real *react_vect,
+         Real *spec_src_vect,Real *energy_vect, Real *energy_src_vect,
+         const Real *dt_react,const int *nsubsteps_guess,const int *nsubsteps_min,
+         const int *nsubsteps_max,int *nsubsteps_final,const Real *errtol);
+
 }
 
 #endif // _main_F_H_
