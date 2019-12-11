@@ -94,7 +94,7 @@ contains
     real(amrex_real), intent(inout) ::  rhoEs(rEs_lo(1):rEs_hi(1),rEs_lo(2):rEs_hi(2),rEs_lo(3):rEs_hi(3),1)
 
     ! local variables
-    integer          :: i, j, k
+    integer          :: i, j, k,sp
     real(amrex_real) :: Temp_lo, Temp_hi, dTemp, P(3), L(3), x, y, z, pressure
     type(eos_t)      :: eos_state
 
@@ -107,7 +107,9 @@ contains
     if (nspecies.lt.3) then
        stop 'This step assumes that there are at least 3 species'
     endif
-    print *, 'Fuel id ', fuel_ID, 'bath_id ', bath_ID, 'oxy_ID ', oxy_ID
+    write(6, *) 'Fuel id ', fuel_ID, 'bath_id ', bath_ID, 'oxy_ID ', oxy_ID
+    flush(6)
+
     eos_state%molefrac = 0.d0
     eos_state%molefrac(oxy_ID)  = 0.2d0
     eos_state%molefrac(fuel_ID) = 0.1d0
@@ -154,7 +156,7 @@ contains
           end do
        end do
     end do
-
+    
     call destroy(eos_state)
 
   end subroutine initialize_data

@@ -10,10 +10,11 @@ cvode_iE = 1
 # Choose between sparse (5) dense (1) or iterative (99) solver
 ns.cvode_iDense = 1
 
-max_grid_size = 1
+max_grid_size = 8
 
 # Choose name of output pltfile
 amr.plot_file       = plt
 
 # Be aware of what your fuel species is 
+#fuel_name = H2
 fuel_name = NC12H26
