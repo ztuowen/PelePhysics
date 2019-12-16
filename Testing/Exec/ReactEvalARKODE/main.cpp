@@ -98,7 +98,7 @@ int main (int   argc, char* argv[])
         amrex::Print() << "Integration method: ";
         if(chem_integrator==1)
         {
-#if USE_ARKODE_PP==TRUE 
+#if USE_ARKODE_PP 
             amrex::Print() << "ARK ODE";
 #else
             amrex::Print() << "CVODE BDF";
