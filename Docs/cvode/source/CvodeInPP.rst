@@ -209,6 +209,7 @@ The domain considered is a :math:`2x1024x2` box, where the initial temperature i
     T(i,j,k) =  T_l + (T_h-T_l)\frac{y(i,j,k)}{L} + dTsin\left(2\pi\frac{y(i,j,k)}{P}\right) 
 
 The different parameters involved are summarized in Table :numref:`tab::ParamReactEvalCvode`. The initial pressure is 1 atm. The initial composition is the same in every cell, and is a mixture of 0.1 :math:`C_nH_m`, 0.2 :math:`O_2` and 0.7 :math:`N_2` in mass fractions. 
+
 Various fuels and kinetic mechanisms can be employed. For the purpose of this tutorial, two common fuels will be considered: **methane** (n=1 and m=4) and **n-dodecane** (n=12 and m=26), modelled via the **drm** and **dodecane_wang** kinetic schemes, respectively. Both mechanisms are available in `PelePhysics`.
 
 The following focuses on the :math:`CH_4`/:math:`O_2` example, but performances for both mechanisms and initial composition will be reported in the results section.
@@ -388,11 +389,11 @@ closer the system matrix is from the identity matrix and the GMRES iterations be
 
 This example illustrates that choosing the "best" and "most efficient" algorithm is far from being a trivial task, 
 and will depend upon many factors. Table :numref:`tab:RunsReactEvalCvode` provides a summary of the CPU run time in solving the 
-ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients.
+ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients. Again, in this particular case, using a sparse solver does not appear to provide additional time savings.
 
 .. _tab:RunsReactEvalCvode:
 
-.. table:: Summary of ReactEvalCvode runs with various algorithms
+.. table:: Summary of ReactEvalCvode runs with various algorithms (methane/air)
     :align: center
 
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
@@ -407,14 +408,38 @@ ReactEvalCVODE example with a subset of the various available CVODE linear solve
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
     |  cvode.analytical_jacobian    |       0         |       1        |      1      |        1       |        1        |
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  Run time                     |      52.61s     |     44.87s     |    48.64S   |      1m42s     |        1m34s    |
+    |  Run time                     |      52.61s     |     44.87s     |    48.64s   |      1m42s     |        1m34s    |
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+
+
+The same series of tests are performed for a mixture of n-dodecane and air (see :ref:`sec:subsReactEvalCvode`), the configuration being otherwise the same as in the methane/air case. Results are sumarized in Table :numref:`tab:RunsReactEvalCvodeDOD`
+
+.. _tab:RunsReactEvalCvodeDOD:
+
+.. table:: Summary of ReactEvalCvode runs with various algorithms (n-dodecane/air)
+    :align: center
+
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  Solver                       |     Direct      |  Direct        |  Direct     |   Iter.        |   Iter.         |
+    |                               |     Dense       |  Dense AJ      |  Sparse AJ  |   not Precond. |   Precond. (S)  |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  KLU                          |       OFF       |       OFF      |     ON      |       OFF      |        ON       |
+    +===============================+=================+================+=============+================+=================+
+    |  reactor_type                 |       1         |       1        |      1      |        1       |        1        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  cvode.solve_type             |       1         |       1        |      5      |       99       |       99        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  cvode.analytical_jacobian    |       0         |       1        |      1      |        1       |        1        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  Run time                     |      s     |     s     |    s   |      s     |        s    |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+
 
 
 Current Limitations
 --------------------
 
-Note that currently, all sparse operations rely on an Analytical Jacobian. This AJ is provided via the chemistry routines dumped by the Fuego code. Those routines are generated in a pre-processing step, when the sparsity pattern of the AJ is still unknown. As such, all entries of the AJ are computed at all times, and when a sparsity solver is chosen, the AJ is in fact "sparsified" to take advantage of the sparse linear algebra. The "sparsification" process involves a series of loop in the cpp that takes a significant amount of the CPU time most of the time. However, it is always good to verify that this is the case. `AMREX`'s TINY_PROFILER option is a handy tool to do so.
+Note that currently, all sparse operations rely on an Analytical Jacobian. This AJ is provided via the chemistry routines dumped by the Fuego code. Those routines are generated in a pre-processing step, when the sparsity pattern of the AJ is still unknown. As such, all entries of the AJ are computed at all times, and when a sparsity solver is chosen, the AJ is in fact "sparsified" to take advantage of the sparse linear algebra. The "sparsification" process involves a series of loop in the cpp that takes a significant amount of the CPU time most of the time. However, it is always good to verify that this is the case. `AMREX`'s ``TINY_PROFILER`` features is a handy tool to do so.
 
 .. _sec:subssubsTricks:
 
