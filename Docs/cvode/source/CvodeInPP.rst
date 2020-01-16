@@ -208,9 +208,11 @@ The domain considered is a :math:`2x1024x2` box, where the initial temperature i
 
     T(i,j,k) =  T_l + (T_h-T_l)\frac{y(i,j,k)}{L} + dTsin\left(2\pi\frac{y(i,j,k)}{P}\right) 
 
-The different parameters involved are summarized in Table :numref:`tab::ParamReactEvalCvode`. The initial composition 
-is the same in every cell, and is a mixture of 0.1 :math:`CH_4`, 0.2 :math:`O_2` and 0.7 :math:`N_2` in mass fractions. 
-The initial pressure is 1 atm and the mechanism considered is the DRM mechanism, directly available in `PelePhysics`.
+The different parameters involved are summarized in Table :numref:`tab::ParamReactEvalCvode`. The initial pressure is 1 atm. The initial composition is the same in every cell, and is a mixture of 0.1 :math:`C_nH_m`, 0.2 :math:`O_2` and 0.7 :math:`N_2` in mass fractions. 
+Various fuels and kinetic mechanisms can be employed. For the purpose of this tutorial, two common fuels will be considered: **methane** (n=1 and m=4) and **n-dodecane** (n=12 and m=26), modelled via the **drm** and **dodecane_wang** kinetic schemes, respectively. Both mechanisms are available in `PelePhysics`.
+
+The following focuses on the :math:`CH_4`/:math:`O_2` example, but performances for both mechanisms and initial composition will be reported in the results section.
+
 
 .. _tab::ParamReactEvalCvode:
 
@@ -259,10 +261,14 @@ Additionally, the ``FUEGO_GAS`` flag should be set to true and the chemistry mod
     
     FUEGO_GAS  = TRUE
     
+    TINY_PROFILE = TRUE
+    
     # define the location of the PELE_PHYSICS top directory
     PELE_PHYSICS_HOME    := ../../../..
     
     #######################
+    DEFINES  += -DMOD_REACTOR
+    
     USE_SUNDIALS_PP = TRUE
     
     USE_KLU_PP = FALSE
@@ -283,6 +289,7 @@ Additionally, the ``FUEGO_GAS`` flag should be set to true and the chemistry mod
 
     include $(PELE_PHYSICS_HOME)/Testing/Exec/Make.PelePhysics         
 
+Note that the ``TINY_PROFILE`` flag has been activated to obtain statistics on the run. This is an `AMREX` option.
 
 The input file
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -290,28 +297,30 @@ The input file
 The run parameters that can be controlled via the input files are as follows: ::
 
     dt = 1.e-05  
-    ndt = 100
+    ndt = 10
     
     reactor_type = 1
     cvode.solve_type = 1
     cvode.analytical_jacobian = 0
+    
+    max_grid_size = 2
 
     amr.plot_file       = plt
     
     fuel_name = CH4
 
 so in this example, a **CV reactor model is chosen** to integrate each cell, and the **dense direct solve without analytical Jacobian** is activated. 
-Each cell is then integrated for a total of :math:`1.e-05` seconds, with 100 external time steps. 
-This means that the actual :math:`dt` is :math:`1.e-07s`, a little more than what is used in the `PeleC` code, 
-but consistent with what will be used in `PeleLM`. Note that the fuel is explicitly specified to be methane.
-By default, the number of cells integrated simultaneously by one CVODE instance is 1 [#Foot1]_.
+Each cell is then integrated for a total of :math:`1.e-05` seconds, with 10 external time steps. 
+This means that the actual :math:`dt` is :math:`1.e-06s`, which is more than what is typically used in the `PeleC` code, 
+but consistent with what is used in `PeleLM`. Note that the fuel is explicitly specified to be methane.
+By default, the number of cells integrated simultaneously by one CVODE instance is 1 [#Foot1]_, but the `AMREX` block-integration proceeds by blocks of :math:`2x2x2`.
 
 
 Results
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-It took 1m19s to integrate the 4096 cells of this box, with 4 MPI processes and no OMP process. 
-The resulting temperature evolution for all cells is displayed in Fig. :numref:`fig:ReacEvalCv`.
+It took 52.61s to integrate the 4096 cells of this box, with 4 MPI processes and no OMP process. 
+The resulting temperature evolution for all cells in the y-direction is displayed in Fig. :numref:`fig:ReacEvalCv`.
 
 
 .. _fig:ReacEvalCv:
@@ -331,20 +340,17 @@ To go further: ReactEvalCVODE with the KLU library
 The GNUmakefile
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Only the middle part of the ``GNUmakefile`` is modified compared to the previous example.
+Only the middle part of the ``GNUmakefile`` needs to be modified compared to the previous example.
 
 .. code-block:: c++
 
     ...
     #######################
-    USE_SUNDIALS_3x4x = TRUE
+    DEFINES  += -DMOD_REACTOR
     
-    USE_KLU = TRUE
-    ifeq ($(USE_KLU), TRUE)
-        DEFINES  += -DUSE_KLU
-        include Make.CVODE
-    endif
+    USE_SUNDIALS_PP = TRUE
     
+    USE_KLU_PP = TRUE
     #######################
     ...
 
@@ -356,56 +362,59 @@ For the KLU library to be of use, a solver utilizing sparsity features should
 be selected. We modify the input file as follows: ::
 
     dt = 1.e-05  
-    ndt = 100
-    cvode_ncells = 1
+    ndt = 10
     
-    cvode_iE = 1
-    ns.cvode_iDense = 99
-    ns.cvode_iJac = 1
+    reactor_type = 1
+    cvode.solve_type = 99
+    cvode.analytical_jacobian = 1
+    
+    max_grid_size = 2
     
     amr.plot_file       = plt
+    
+    fuel_name = CH4
 
 So that now, a preconditioned iterative Krylov solver is selected, where the preconditioner is specified in a sparse format.
 
 Results
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-This run now takes 2m01s to run. As expected from the dense Jacobian of the system obtained when using the small DRM mechanism 
+This run now takes 1m34s to run. As expected from the dense Jacobian of the system obtained when using the small DRM mechanism 
 (the fill in pattern is :math:`>90 \%`), using an iterative solver does not enable to reach speed-ups over the simple dense direct 
 solve. **NOTE**, and this is important, that this tendency will revert when sufficiently small time steps are used. 
-For example, if instead of :math:`1e-7s` we took time steps of :math:`1e-8s` (consistent with `PeleC` time steps), then using 
+For example, if instead of :math:`1e-6s` we took time steps of :math:`1e-8s` (consistent with `PeleC` time steps), then using 
 the iterative GMRES solver would have provided significant time savings. This is because the smaller the time step the 
 closer the system matrix is from the identity matrix and the GMRES iterations become really easy to complete.
 
 This example illustrates that choosing the "best" and "most efficient" algorithm is far from being a trivial task, 
-and depends upon many factors. Table :numref:`tab:RunsReactEvalCvode` provides a summary of the run time in solving the 
-ReactEvalCVODE example with the various available CVODE linear solvers.
+and will depend upon many factors. Table :numref:`tab:RunsReactEvalCvode` provides a summary of the CPU run time in solving the 
+ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients.
 
 .. _tab:RunsReactEvalCvode:
 
 .. table:: Summary of ReactEvalCvode runs with various algorithms
     :align: center
 
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  Solver           |     Direct      |  Direct        |  Direct     |   Iter.        |   Iter.         |
-    |                   |     Dense       |  Dense AJ      |  Sparse AJ  |   Precond. (D) |   Precond. (S)  |
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  KLU              |       OFF       |       OFF      |     ON      |       OFF      |        ON       |
-    +===================+=================+================+=============+================+=================+
-    |  cvode_iE         |       1         |       1        |      1      |        1       |        1        |
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  ns.cvode_iDense  |       1         |       1        |      5      |       99       |       99        |
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  ns.cvode_iJac    |       0         |       1        |      1      |        1       |        1        |
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  Run time         |      1m19s      |     1m02s      |    1m15s    |      1m52s     |        2m01s    |
-    +-------------------+-----------------+----------------+-------------+----------------+-----------------+
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  Solver                       |     Direct      |  Direct        |  Direct     |   Iter.        |   Iter.         |
+    |                               |     Dense       |  Dense AJ      |  Sparse AJ  |   not Precond. |   Precond. (S)  |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  KLU                          |       OFF       |       OFF      |     ON      |       OFF      |        ON       |
+    +===============================+=================+================+=============+================+=================+
+    |  reactor_type                 |       1         |       1        |      1      |        1       |        1        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  cvode.solve_type             |       1         |       1        |      5      |       99       |       99        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  cvode.analytical_jacobian    |       0         |       1        |      1      |        1       |        1        |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
+    |  Run time                     |      52.61s     |     44.87s     |    48.64S   |      1m42s     |        1m34s    |
+    +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
 
 
 Current Limitations
 --------------------
 
-TODO
+Note that currently, all sparse operations rely on an Analytical Jacobian. This AJ is provided via the chemistry routines dumped by the Fuego code. Those routines are generated in a pre-processing step, when the sparsity pattern of the AJ is still unknown. As such, all entries of the AJ are computed at all times, and when a sparsity solver is chosen, the AJ is in fact "sparsified" to take advantage of the sparse linear algebra. The "sparsification" process involves a series of loop in the cpp that takes a significant amount of the CPU time most of the time. However, it is always good to verify that this is the case. `AMREX`'s TINY_PROFILER option is a handy tool to do so.
 
 .. _sec:subssubsTricks:
 
