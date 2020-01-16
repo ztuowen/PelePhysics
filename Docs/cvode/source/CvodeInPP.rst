@@ -26,7 +26,7 @@ within `PeleC`. This reactor type is equivalent to a rigid vessel with fixed vol
 In `PelePhysics`, the constant-volume constraint is ensured by keeping the density :math:`\rho` fixed 
 -since there is no change of mass; and the indirect choice of energy in the CV reactor implementation is the total energy 
 :math:`E`. :math:`E`'s evolution in our case is solely due to a constant external source term :math:`\dot{E}_{ext}`, which accounts 
-for the effects of advection and convection in the Spectral Deferred Correction (SDC) scheme that all `Pele` codes use (see the PeleLM documentation for example). 
+for the effects of advection and convection in the Spectral Deferred Correction (SDC) scheme that all `Pele` codes use (see the `PeleLM <https://pelelm.readthedocs.io/en/latest/index.html>`_ documentation for example). 
 In that sense, the CV reactor is an abstraction and is not a true closed vessel.
 
 Note that CVODE still integrates the mass fractions (:math:`\rho Y`) together with energy for stability reasons, 
