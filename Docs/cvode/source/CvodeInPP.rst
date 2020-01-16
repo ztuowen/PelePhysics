@@ -389,7 +389,7 @@ closer the system matrix is from the identity matrix and the GMRES iterations be
 
 This example illustrates that choosing the "best" and "most efficient" algorithm is far from being a trivial task, 
 and will depend upon many factors. Table :numref:`tab:RunsReactEvalCvode` provides a summary of the CPU run time in solving the 
-ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients. Again, in this particular case, using a sparse solver does not appear to provide additional time savings.
+ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients. Using a sparse solver does not appear to provide additional time savings.
 
 .. _tab:RunsReactEvalCvode:
 
@@ -412,7 +412,7 @@ ReactEvalCVODE example with a subset of the various available CVODE linear solve
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
 
 
-The same series of tests are performed for a mixture of n-dodecane and air (see :ref:`sec:subsReactEvalCvode`), the configuration being otherwise the same as in the methane/air case. Results are sumarized in Table :numref:`tab:RunsReactEvalCvodeDOD`
+The same series of tests are performed for a mixture of n-dodecane and air (see :ref:`sec:subsReactEvalCvode`), the configuration being otherwise the same as in the methane/air case. Results are sumarized in Table :numref:`tab:RunsReactEvalCvodeDOD`. The overall tendencies remain similar. Note that the non-preconditioned GMRES solver becomes very inefficient for this larger system. Here also, the direct sparse solve --which relies upon the KLU library, does not seem to provide additional time savings. The fill-in pattern is :math:`70 \%`.
 
 .. _tab:RunsReactEvalCvodeDOD:
 
@@ -431,7 +431,7 @@ The same series of tests are performed for a mixture of n-dodecane and air (see 
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
     |  cvode.analytical_jacobian    |       0         |       1        |      1      |        1       |        1        |
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
-    |  Run time                     |      s     |     s     |    s   |      s     |        s    |
+    |  Run time                     |      6m25s      |     5m33s      |    6m32s    |      21m44s    |        10m14s   |
     +-------------------------------+-----------------+----------------+-------------+----------------+-----------------+
 
 
@@ -460,15 +460,11 @@ A similar feature is currently not available in CVODE, although it would be poss
 to reinitialize only a subset of counters. This is currently under investigation. 
 The user still has some control via the CVODE flag ``CVodeSetMaxStepsBetweenJac``.
 
-Note that CVODE is currently **NOT** guaranteed to work with OMP !! 
-It will however work (as seen on the previous examples) with MPI.
-
-
 How does CVODE compare with DVODE ?
 -----------------------------------
 
 Depending on whether the famous Jacobian `hack` is activated or not in DVODE, 
-the run can be much faster. The same test case as that described in the previous section can also be integrated with DVODE. 
+the completion time of the run can be decreased significantly. The same test case as that described in the previous section can also be integrated with DVODE. 
 For that purpose, the FORTRAN routines implementing the DVODE integration have been interfaced with C++ via a FORTRAN header. The run is thus identical to ReactEvalCVODE.
 Only the ``GNUmakefile`` needs to be modified:
 
@@ -476,14 +472,11 @@ Only the ``GNUmakefile`` needs to be modified:
 
     ...
     #######################
-    USE_SUNDIALS_3x4x = FALSE
+    DEFINES  += -DMOD_REACTOR
     
-    USE_KLU = FALSE
-    ifeq ($(USE_KLU), TRUE)
-        DEFINES  += -DUSE_KLU
-        include Make.CVODE
-    endif
+    USE_SUNDIALS_PP = FALSE
     
+    USE_KLU_PP = FALSE  
     #######################
     ...
 
@@ -496,22 +489,22 @@ Two runs are performed, activating the hack or not. Times are reported in Table 
 .. table:: Summary of a CVODE vs a DVODE chemistry integration on the same test case
     :align: center
 
-    +-------------------+-----------------+----------------+-----------------+
-    |  Solver           |     Direct      |     Direct     |  Direct         |
-    |                   |     Dense       |     Dense      |  Dense + `hack` |
-    +-------------------+-----------------+----------------+-----------------+
-    |  KLU              |       OFF       |       OFF      |       OFF       |
-    +-------------------+-----------------+----------------+-----------------+
-    | USE_SUNDIALS_3x4x |       ON        |       OFF      |       OFF       |
-    +===================+=================+================+=================+
-    |  cvode_iE         |       1         |       1        |        1        |
-    +-------------------+-----------------+----------------+-----------------+
-    |  ns.cvode_iDense  |       1         |      N/A       |       N/A       |
-    +-------------------+-----------------+----------------+-----------------+
-    |  ns.cvode_iJac    |       0         |      N/A       |       N/A       |
-    +-------------------+-----------------+----------------+-----------------+
-    |  Run time         |      1m19s      |     1m25s      |      1m23s      |
-    +-------------------+-----------------+----------------+-----------------+
+    +-------------------------------+-----------------+----------------+-----------------+
+    |  Solver                       |     Direct      |     Direct     |  Direct         |
+    |                               |     Dense       |     Dense      |  Dense + `hack` |
+    +-------------------------------+-----------------+----------------+-----------------+
+    |  KLU                          |       OFF       |       OFF      |       OFF       |
+    +-------------------------------+-----------------+----------------+-----------------+
+    | USE_SUNDIALS_PP               |       ON        |       OFF      |       OFF       |
+    +===============================+=================+================+=================+
+    |  reactor_type                 |       1         |       1        |        1        |
+    +-------------------------------+-----------------+----------------+-----------------+
+    |  cvode.solve_type             |       1         |      N/A       |       N/A       |
+    +-------------------------------+-----------------+----------------+-----------------+
+    |  cvode.analytical_jacobian    |       0         |      N/A       |       N/A       |
+    +-------------------------------+-----------------+----------------+-----------------+
+    |  Run time                     |      52.61s     |     1m25s      |      1m23s      |
+    +-------------------------------+-----------------+----------------+-----------------+
 
 
 In this case, the hack does not seem to provide significant time savings. Note also that CVODE is slightly more efficient than DVODE, consistently with findings of other studies available in the literature.
