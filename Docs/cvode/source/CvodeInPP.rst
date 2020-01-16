@@ -12,7 +12,7 @@ The different reactors
 -----------------------
 
 Throughout this document, what we call a `reactor` is in fact a zero-dimensional model, 
-representing the simplest form of a chemically reacting system. Depending upon the choice of state variables 
+the simplest representation of a chemically reacting system. Depending upon the choice of state variables 
 driving the system, several different types of reactor can be considered; 
 and the "correct" choice is case dependent. In general, the state variables for a reactor model are
 
@@ -26,7 +26,7 @@ within `PeleC`. This reactor type is equivalent to a rigid vessel with fixed vol
 In `PelePhysics`, the constant-volume constraint is ensured by keeping the density :math:`\rho` fixed 
 -since there is no change of mass; and the indirect choice of energy in the CV reactor implementation is the total energy 
 :math:`E`. :math:`E`'s evolution in our case is solely due to a constant external source term :math:`\dot{E}_{ext}`, which accounts 
-for the effects of advection and convection in the Spectral Deferred Correction (SDC) scheme that all Pele codes use. 
+for the effects of advection and convection in the Spectral Deferred Correction (SDC) scheme that all `Pele` codes use (see the PeleLM documentation for example). 
 In that sense, the CV reactor is an abstraction and is not a true closed vessel.
 
 Note that CVODE still integrates the mass fractions (:math:`\rho Y`) together with energy for stability reasons, 
@@ -61,11 +61,11 @@ we will be able to validate our implementation.
 
 Note that only the CV reactor model described above can be validated, since as we discussed before, 
 the CVH reactor model is an abstraction needed for our Low-Mach PeleLM chemistry integration. Also, to have a real CV reactor, 
-the external source terms on the energy and species in `PelePhysics` have been set to 0 (see :ref:`sec:subsDiffReacts`).
+the external source terms for the energy and species equations in `PelePhysics` have been set to 0 (see :ref:`sec:subsDiffReacts`).
 
 The parameters chosen to initialize the simulation in both CANTERA and `PelePhysics` are described in 
-Table :numref:`tab:ReactEvalCVODE`. Two sets of runs are performed, with two mechanisms available in `PelePhysics`. 
-Note that small sub-steps are taken until the final time is reached, 
+Table :numref:`tab:ReactEvalCVODE`. The kinetic mechanism used for hydrogen combustion is available in `PelePhysics`. 
+Note that small sub-steps are explicitly taken until the final time is reached, 
 but CVODE's internal machinery can subdivides the :math:`dt` even further. 
 For the purpose of validation, the direct dense solver of CVODE is selected 
 in `PelePhysics` (see section :ref:`sec:subsPPOptions`).
@@ -130,21 +130,21 @@ for :math:`H` and :math:`H_2O` are representative of those exhibited by, respect
 
 
 Overall, considering the many CVODE controlling parameters, results are deemed acceptable and that 
-concludes the validation of the reactors implementations in `PelePhysics`.
+concludes the validation of the reactors implemented in `PelePhysics`.
 
 
 
 .. _sec:subsPPOptions:
 
-Activating the different options via the input files
+Activating the different solver options via the input files
 -----------------------------------------------------
 **Note that at this point, it is believed that the user has properly installed CVODE as well as the SuiteSparse package. If not, refer to** :ref:`sec:GetCVODE`.
 
 Choosing between DVODE/CVODE is done at compile time, 
 via the ``GNUmakefile``. On the other hand, the type of reactor and numerical algorithm 
 are selected via keywords in the input file. There is a subtlety though: 
-when any sparsity feature is required, the choice should also be made at compile time; 
-and if the option is not selected, subsequent options via keywords can either lead to an error or fall back to a dense formulation 
+when any sparsity feature is required, the choice should also be made at compile time since external libraries will be required; 
+and if the compilation is not performed properly, subsequent options via keywords in the ``input_file`` can either lead to an error or fall back to a dense formulation 
 of the problem. This is discussed in more depth in what follows.
 
 .. _subsubs:GNUtype:
@@ -155,45 +155,41 @@ The GNUmakefile
 The default setting is to use DVODE in `PelePhysics`; i.e, if no modifications are done to the original ``GNUmakefile``, 
 then this option should automatically be selected. To activate CVODE, the following line should be added: ::
 
-    USE_SUNDIALS_3x4x = TRUE
+    USE_SUNDIALS_PP = TRUE
 
-Note that this is an AMREX flag, so it will automatically be recognized throughout the `Pele` codes. 
+Note that this is a `PelePhysics` flag, so it will automatically be recognized in the `Pele` codes. However, if CVODE has not been installed as prescribed in :ref:`sec:GetCVODE` then a line specifying the location of the Sundials libraries should be added: ::
 
-If sparsity features are required, then the following line should also be added:
+    CVODE_LIB_DIR=PathToSundials/instdir/lib/
 
-.. code-block:: c++
+Add the following line if sparsity features are required: ::
 
-    USE_KLU = TRUE
-    ifeq ($(USE_KLU), TRUE)  
-        DEFINES  += -DUSE_KLU
-    endif
+    USE_KLU_PP = TRUE
 
-In this case, the location of the ``klu.h`` should be specified via: ::
+Likewise, if `SuiteSparse` has not been installed as prescribed in :ref:`sec:GetCVODE`, then a line specifying the location of the libraries should be added: ::
 
-    INCLUDE_LOCATIONS += patToLocationOfklu.h
-
-And if the `SuiteSparse` instructions have been followed, this should be: ::
-
-   INCLUDE_LOCATIONS += pathToSuiteSparse/include 
-
-The only place where this flag will be used is in the C++ file where all CVODE calls are done.
+    SUITESPARSE_DIR=PathToSuiteSparse/
+    
+All of these flags are used in ``$PELE_PHYSICS_HOME/ThirdPartyThirdParty/Make.ThirdParty``.
 
 
 The input file
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-If DVODE has been enabled in the ``GNUmakefile``, no modifications of the input file are required. If CVODE is selected, 
-then the original input file will trigger a dense direct solve without Analytical Jacobian. 
-Three keywords control the algorithm.
+If DVODE has been enabled in the ``GNUmakefile``, no modifications of the input files are required. If CVODE is selected, 
+then the original input files will trigger a dense direct solve without Analytical Jacobian. 
+Three main keywords control the algorithm.
 
-- ``cvode_iE`` enable to switch from a CV reactor (``=1``) to a CVH reactor (``=2``).
-- ``ns.cvode_iDense`` controls the numerical method: choose ``1`` to enable the dense direct linear solver, 
+- ``reactor_type`` enable to switch from a CV reactor (``=1``) to a CVH reactor (``=2``).
+- ``cvode.solve_type`` controls the numerical method: choose ``1`` to enable the dense direct linear solver, 
   ``5`` for the sparse direct linear solver (if the KLU library has been linked) and ``99`` for the Krylov iterative solver
-- ``ns.cvode_iJac`` is a bit less obvious. If ``ns.cvode_iDense = 1``, then ``ns.cvode_iJac = 1`` will activate 
-  the use of an Analytical Jacobian. But if ``ns.cvode_iDense = 99``, then ``ns.cvode_iJac = 1`` will activate 
-  the preconditioned GMRES solver while ``ns.cvode_iJac = 0`` will activate the non-preconditioned GMRES solver. 
-  Additionally, if ``ns.cvode_iDense = 99``, ``ns.cvode_iJac = 1`` and the KLU library is linked, then the preconditioned solve 
-  is done in a sparse format. Note that with ``ns.cvode_iDense = 5``, the only allowed option is ``ns.cvode_iJac = 1``.
+- ``cvode.analytical_jacobian`` is a bit less obvious: 
+  - If ``cvode.solve_type = 1``, then ``cvode.analytical_jacobian = 1`` will activate 
+  the use of an Analytical Jacobian. 
+  - If ``cvode.solve_type = 99``, then ``cvode.analytical_jacobian = 1`` will activate 
+  the preconditioned GMRES solver while ``cvode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver. 
+  - If ``cvode.solve_type = 99``, ``cvode.analytical_jacobian = 1`` **and** the KLU library is linked, 
+  then the preconditioned solve is done in a sparse format. 
+  - With ``cvode.solve_type = 5``, the only allowed option is ``cvode.analytical_jacobian = 1``.
 
 
 .. _sec:subsReactEvalCvode:
@@ -201,7 +197,7 @@ Three keywords control the algorithm.
 The ReactEvalCVODE test case in details
 ---------------------------------------
 
-This tutorial has been adapted from the ReactEval tutorial employed in the series of regression tests to monitor the DVODE chemistry integration. 
+This tutorial has been adapted from the `ReactEval` tutorial employed in the series of regression tests to monitor the DVODE chemistry integration. 
 The domain considered is a :math:`2x1024x2` box, where the initial temperature is different in each :math:`(i,j,k)-` cell, according to a :math:`y-` evolving sinusoidal profile, see Fig. :numref:`fig:ErrH2`:
 
 .. math::
@@ -210,7 +206,7 @@ The domain considered is a :math:`2x1024x2` box, where the initial temperature i
 
 The different parameters involved are summarized in Table :numref:`tab::ParamReactEvalCvode`. The initial composition 
 is the same in every cell, and is a mixture of 0.1 :math:`CH_4`, 0.2 :math:`O_2` and 0.7 :math:`N_2` in mass fractions. 
-The initial pressure is 1 atm and the mechanism considered is the DRM mechanism.
+The initial pressure is 1 atm and the mechanism considered is the DRM mechanism, directly available in `PelePhysics`.
 
 .. _tab::ParamReactEvalCvode:
 
@@ -238,8 +234,8 @@ The initial pressure is 1 atm and the mechanism considered is the DRM mechanism.
 The GNUmakefile
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-For this example, the ``USE_SUNDIALS_3x4x`` flag should be set to true, as the ODE integration 
-is called from the C++ routine directly and will thus not work with DVODE (only accessible via FORTRAN with the current implementation).
+For this example, the ``USE_SUNDIALS_PP`` flag should be set to true, as the ODE integration 
+is called from the C++ routine directly using CVODE.
 Additionally, the ``FUEGO_GAS`` flag should be set to true and the chemistry model should be set to ``drm19``. The full file reads as follows:
 
 .. code-block:: c++
@@ -263,14 +259,9 @@ Additionally, the ``FUEGO_GAS`` flag should be set to true and the chemistry mod
     PELE_PHYSICS_HOME    := ../../../..
     
     #######################
-    USE_SUNDIALS_3x4x = TRUE
+    USE_SUNDIALS_PP = TRUE
     
-    USE_KLU = FALSE
-    ifeq ($(USE_KLU), TRUE)
-        DEFINES  += -DUSE_KLU
-        include Make.CVODE
-    endif
-    
+    USE_KLU_PP = FALSE
     #######################
     ifeq ($(FUEGO_GAS), TRUE)
       Eos_dir         = Fuego
@@ -288,8 +279,6 @@ Additionally, the ``FUEGO_GAS`` flag should be set to true and the chemistry mod
 
     include $(PELE_PHYSICS_HOME)/Testing/Exec/Make.PelePhysics         
 
-where the ``Make.CVODE`` contains the link to the `SuiteSparse` include directory (see :ref:`subsubs:GNUtype`).
-
 
 The input file
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -298,18 +287,20 @@ The run parameters that can be controlled via the input files are as follows: ::
 
     dt = 1.e-05  
     ndt = 100
-    cvode_ncells = 1
     
-    cvode_iE = 1
-    ns.cvode_iDense = 1
-    ns.cvode_iJac = 0
+    reactor_type = 1
+    cvode.solve_type = 1
+    cvode.analytical_jacobian = 0
 
     amr.plot_file       = plt
+    
+    fuel_name = CH4
 
 so in this example, a **CV reactor model is chosen** to integrate each cell, and the **dense direct solve without analytical Jacobian** is activated. 
 Each cell is then integrated for a total of :math:`1.e-05` seconds, with 100 external time steps. 
 This means that the actual :math:`dt` is :math:`1.e-07s`, a little more than what is used in the `PeleC` code, 
-but consistent with what will be used in `PeleLM`. The number of cells to be integrated simultaneously is 1 [#Foot1]_.
+but consistent with what will be used in `PeleLM`. Note that the fuel is explicitly specified to be methane.
+By default, the number of cells integrated simultaneously by one CVODE instance is 1 [#Foot1]_.
 
 
 Results
@@ -488,4 +479,4 @@ Two runs are performed, activating the hack or not. Times are reported in Table 
 In this case, the hack does not seem to provide significant time savings. Note also that CVODE is slightly more efficient than DVODE, consistently with findings of other studies available in the literature.
 
 
-.. [#Foot1] NOTE that only one cell at a time should be integrated with CVODE right now. The vectorized version on CPU is still WIP and not properly implemented for all linear solver.
+.. [#Foot1] NOTE that only one cell at a time should be integrated with CVODE right now. The vectorized version on CPU is still WIP and not properly implemented for all linear solvers so that no computational gain should be expected from solving several cells at a time.
