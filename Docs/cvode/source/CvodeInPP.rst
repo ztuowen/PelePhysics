@@ -165,7 +165,7 @@ Add the following line if sparsity features are required: ::
 
     USE_KLU_PP = TRUE
 
-Likewise, if `SuiteSparse` has not been installed as prescribed in :ref:`sec:GetCVODE`, then a line specifying the location of the libraries should be added: ::
+Likewise, if `SuiteSparse` has not been installed as prescribed in :ref:`sec:GetCVODE`, then a line specifying its location should be added: ::
 
     SUITESPARSE_DIR=PathToSuiteSparse/
     
@@ -183,12 +183,16 @@ Three main keywords control the algorithm.
 - ``cvode.solve_type`` controls the numerical method: choose ``1`` to enable the dense direct linear solver, 
   ``5`` for the sparse direct linear solver (if the KLU library has been linked) and ``99`` for the Krylov iterative solver
 - ``cvode.analytical_jacobian`` is a bit less obvious: 
+
   - If ``cvode.solve_type = 1``, then ``cvode.analytical_jacobian = 1`` will activate 
   the use of an Analytical Jacobian. 
+  
   - If ``cvode.solve_type = 99``, then ``cvode.analytical_jacobian = 1`` will activate 
-  the preconditioned GMRES solver while ``cvode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver. 
+  the preconditioned GMRES solver while ``cvode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver.
+  
   - If ``cvode.solve_type = 99``, ``cvode.analytical_jacobian = 1`` **and** the KLU library is linked, 
   then the preconditioned solve is done in a sparse format. 
+  
   - With ``cvode.solve_type = 5``, the only allowed option is ``cvode.analytical_jacobian = 1``.
 
 
