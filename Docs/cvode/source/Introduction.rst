@@ -32,6 +32,7 @@ to perform the chemistry integration, no matter the problem at hand.
 DVODE is a very robust, but slightly outdated, variable-coefficient Ordinary Differential Equation (ODE) solver written in Fortran 77. 
 At its core, it uses a direct dense linear solver. DVODE is very efficient in the resolution of small stiff systems 
 of equations but can become prohibitively expensive when dealing with bigger systems of equations, such as those frequently encountered in combustion systems. 
+
 In recent years, the Sundials team at LLNL [LLNL2005]_ has been involved in the active development of a modern, 
 C++ version, of DVODE called CVODE. 
 CVODE implements the same functionalities as those available in DVODE, but offers much more flexibility through 
