@@ -495,7 +495,7 @@ Two runs are performed, activating the hack or not. Times are reported in Table 
     +-------------------------------+-----------------+----------------+-----------------+
     |  KLU                          |       OFF       |       OFF      |       OFF       |
     +-------------------------------+-----------------+----------------+-----------------+
-    | USE_SUNDIALS_PP               |       ON        |       OFF      |       OFF       |
+    | USE_SUNDIALS_PP               |  ON (CVODE)     |  OFF (DVODE)   |  OFF (DVODE)    |
     +===============================+=================+================+=================+
     |  reactor_type                 |       1         |       1        |        1        |
     +-------------------------------+-----------------+----------------+-----------------+
@@ -503,11 +503,23 @@ Two runs are performed, activating the hack or not. Times are reported in Table 
     +-------------------------------+-----------------+----------------+-----------------+
     |  cvode.analytical_jacobian    |       0         |      N/A       |       N/A       |
     +-------------------------------+-----------------+----------------+-----------------+
-    |  Run time                     |      52.61s     |     1m25s      |      1m23s      |
+    |  Run time                     |      52.61s     |     53.21s     |      52.83s     |
     +-------------------------------+-----------------+----------------+-----------------+
 
 
-In this case, the hack does not seem to provide significant time savings. Note also that CVODE is slightly more efficient than DVODE, consistently with findings of other studies available in the literature.
+In this case, the hack does not seem to provide significant time savings. Note also that CVODE is usually slightly more efficient than DVODE, consistently with findings of other studies available in the literature -- although in this case all options give comparable results.
+
+
+CVODE implementation on GPU
+-----------------------------------
+
+**To use CVODE on a GPU, sundials needs to be build with the flag** ``CUDA_ENABLE`` **(Refer to** :ref:`sec:GetCVODE`**. The SuiteSparse package is no longer required.**
+
+Requirements and input files
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ReactEvalCVODE_GPU test case in details
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 .. [#Foot1] NOTE that only one cell at a time should be integrated with CVODE right now. The vectorized version on CPU is still WIP and not properly implemented for all linear solvers so that no computational gain should be expected from solving several cells at a time.
