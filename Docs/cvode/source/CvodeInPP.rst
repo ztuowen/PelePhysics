@@ -556,10 +556,28 @@ In the ``input_file``, the same three main keywords control the algorithm (``rea
 Grouping cells together
 --------------------
 
+To take full advantage of the GPU power, many intensive operations of similar nature should be performed in parallel. In `PelePhysics`, this is achieved by grouping many cells together, and integrating each one in separate threads within one CVODE instance. Indeed, the flow of operations to solve one set of ODEs is very similar from one cell to the next, and one could expect limited thread divergence from this approach. Fig. :numref:`fig:GroupingCells` summarizes the idea. Note that the Jacobian of the group of cells is block-sparse, and any chosen integration method should take advantage of this.
+
+
+.. _fig:GroupingCells:
+
+.. figure:: ./Visualization/GroupingOfCells.png
+     :width: 100%
+     :align: center
+     :name: fig-GroupingCells
+     :alt: Grouping of cells 
+
+     n cells are solved together in one CVODE instance. The big-matrix is block-sparse.
+
+In the current implementation, the number of cells that are grouped together is equal to the number of cells contained in the box under investigation within a MultiFab iteration.
+
 The ReactEvalCVODE_GPU test case in details
 --------------------
 
 Current Limitations
 --------------------
+
+The current GPU implementation of CVODE relies on the launch of many kernels from the host. As such, a CVODE instance does not live *directly* on the GPU; rather, the user is in charge of identifying and delegating computation-intensive part of the RHS, Jacobian evaluation, etc.
+The current implementation thus suffers from the cost of data movement, and parallelization is limited due to required device synchronizations within CVODE.
 
 .. [#Foot1] NOTE that only one cell at a time should be integrated with CVODE right now. The vectorized version on CPU is still WIP and not properly implemented for all linear solvers so that no computational gain should be expected from solving several cells at a time.
