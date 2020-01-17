@@ -562,7 +562,7 @@ To take full advantage of the GPU power, many intensive operations of similar na
 .. _fig:GroupingCells:
 
 .. figure:: ./Visualization/GroupingOfCells.png
-     :width: 50%
+     :width: 40%
      :align: center
      :name: fig-GroupingCells
      :alt: Grouping of cells 
@@ -573,6 +573,93 @@ In the current implementation, the number of cells that are grouped together is 
 
 The ReactEvalCVODE_GPU test case in details
 --------------------
+
+A series of tests are performed on the GPU for a mixture of methane and air, with the intent of evaluationg the performance of the chemistry solvers. 
+The test case, configuration and initial conditions are similar to that described in :ref:`sec:subsReactEvalCvode`. The mechanism employed is the **drm**. 
+
+The GNUmakefile
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The full file reads as follows:
+
+.. code-block:: c++
+
+    PRECISION  = DOUBLE               
+    PROFILE    = FALSE
+    
+    DEBUG      = FALSE
+
+    DIM        = 3
+
+    COMP       = gcc
+    FCOMP      = gfortran
+
+    USE_MPI    = FALSE
+    USE_OMP    = FALSE
+
+    FUEGO_GAS  = TRUE
+    
+    USE_CUDA   = TRUE
+
+    TINY_PROFILE = TRUE
+
+    # define the location of the PELE_PHYSICS top directory
+    PELE_PHYSICS_HOME    := ../../..
+
+    #######################
+    # this flag activates the subcycling mode in the D/Cvode routines
+    DEFINES  += -DMOD_REACTOR
+
+    # use CVODE
+    USE_SUNDIALS_PP = TRUE
+    
+    USE_CUDA_CVODE = TRUE
+    ##############################################
+    ifeq ($(FUEGO_GAS), TRUE)
+      Eos_dir         = Fuego
+      Chemistry_Model = drm19
+      Reactions_dir   = Fuego
+      Transport_dir   = Simple
+    else
+      Eos_dir       = GammaLaw
+      Reactions_dir = Null
+      Transport_dir = Constant
+    endif
+
+    Bpack   := ./Make.package
+    Blocs   := .
+
+    include $(PELE_PHYSICS_HOME)/Testing/Exec/Make.PelePhysics                                                                           
+
+
+The input file
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Results
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Results are sumarized in Table :numref:`tab:RunsReactEvalCvodeDRMGPU`. 
+
+
+.. _tab:RunsReactEvalCvodeDRMGPU:
+
+.. table:: Summary of ReactEvalCvode_GPU runs with various algorithms (methane/air)
+    :align: center
+
+    +-------------------------------+-----------------+----------------+----------------+-----------------+
+    |  Solver                       |     Direct      |  Direct        |   Iter.        |   Iter.         |
+    |                               |     Sparse I    |  Sparse II     |   not Precond. |   Precond. (S)  |
+    +===============================+=================+================+================+=================+
+    |  reactor_type                 |       1         |       1        |        1       |        1        |
+    +-------------------------------+-----------------+----------------+----------------+-----------------+
+    |  cvode.solve_type             |       1         |       5        |       99       |       99        |
+    +-------------------------------+-----------------+----------------+----------------+-----------------+
+    |  cvode.analytical_jacobian    |       1         |       1        |        0       |        1        |
+    +-------------------------------+-----------------+----------------+----------------+-----------------+
+    |  Run time                     |      13s        |     20s        |      19s       |       36s       |
+    +-------------------------------+-----------------+----------------+----------------+-----------------+
+
+
 
 Current Limitations
 --------------------
