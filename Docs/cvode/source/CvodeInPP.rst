@@ -510,16 +510,56 @@ Two runs are performed, activating the hack or not. Times are reported in Table 
 In this case, the hack does not seem to provide significant time savings. Note also that CVODE is usually slightly more efficient than DVODE, consistently with findings of other studies available in the literature -- although in this case all options give comparable results.
 
 
-CVODE implementation on GPU
------------------------------------
-
-**To use CVODE on a GPU, sundials needs to be build with the flag** ``CUDA_ENABLE`` **(Refer to** :ref:`sec:GetCVODE`**. The SuiteSparse package is no longer required.**
+CVODE implementation in `PelePhysics` on GPU
+======================================
 
 Requirements and input files
+--------------------
+
+**To use CVODE on a GPU, Sundials should be build with the flag** ``CUDA_ENABLE`` **. A CUDA compiler also needs to be specified. Relevant information is provided in the Sundials install guide, and an automatic script is distributed with PelePhysics to ease the process. Refer to** :ref:`sec:GetCVODE`.
+
+Note that the SuiteSparse package does not support GPU architecture and is thus no longer required. Sparse linear algebra operations, when needed, are performed with the help of CUDA's `cuSolver <https://docs.nvidia.com/cuda/cusolver/index.html>`_.
+
+The GNUmakefile
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+To run on GPUs, `AMREX` should be build with CUDA enabled. To do so, add this line to the ``GNUmakefile``: ::
+
+    USE_CUDA   = TRUE
+
+Then, the CUDA features of CVODE are enabled in `PelePhysics` via a specific ``USE_CUDA_CVODE`` flag:
+
+.. code-block:: c++
+
+    ...
+    #######################
+    DEFINES  += -DMOD_REACTOR
+    
+    USE_SUNDIALS_PP = TRUE
+    
+    USE_CUDA_CVODE = TRUE 
+    #######################
+    ...
+ 
+
+The input file
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the ``input_file``, the same three main keywords control the algorithm (``reactor_type``, ``cvode.solve_type``, ``cvode.analytical_jacobian``). However, note that there are less solver options available. 
+
+- Both preconditioned or non-preconditioned GMRES options are available (``cvode.solve_type = 99``). The preconditioned version is triggered via the same flag as on the CPU (``cvode.analytical_jacobian = 1``).
+- The user has the choice between two different sparse solvers. 
+
+  - Sundials offers one option (the SUNLinSol_cuSolverSp_batchQR) relying upon the cuSolver to perform batched sparse QR factorizations. This version is enabled via ``cvode.solve_type = 5`` and ``cvode.analytical_jacobian = 1``. 
+  - Another version is available via ``cvode.solve_type = 1`` and ``cvode.analytical_jacobian = 1``. This version relies upon a pre-computed Gauss-Jordan `Solver <https://github.com/accelerated-odes/gauss-jordan-solver>`_, and is fairly efficient for problems of moderate size.
+  
+Grouping cells together
+--------------------
 
 The ReactEvalCVODE_GPU test case in details
-^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------
 
+Current Limitations
+--------------------
 
 .. [#Foot1] NOTE that only one cell at a time should be integrated with CVODE right now. The vectorized version on CPU is still WIP and not properly implemented for all linear solvers so that no computational gain should be expected from solving several cells at a time.
