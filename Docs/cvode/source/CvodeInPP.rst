@@ -562,7 +562,7 @@ To take full advantage of the GPU power, many intensive operations of similar na
 .. _fig:GroupingCells:
 
 .. figure:: ./Visualization/GroupingOfCells.png
-     :width: 100%
+     :width: 50%
      :align: center
      :name: fig-GroupingCells
      :alt: Grouping of cells 
