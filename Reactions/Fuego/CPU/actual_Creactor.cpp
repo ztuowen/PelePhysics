@@ -447,12 +447,12 @@ void fKernelSpec(realtype *dt, realtype *yvec_d, realtype *ydot_d,
       if (data_wk->iE_Creact == 1){
           /* UV REACTOR */
           eos.eos_EY2T(massfrac, energy, temp);
-          eos.eos_TY2Cv(temp, massfrac, &cX);
+          eos.eos_TY2Cv(temp, massfrac, cX);
           eos.eos_T2EI(temp, Xi);
       } else {
           /* HP REACTOR */
           eos.eos_HY2T(massfrac, energy, temp);
-          eos.eos_TY2Cp(temp, massfrac, &cX);
+          eos.eos_TY2Cp(temp, massfrac, cX);
           eos.eos_T2HI(temp, Xi);
       }
       eos.eos_RTY2W(rho, temp, massfrac, cdot);
@@ -1109,7 +1109,7 @@ UserData AllocUserData(int iE, int num_cells)
 
   (data_wk->ncells)                    = num_cells;
 
-  (data_wk->iverbose)                  = 1;
+  (data_wk->iverbose)                  = 3;
 
   (data_wk->FirstTimePrecond)          = true;
   (data_wk->reactor_cvode_initialized) = false;

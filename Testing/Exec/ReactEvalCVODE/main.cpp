@@ -208,22 +208,12 @@ main (int   argc,
         Real dt_incr   = dt/ndt;
 
         const Box& box = mfi.tilebox();
-	//int ncells = box.numPts();
 
-	FArrayBox& Fb     = mf[mfi];
-	FArrayBox& Fbsrc  = rY_source_ext[mfi];
-	FArrayBox& FbE    = mfE[mfi];
-	FArrayBox& FbEsrc = rY_source_energy_ext[mfi];
-	FArrayBox& Fct    = fctCount[mfi];
-
-	const auto len     = amrex::length(box);
-	const auto lo      = amrex::lbound(box);
-
-	const auto rhoY    = Fb.view(lo);
-	const auto rhoE    = FbE.view(lo);
-	const auto frcExt  = Fbsrc.view(lo); 
-	const auto frcEExt = FbEsrc.view(lo);
-	const auto fc      = Fct.view(lo); 
+        const auto& rhoY = mf.array(mfi,0);
+        const auto& rhoE = mfE.array(mfi,0);
+        const auto& frcExt = rY_source_ext.array(mfi,0);
+        const auto& frcEExt = rY_source_energy_ext.array(mfi,0);
+        const auto& fc = fctCount.array(mfi,0);
 
         /* Pack the data */
 	// rhoY,T
@@ -240,17 +230,25 @@ main (int   argc,
 	
 	int nc = 0;
 	int num_cell_cvode_int = 0;
-	for         (int k = 0; k < len.z; ++k) {
-	    for         (int j = 0; j < len.y; ++j) {
-	        for         (int i = 0; i < len.x; ++i) {
-		    /* Fill the vectors */
+        const auto& se = box.smallEnd();
+        const auto& be = box.bigEnd();
+#if AMREX_SPACEDIM > 2
+        for (int k=se[2]; k<=be[2]; ++k)
+        {
+#else
+          int k = 0;
+#endif
+          for (int j=se[1]; j<=be[1]; ++j)
+          {
+            for (int i=se[0]; i<=be[0]; ++i)
+            { 
 	            for (int sp=0;sp<Ncomp; sp++){
 	                tmp_vect[nc*(Ncomp+1) + sp]   = rhoY(i,j,k,sp);
 		        tmp_src_vect[nc*Ncomp + sp]   = frcExt(i,j,k,sp);
 		    }
 		    tmp_vect[nc*(Ncomp+1) + Ncomp]    = rhoY(i,j,k,Ncomp);
-		    tmp_vect_energy[nc]               = rhoE(i,j,k,0);
-		    tmp_src_vect_energy[nc]           = frcEExt(i,j,k,0);
+		    tmp_vect_energy[nc]               = rhoE(i,j,k);
+		    tmp_src_vect_energy[nc]           = frcEExt(i,j,k);
 		    //
 		    indx_i[nc] = i;
 		    indx_j[nc] = j;
@@ -288,7 +286,9 @@ main (int   argc,
 		    }
 		}
 	    }
+#if AMREX_SPACEDIM > 2
 	}
+#endif
 	if (nc != 0) {
 		printf(" WARNING !! Not enough cells (%d) to fill %d \n", nc, cvode_ncells);
 	} else {
