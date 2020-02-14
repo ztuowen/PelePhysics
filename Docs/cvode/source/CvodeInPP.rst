@@ -144,7 +144,7 @@ Choosing between DVODE/CVODE (as well as other ODE integrators that will not be 
 via the ``GNUmakefile``. On the other hand, the type of reactor and specifics of the numerical algorithm 
 are selected via keywords in the input file. There is a subtlety though: 
 when any sparsity feature is required, the choice should also be made at compile time since external libraries will be required; 
-and if the compilation is not performed properly, subsequent options via keywords in the ``input_file`` can either lead to an error or fall back to a dense formulation 
+and if the compilation is not performed properly, subsequent options via keywords in the input file can either lead to an error or fall back to a dense formulation 
 of the problem. This is discussed in more depth in what follows.
 
 .. _subsubs:GNUtype:
@@ -176,25 +176,25 @@ All of the flags discussed in this subection are used in ``$PELE_PHYSICS_HOME/Th
 The input file
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-If DVODE has been enabled via the ``GNUmakefile``, no modifications to the original input file ``inputs.3d`` are required because there is only one linear solver available in that case. If CVODE is selected, 
-then the original input file will trigger a dense direct linear solve without Analytical Jacobian. 
-Three main keywords control the algorithm.
+The input file is made up of specific blocks containing keywords that apply to specific areas of the integrationof the problem at hand. 
+The suffix associated with each block of keywords should help the user in determining which keywords 
+are needed in his case, depending on the options selected via the ``GNUmakefile``.
+If CVODE is enabled via the ``GNUmakefile``, for example, keywords starting with ``cvode.*`` are relevant. 
+The general ``ode.*`` keywords are shared by all ODE integrators and thus are also relevant for CVODE:
 
-- ``reactor_type`` enable to switch from a CV reactor (``=1``) to a CVH reactor (``=2``).
-- ``cvode.solve_type`` controls the numerical method: choose ``1`` to enable the dense direct linear solver, 
+- ``ode.reactor_type`` enable to switch from a CV reactor (``=1``) to a CVH reactor (``=2``).
+- ``cvode.solve_type`` controls the CVODE linear integration method: choose ``1`` to enable the dense direct linear solver, 
   ``5`` for the sparse direct linear solver (if the KLU library has been linked) and ``99`` for the Krylov iterative solver
-- ``cvode.analytical_jacobian`` is a bit less obvious: 
+- ``ode.analytical_jacobian`` is a bit less obvious: 
 
-  - If ``cvode.solve_type = 1``, then ``cvode.analytical_jacobian = 1`` will activate 
-  the use of an Analytical Jacobian. 
-  
-  - If ``cvode.solve_type = 99``, then ``cvode.analytical_jacobian = 1`` will activate 
-  the preconditioned GMRES solver while ``cvode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver.
-  
-  - If ``cvode.solve_type = 99``, ``cvode.analytical_jacobian = 1`` **and** the KLU library is linked, 
+  - If ``cvode.solve_type = 1``, then ``ode.analytical_jacobian = 1`` will activate 
+  the use of an Analytical Jacobian.   
+  - If ``cvode.solve_type = 99``, then ``ode.analytical_jacobian = 1`` will activate 
+  the preconditioned GMRES solver while ``ode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver.  
+  - If ``cvode.solve_type = 99``, ``ode.analytical_jacobian = 1`` **and** the KLU library is linked, 
   then the preconditioned solve is done in a sparse format. 
   
-  - With ``cvode.solve_type = 5``, the only allowed option is ``cvode.analytical_jacobian = 1``.
+  - With ``cvode.solve_type = 5``, the only allowed option is ``ode.analytical_jacobian = 1``.
 
 
 .. _sec:subsReactEvalCvode:
