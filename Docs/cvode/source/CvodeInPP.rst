@@ -237,9 +237,9 @@ The following focuses on the :math:`CH_4`/:math:`O_2` example, but performances 
      :align: center
      :name: fig-ReactEvalCVODE
      :target: ./Visualization/Case_ReactEvalCvode.001.png
-     :alt: The ReactEvalCVODE test case
+     :alt: The ReactEval_C test case
 
-     The ReactEvalCVODE test case
+     The ReactEval_C test case
 
 The GNUmakefile
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -431,7 +431,7 @@ closer the system matrix is from the identity matrix and the GMRES iterations be
 
 This example illustrates that choosing the "best" and "most efficient" algorithm is far from being a trivial task, 
 and will depend upon many factors. Table :numref:`tab:RunsReactEvalCvode` provides a summary of the CPU run time in solving the 
-ReactEvalCVODE example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients. Using a sparse solver does not appear to provide additional time savings.
+ReactEval_C example with a subset of the various available CVODE linear solvers. As can be seen from the numbers, using an AJ is much more efficient than relying upon CVODE's built-in difference quotients. Using a sparse solver does not appear to provide additional time savings.
 
 .. _tab:RunsReactEvalCvode:
 
