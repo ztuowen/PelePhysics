@@ -188,9 +188,11 @@ The general ``ode.*`` keywords are shared by all ODE integrators and thus are al
 - ``ode.analytical_jacobian`` is a bit less obvious: 
 
   - If ``cvode.solve_type = 1``, then ``ode.analytical_jacobian = 1`` will activate 
-  the use of an Analytical Jacobian.   
+  the use of an Analytical Jacobian. 
+  
   - If ``cvode.solve_type = 99``, then ``ode.analytical_jacobian = 1`` will activate 
-  the preconditioned GMRES solver while ``ode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver.  
+  the preconditioned GMRES solver while ``ode.analytical_jacobian = 0`` will activate the non-preconditioned GMRES solver. 
+  
   - If ``cvode.solve_type = 99``, ``ode.analytical_jacobian = 1`` **and** the KLU library is linked, 
   then the preconditioned solve is done in a sparse format. 
   
