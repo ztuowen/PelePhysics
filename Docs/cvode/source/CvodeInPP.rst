@@ -329,7 +329,7 @@ The run parameters that can be controlled via ``inputs.3d`` input file for this 
     ode.rtol = 1e-9
     ode.atol = 1e-9
     # Select ARK/CV-ODE Jacobian eval: 0=FD 1=AJ
-    cvode.analytical_jacobian = 0
+    ode.analytical_jacobian = 0
     #CVODE SPECIFICS
     # Choose between sparse (5) dense (1/101) iterative (99) solver
     cvode.solve_type = 1
@@ -400,12 +400,16 @@ The input file
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 For the KLU library to be of use, a solver utilizing sparsity features should 
-be selected. We modify the input file as follows: ::
+be selected. We modify the input file as follows:
 
+.. code-block:: c++
+
+    ...
+    #######################
     #ODE solver options 
     ...
     # Select ARK/CV-ODE Jacobian eval: 0=FD 1=AJ
-    ode.analytical_jacobian = 0
+    ode.analytical_jacobian = 1
     #CVODE SPECIFICS
     # Choose between sparse (5) dense (1/101) iterative (99) solver
     cvode.solve_type = 99
