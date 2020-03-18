@@ -1,0 +1,54 @@
+#include <math.h>
+#include <iostream>
+#include <cstring>
+#include <chrono>
+
+#include <arkode/arkode_arkstep.h>
+#include <arkode/arkode_erkstep.h>
+
+#include <nvector/nvector_serial.h>    /* access to serial N_Vector            */
+#include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
+#include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
+#include <sunnonlinsol/sunnonlinsol_newton.h>
+#include <sundials/sundials_types.h>   /* defs. of realtype, sunindextype      */
+#include <sundials/sundials_math.h>
+
+#include <AMReX_Print.H>
+#include <Fuego_EOS.H>
+/**********************************/
+
+typedef struct ARKODEUserData {
+    /* Checks */
+    bool reactor_arkode_initialized;
+    /* Base items */
+    int ncells_d[1];
+    int neqs_per_cell[1];
+    int iverbose;
+    int ireactor_type;
+
+    double *rhoe_init = NULL;
+    double *rhoesrc_ext = NULL;
+    double *rYsrc = NULL;
+    cudaStream_t stream;
+    int nbBlocks;
+    int nbThreads;
+} *UserData;
+
+int reactor_info(const int* cvode_iE, const int* Ncells,
+            double relative_tol=1e-10,double absolute_tol=1e-10);
+
+static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot, void *user_data);
+
+void reactor_close();
+    
+int react(realtype *rY_in, realtype *rY_src_in, 
+            realtype *rX_in, realtype *rX_src_in, 
+            realtype *dt_react, realtype *time
+            const int* cvode_iE, const int* Ncells, cudaStream_t stream);
+
+AMREX_GPU_DEVICE
+inline
+void
+fKernelSpec(int ncells, void *user_data, 
+		            realtype *yvec_d, realtype *ydot_d,  
+		            double *rhoX_init, double *rhoXsrc_ext, double *rYs);
