@@ -81,6 +81,9 @@ main (int   argc,
 
       // Get name of fuel
       pp.get("fuel_name", fuel_name);
+           
+      //ncells for ode
+      pp.query("ode_ncells",ode_ncells);
     }
 
     {
@@ -155,6 +158,10 @@ main (int   argc,
     bath_idx  = N2_ID;
     extern_init(&(probin_file_name[0]),&probin_file_length,&fuel_idx,&oxy_idx,&bath_idx,&ode_iE);
 
+#if !(defined(USE_SUNDIALS_PP) || defined(USE_RK64_PP))
+        ode_ncells=1
+#endif
+
     /* Initialize D/CVODE reactor */
 #ifdef _OPENMP
 #pragma omp parallel
@@ -174,7 +181,7 @@ main (int   argc,
     for (int i = 0; i < BL_SPACEDIM; ++i) {
 	npts[i] = 2;
     }
-    npts[1] = 1024;
+    npts[1] = 128;
 
     amrex::Print() << "Integrating "<<npts[0]<< "x"<<npts[1]<< "x"<<npts[2]<< "  box for: ";
         amrex::Print() << dt << " seconds";

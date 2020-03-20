@@ -15,7 +15,14 @@ using namespace amrex;
 #include <Transport_F.H>
 #include <main_F.H>
 #include <PlotFileFromMF.H>
-#include <actual_Creactor_GPU.h>
+#if defined(USE_SUNDIALS_PP)
+// ARKODE or CVODE
+  #ifdef USE_ARKODE_PP
+    #include <actual_CARKODE_GPU.h>
+  #else
+    #include <actual_Creactor_GPU.h>
+  #endif
+#endif
 
 /**********************************/
 int
@@ -310,7 +317,7 @@ main (int   argc,
 	    fc_pt = react(tmp_vect, tmp_src_vect,
 	                    tmp_vect_energy, tmp_src_vect_energy,
 	                    &dt_incr, &time,
-                            &cvode_iE, &ncells, amrex::Gpu::gpuStream());
+                            &cvode_iE, &ncells, amrex::Gpu::gpuStream(),1e-10);
 	    //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp + (NUM_SPECIES + 1)]);
 	    dt_incr =  dt/ndt;
         }

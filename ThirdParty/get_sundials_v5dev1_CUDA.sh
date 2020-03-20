@@ -10,8 +10,8 @@ if [ ! -d sundials ]; then
   git clone https://github.com/LLNL/sundials
   cd sundials/
   git checkout develop
-  git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators.patch
-  git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators_part2.patch
+  #git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators.patch
+  #git apply ../sundials-5.0.0-dev.1+cuda_nvector_allocators_part2.patch
 else
   cd sundials/
 fi
@@ -36,7 +36,7 @@ cmake    \
    -DCUDA_ENABLE=ON   \
    -DMPI_ENABLE=OFF    \
    -DOPENMP_ENABLE=ON \
-   -DKLU_ENABLE=ON \
+   -DKLU_ENABLE=OFF \
    -DKLU_INCLUDE_DIR=${SUITESPARSE_PREFIX}/include \
    -DKLU_LIBRARY_DIR=${SUITESPARSE_PREFIX}/lib \
    -DEXAMPLES_ENABLE=OFF ../

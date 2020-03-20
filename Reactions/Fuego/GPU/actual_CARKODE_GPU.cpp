@@ -1,8 +1,9 @@
-#include <CPU/actual_CARKODE.h> 
+#include <GPU/actual_CARKODE_GPU.h> 
 #include <AMReX_ParmParse.H>
 #include <chemistry_file.H>
 #include "mechanism.h"
-#include <eos.H>
+#include <Fuego_EOS.H>
+#include <AMReX_Gpu.H>
 
 AMREX_GPU_DEVICE_MANAGED  int eint_rho = 1; // in/out = rhoE/rhoY
 AMREX_GPU_DEVICE_MANAGED  int enth_rho = 2; // in/out = rhoH/rhoY 
@@ -19,7 +20,7 @@ int reactor_info(const int* reactor_type, const int* Ncells)
 int react(realtype *rY_in, realtype *rY_src_in, 
         realtype *rX_in, realtype *rX_src_in,
         realtype *dt_react, realtype *time,
-        const int* reactor_type,const int* Ncells, cudaStream_t stream
+        const int* reactor_type,const int* Ncells, cudaStream_t stream,
         double tol)
 {
 
@@ -27,6 +28,9 @@ int react(realtype *rY_in, realtype *rY_src_in,
     realtype time_init, time_out, dummy_time;
     void *arkode_mem    = NULL;
     N_Vector y         = NULL;
+    realtype reltol,abstol;
+    N_Vector atol;
+    realtype *ratol;
 
     NEQ = NUM_SPECIES;
     NCELLS         = *Ncells;
@@ -35,7 +39,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
     /* User data */
     UserData user_data;
     BL_PROFILE_VAR("AllocsInARKODE", AllocsARKODE);
-    cudaMallocManaged(&user_data, sizeof(struct CVodeUserData));
+    cudaMallocManaged(&user_data, sizeof(struct ARKODEUserData));
     BL_PROFILE_VAR_STOP(AllocsARKODE);
     user_data->ncells_d[0]             = NCELLS;
     user_data->neqs_per_cell[0]        = NEQ;
@@ -48,15 +52,15 @@ int react(realtype *rY_in, realtype *rY_src_in,
     y = N_VNewManaged_Cuda(neq_tot);
     N_VSetCudaStream_Cuda(y, &stream);
 
-    arkode_mem = ERKStepCreate(cF_RHS, time, y);
+    arkode_mem = ERKStepCreate(cF_RHS, *time, y);
     flag = ERKStepSetUserData(arkode_mem, static_cast<void*>(user_data));
 
-    BL_PROFILE_VAR_START(AllocsERKODE);
+    BL_PROFILE_VAR_START(AllocsARKODE);
     /* Define vectors to be used later in creact */
     cudaMalloc(&(user_data->rhoe_init), NCELLS*sizeof(double));
     cudaMalloc(&(user_data->rhoesrc_ext), NCELLS*sizeof(double));
     cudaMalloc(&(user_data->rYsrc), (NCELLS*NEQ)*sizeof(double));
-    BL_PROFILE_VAR_STOP(AllocsERKODE);
+    BL_PROFILE_VAR_STOP(AllocsARKODE);
 
     /* Get Device MemCpy of in arrays */
     /* Get Device pointer of solution vector */
@@ -76,13 +80,8 @@ int react(realtype *rY_in, realtype *rY_src_in,
     time_out  = *time + (*dt_react);
 
     reltol = tol;
-    atol  = N_VNew_Cuda(neq_tot);
-    ratol = N_VGetHostArrayPointer_Cuda(atol);
-    for (int i=0; i<neq_tot; i++) {
-        ratol[i] = tol;
-    }
-    N_VCopyToDevice_Cuda(atol);
-    flag = ERKStepSStolerances(arkode_mem, reltol, atol); 
+    abstol = tol;
+    flag = ERKStepSStolerances(arkode_mem, reltol, reltol); 
 
 
     flag = ERKStepEvolve(arkode_mem, time_out, y, &time_init, ARK_NORMAL);      /* call integrator */
@@ -108,14 +107,12 @@ int react(realtype *rY_in, realtype *rY_src_in,
 
     //cleanup
     N_VDestroy(y);          /* Free the y vector */
-    CVodeFree(&cvode_mem);
+    ERKStepFree(&arkode_mem);
 
     cudaFree(user_data->rhoe_init);
     cudaFree(user_data->rhoesrc_ext);
     cudaFree(user_data->rYsrc);
     cudaFree(user_data);
-
-    N_VDestroy(atol);          /* Free the atol vector */
 
     return nfe;
 }
@@ -133,7 +130,7 @@ static int cF_RHS(realtype t, N_Vector y_in, N_Vector ydot_in,
     realtype *ydot_d      = N_VGetDeviceArrayPointer_Cuda(ydot_in);
 
     // allocate working space 
-    UserData udata = static_cast<CVodeUserData*>(user_data);
+    UserData udata = static_cast<ARKODEUserData*>(user_data);
     udata->dt_save = t;
 
     const auto ec = Gpu::ExecutionConfig(udata->ncells_d[0]);   
@@ -165,7 +162,7 @@ fKernelSpec(int icell, void *user_data,
         realtype *yvec_d, realtype *ydot_d,  
         double *rhoe_init, double *rhoesrc_ext, double *rYs)
 {
-    UserData udata = static_cast<CVodeUserData*>(user_data);
+    UserData udata = static_cast<ARKODEUserData*>(user_data);
 
     EOS eos;
 
@@ -202,11 +199,11 @@ fKernelSpec(int icell, void *user_data,
         /* UV REACTOR */
         eos.eos_EY2T(massfrac.arr, nrg_pt, temp_pt);
         eos.eos_T2EI(temp_pt, ei_pt.arr);
-        eos.eos_TY2Cv(temp_pt, massfrac.arr, &Cv_pt);
+        eos.eos_TY2Cv(temp_pt, massfrac.arr, Cv_pt);
     }else {
         /* HP REACTOR */
         eos.eos_HY2T(massfrac.arr, nrg_pt, temp_pt);
-        eos.eos_TY2Cp(temp_pt, massfrac.arr, &Cv_pt);
+        eos.eos_TY2Cp(temp_pt, massfrac.arr, Cv_pt);
         eos.eos_T2HI(temp_pt, ei_pt.arr);
     }
 
