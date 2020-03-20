@@ -47,7 +47,7 @@ void reactor_close();
 int react(realtype *rY_in, realtype *rY_src_in, 
             realtype *rX_in, realtype *rX_src_in, 
             realtype *dt_react, realtype *time,
-            const int* cvode_iE, const int* Ncells, cudaStream_t stream,double tol);
+            const int* cvode_iE, const int* Ncells, cudaStream_t stream,double reltol=1e-6,double abstol=1e-10);
 
 AMREX_GPU_DEVICE
 inline

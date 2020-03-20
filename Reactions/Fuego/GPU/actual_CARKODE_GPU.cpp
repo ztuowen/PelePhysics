@@ -21,16 +21,13 @@ int react(realtype *rY_in, realtype *rY_src_in,
         realtype *rX_in, realtype *rX_src_in,
         realtype *dt_react, realtype *time,
         const int* reactor_type,const int* Ncells, cudaStream_t stream,
-        double tol)
+        double reltol,double abstol)
 {
 
     int NCELLS, NEQ, neq_tot,flag;
-    realtype time_init, time_out, dummy_time;
+    realtype time_init, time_out;
     void *arkode_mem    = NULL;
     N_Vector y         = NULL;
-    realtype reltol,abstol;
-    N_Vector atol;
-    realtype *ratol;
 
     NEQ = NUM_SPECIES;
     NCELLS         = *Ncells;
@@ -75,12 +72,10 @@ int react(realtype *rY_in, realtype *rY_src_in,
     cudaMemcpy(user_data->rhoesrc_ext, rX_src_in, sizeof(realtype) * NCELLS, cudaMemcpyHostToDevice);
     BL_PROFILE_VAR_STOP(AsyncCpy)
 
-        /* Initial time and time to reach after integration */
-        time_init = *time;
+    /* Initial time and time to reach after integration */
+    time_init = *time;
     time_out  = *time + (*dt_react);
 
-    reltol = tol;
-    abstol = tol;
     flag = ERKStepSStolerances(arkode_mem, reltol, reltol); 
 
 

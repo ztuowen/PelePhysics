@@ -51,7 +51,7 @@ main (int   argc,
 
     int max_grid_size = 16;
     std::string probin_file="probin";
-    std::string fuel_name="none";
+    std::string fuel_name="CH4";
     std::string pltfile("plt");
     /* CVODE inputs */
     int cvode_ncells = 1;
@@ -92,7 +92,7 @@ main (int   argc,
       pp.query("cvode_ncells",cvode_ncells);
 
       // Get name of fuel 
-      pp.get("fuel_name", fuel_name);
+      pp.query("fuel_name", fuel_name);
 
     }
 
@@ -317,7 +317,7 @@ main (int   argc,
 	    fc_pt = react(tmp_vect, tmp_src_vect,
 	                    tmp_vect_energy, tmp_src_vect_energy,
 	                    &dt_incr, &time,
-                            &cvode_iE, &ncells, amrex::Gpu::gpuStream(),1e-10);
+                            &cvode_iE, &ncells, amrex::Gpu::gpuStream());
 	    //printf("%14.6e %14.6e \n", time, tmp_vect[Ncomp + (NUM_SPECIES + 1)]);
 	    dt_incr =  dt/ndt;
         }
