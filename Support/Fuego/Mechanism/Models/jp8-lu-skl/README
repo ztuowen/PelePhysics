@@ -1,0 +1,5 @@
+Some modifications have been made to the therm.dat and chem.inp files
+
+These include deleting unused species and chanding numbers like 1E 02 to 1E+02
+
+Also increased the max number of species on a reaction side to 10 for Fuego
