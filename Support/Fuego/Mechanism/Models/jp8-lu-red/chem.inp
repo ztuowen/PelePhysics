@@ -1,0 +1,108 @@
+!****************************************************************************
+
+!
+
+! Reaction model for POSF10325 (Cat A2)
+
+! Version 1
+
+!
+
+!****************************************************************************
+
+! Title: "A experiment-based lumped model of jet fuel combustion at high temperatures"
+
+!
+
+! Hai Wang, Ray Xu, David F. Davidson, Sayak Banerjee, Tom Bowman, Ronald K. Hanson
+
+! Mechanical Engineering, Stanford University                   
+
+! Stanford, CA 94305                                     
+
+!
+
+! March 28, 2015
+
+!
+
+! Model description: Six reaction steps to describe POSF10325 thermal decomposition
+
+!                    and USC Mech II as the foundational fuel chemistry model
+
+!
+
+! The cracked products considered are CH4, C2H4, C3H6, C4H8, benzene, CH3 and H.  
+
+! The oxidation kinetics of these cracking products are described by USC Mech II.
+
+!
+
+! Please contact Hai Wang at haiwang@stanford.edu for questions and comments. 
+
+!
+
+!====================:q
+!Ich:q
+!Ich:q
+!Ich========================================================  
+
+ELEMENTS
+
+O  H  C  N  AR
+
+END       
+
+
+SPECIES
+POSF10325         C2H4              CH4               H2                
+C3H6              C4H81             iC4H8             C6H6              
+C6H5CH3           H                 O                 OH                
+HO2               H2O               H2O2              O2                
+CH3               CH2O              CO                CO2               
+C2H2              C2H6              CH2CO             aC3H5             
+C6H5              C6H5CH2           C6H4O2            C6H5CHO           
+N2                
+END
+
+
+
+TRANS ALL
+POSF10325          2   750.460     6.834     0.000     0.000     1.000          
+C2H4               2   280.800     3.971     0.000     0.000     1.500          
+CH4                2   141.400     3.746     0.000     2.600    13.000          
+H2                 1    38.000     2.920     0.000     0.790   280.000          
+C3H6               2   266.800     4.982     0.000     0.000     1.000          
+C4H81              2   357.000     5.176     0.000     0.000     1.000          
+iC4H8              2   357.000     5.176     0.000     0.000     1.000          
+C6H6               2   464.8       5.29      0.00     10.32      0.000          
+C6H5CH3            2   495.3       5.68      0.43     12.30      1.000          
+H                  0   145.000     2.050     0.000     0.000     0.000          
+O                  0    80.000     2.750     0.000     0.000     0.000          
+OH                 1    80.000     2.750     0.000     0.000     0.000          
+HO2                2   107.400     3.458     0.000     0.000     1.000          
+H2O                2   572.400     2.605     1.844     0.000     4.000          
+H2O2               2   107.400     3.458     0.000     0.000     3.800          
+O2                 1   107.400     3.458     0.000     1.600     3.800          
+CH3                1   144.000     3.800     0.000     0.000     0.000          
+CH2O               2   498.000     3.590     0.000     0.000     2.000          
+CO                 1    98.100     3.650     0.000     1.950     1.800          
+CO2                1   244.000     3.763     0.000     2.650     2.100          
+C2H2               1   209.000     4.100     0.000     0.000     2.500          
+C2H6               2   252.300     4.302     0.000     0.000     1.500          
+CH2CO              2   436.000     3.970     0.000     0.000     2.000          
+aC3H5              2   266.800     4.982     0.000     0.000     1.000          
+C6H5               2   464.8       5.29      0.00     10.32      0.000          
+C6H5CH2            2   495.3       5.68      0.43     12.30      1.000          
+C6H4O2             2   485.0       5.425     0.4       0.0       1.000          
+C6H5CHO            2   593.0       5.47      2.8       0.0       1.000          
+N2                 1    97.530     3.621     0.000     1.760     4.000          
+END
+
+
+
+
+
+
+REACTIONS
+END
