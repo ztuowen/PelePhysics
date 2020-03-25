@@ -18,7 +18,7 @@ from Token import Token
 from RegularExpressions import eol, whitespace, whitespaceOpt
 from RegularExpressions import species, coeff, namedNumbers_3
 
-_maxParticipants = 6 # Maximum number of species on a reaction side
+_maxParticipants = 10 # Maximum number of species on a reaction side
 
 
 def _makeParticipant(id):
@@ -131,6 +131,7 @@ class Reaction(Token):
         match = self.participantPattern.match(text)
         if not match:
             str = "syntax: '%s' is not well formed" % text
+            print (str)
             raise self.TokenizationException(str)
 
         groups = match.groupdict()
