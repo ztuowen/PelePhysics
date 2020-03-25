@@ -3175,58 +3175,58 @@ AMREX_GPU_HOST_DEVICE inline void comp_qfqr(double *  qf, double * qr, double * 
 
     // (0):  H + O2 <=> O + OH
     k_f = 1.0000000000000002e-06 * 3547000000000000 
-               * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * 16599 * invT);
+               * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * (16599) * invT);
     Corr  = 1.0;
     qf[6] *= Corr * k_f;
     qr[6] *= Corr * k_f / exp(g_RT[1] + g_RT[3] - g_RT[4] - g_RT[5]);
     // (1):  O + H2 <=> H + OH
     k_f = 1.0000000000000002e-06 * 50800 
-               * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * 6290 * invT);
+               * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * (6290) * invT);
     Corr  = 1.0;
     qf[7] *= Corr * k_f;
     qr[7] *= Corr * k_f / exp(g_RT[0] - g_RT[3] + g_RT[4] - g_RT[5]);
     // (2):  H2 + OH <=> H2O + H
     k_f = 1.0000000000000002e-06 * 216000000 
-               * exp(1.51 * tc[0] - 0.50321666580471969 * 3430 * invT);
+               * exp(1.51 * tc[0] - 0.50321666580471969 * (3430) * invT);
     Corr  = 1.0;
     qf[8] *= Corr * k_f;
     qr[8] *= Corr * k_f / exp(g_RT[0] - g_RT[2] - g_RT[3] + g_RT[5]);
     // (3):  O + H2O <=> OH + OH
     k_f = 1.0000000000000002e-06 * 2970000 
-               * exp(2.02 * tc[0] - 0.50321666580471969 * 13400 * invT);
+               * exp(2.02 * tc[0] - 0.50321666580471969 * (13400) * invT);
     Corr  = 1.0;
     qf[9] *= Corr * k_f;
     qr[9] *= Corr * k_f / exp(g_RT[2] + g_RT[4] - g_RT[5] - g_RT[5]);
     // (4):  H2 + M <=> H + H + M
     k_f = 1.0000000000000002e-06 * 4.577e+19 
-               * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * 104380 * invT);
+               * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * (104380) * invT);
     Corr  = mixture + ( 2.5 - 1)*sc[0] + ( 12 - 1)*sc[2];
     qf[2] *= Corr * k_f;
     qr[2] *= Corr * k_f / (exp(g_RT[0] - g_RT[3] - g_RT[3]) * refC);
     // (5):  O + O + M <=> O2 + M
     k_f = 1.0000000000000002e-12 * 6165000000000000 
-               * exp(-0.5 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(-0.5 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = mixture + ( 2.5 - 1)*sc[0] + ( 12 - 1)*sc[2];
     qf[3] *= Corr * k_f;
     qr[3] *= Corr * k_f / (exp(-g_RT[1] + g_RT[4] + g_RT[4]) * refCinv);
     // (6):  O + H + M <=> OH + M
     k_f = 1.0000000000000002e-12 * 4.714e+18 
-               * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(-1 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = mixture + ( 2.5 - 1)*sc[0] + ( 12 - 1)*sc[2];
     qf[4] *= Corr * k_f;
     qr[4] *= Corr * k_f / (exp(g_RT[3] + g_RT[4] - g_RT[5]) * refCinv);
     // (7):  H + OH + M <=> H2O + M
     k_f = 1.0000000000000002e-12 * 3.8000000000000004e+22 
-               * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(-2 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = mixture + ( 2.5 - 1)*sc[0] + ( 12 - 1)*sc[2];
     qf[5] *= Corr * k_f;
     qr[5] *= Corr * k_f / (exp(-g_RT[2] + g_RT[3] + g_RT[5]) * refCinv);
     // (8):  H + O2 (+M) <=> HO2 (+M)
     k_f = 1.0000000000000002e-06 * 1475000000000 
-               * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = mixture + ( 2 - 1)*sc[0] + ( 11 - 1)*sc[2] + ( 0.78000000000000003 - 1)*sc[1];
     redP = Corr / k_f * 1e-12 * 6.366e+20 
-               * exp(-1.72  * tc[0] - 0.50321666580471969  * 524.79999999999995 *invT);
+               * exp(-1.72  * tc[0] - 0.50321666580471969  * (524.79999999999995) *invT);
     F = redP / (1.0 + redP);
     logPred = log10(redP);
     logFcent = log10(
@@ -3242,46 +3242,46 @@ AMREX_GPU_HOST_DEVICE inline void comp_qfqr(double *  qf, double * qr, double * 
     qr[0] *= Corr * k_f / (exp(g_RT[1] + g_RT[3] - g_RT[6]) * refCinv);
     // (9):  HO2 + H <=> H2 + O2
     k_f = 1.0000000000000002e-06 * 16600000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 823 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (823) * invT);
     Corr  = 1.0;
     qf[10] *= Corr * k_f;
     qr[10] *= Corr * k_f / exp(-g_RT[0] - g_RT[1] + g_RT[3] + g_RT[6]);
     // (10):  HO2 + H <=> OH + OH
     k_f = 1.0000000000000002e-06 * 70790000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 295 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (295) * invT);
     Corr  = 1.0;
     qf[11] *= Corr * k_f;
     qr[11] *= Corr * k_f / exp(g_RT[3] - g_RT[5] - g_RT[5] + g_RT[6]);
     // (11):  HO2 + O <=> O2 + OH
     k_f = 1.0000000000000002e-06 * 32500000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = 1.0;
     qf[12] *= Corr * k_f;
     qr[12] *= Corr * k_f / exp(-g_RT[1] + g_RT[4] - g_RT[5] + g_RT[6]);
     // (12):  HO2 + OH <=> H2O + O2
     k_f = 1.0000000000000002e-06 * 28900000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * -497 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (-497) * invT);
     Corr  = 1.0;
     qf[13] *= Corr * k_f;
     qr[13] *= Corr * k_f / exp(-g_RT[1] - g_RT[2] + g_RT[5] + g_RT[6]);
     // (13):  HO2 + HO2 <=> H2O2 + O2
     k_f = 1.0000000000000002e-06 * 420000000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 11982 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (11982) * invT);
     Corr  = 1.0;
     qf[14] *= Corr * k_f;
     qr[14] *= Corr * k_f / exp(-g_RT[1] + g_RT[6] + g_RT[6] - g_RT[7]);
     // (14):  HO2 + HO2 <=> H2O2 + O2
     k_f = 1.0000000000000002e-06 * 130000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * -1629.3 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (-1629.3) * invT);
     Corr  = 1.0;
     qf[15] *= Corr * k_f;
     qr[15] *= Corr * k_f / exp(-g_RT[1] + g_RT[6] + g_RT[6] - g_RT[7]);
     // (15):  H2O2 (+M) <=> OH + OH (+M)
     k_f = 1 * 295100000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 48430 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (48430) * invT);
     Corr  = mixture + ( 2.5 - 1)*sc[0] + ( 12 - 1)*sc[2];
     redP = Corr / k_f * 1e-6 * 1.202e+17 
-               * exp(0  * tc[0] - 0.50321666580471969  * 45500 *invT);
+               * exp(0  * tc[0] - 0.50321666580471969  * (45500) *invT);
     F = redP / (1.0 + redP);
     logPred = log10(redP);
     logFcent = log10(
@@ -3297,31 +3297,31 @@ AMREX_GPU_HOST_DEVICE inline void comp_qfqr(double *  qf, double * qr, double * 
     qr[1] *= Corr * k_f / (exp(-g_RT[5] - g_RT[5] + g_RT[7]) * refC);
     // (16):  H2O2 + H <=> H2O + OH
     k_f = 1.0000000000000002e-06 * 24100000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 3970 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (3970) * invT);
     Corr  = 1.0;
     qf[16] *= Corr * k_f;
     qr[16] *= Corr * k_f / exp(-g_RT[2] + g_RT[3] - g_RT[5] + g_RT[7]);
     // (17):  H2O2 + H <=> HO2 + H2
     k_f = 1.0000000000000002e-06 * 48200000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 7950 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (7950) * invT);
     Corr  = 1.0;
     qf[17] *= Corr * k_f;
     qr[17] *= Corr * k_f / exp(-g_RT[0] + g_RT[3] - g_RT[6] + g_RT[7]);
     // (18):  H2O2 + O <=> OH + HO2
     k_f = 1.0000000000000002e-06 * 9550000 
-               * exp(2 * tc[0] - 0.50321666580471969 * 3970 * invT);
+               * exp(2 * tc[0] - 0.50321666580471969 * (3970) * invT);
     Corr  = 1.0;
     qf[18] *= Corr * k_f;
     qr[18] *= Corr * k_f / exp(g_RT[4] - g_RT[5] - g_RT[6] + g_RT[7]);
     // (19):  H2O2 + OH <=> HO2 + H2O
     k_f = 1.0000000000000002e-06 * 1000000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
     Corr  = 1.0;
     qf[19] *= Corr * k_f;
     qr[19] *= Corr * k_f / exp(-g_RT[2] + g_RT[5] - g_RT[6] + g_RT[7]);
     // (20):  H2O2 + OH <=> HO2 + H2O
     k_f = 1.0000000000000002e-06 * 580000000000000 
-               * exp(0 * tc[0] - 0.50321666580471969 * 9557 * invT);
+               * exp(0 * tc[0] - 0.50321666580471969 * (9557) * invT);
     Corr  = 1.0;
     qf[20] *= Corr * k_f;
     qr[20] *= Corr * k_f / exp(-g_RT[2] + g_RT[5] - g_RT[6] + g_RT[7]);
@@ -4468,13 +4468,13 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[1]*sc[3];
     k_f = 1.0000000000000002e-06 * 1475000000000
-                * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = 0.59999999999999998 * invT + 0.50321666580471969 *  0  * invT2;
     /* pressure-fall-off */
-    k_0 = 6.366e+20 * exp(-1.72 * tc[0] - 0.50321666580471969 * 524.79999999999995 * invT);
+    k_0 = 6.366e+20 * exp(-1.72 * tc[0] - 0.50321666580471969 * (524.79999999999995) * invT);
     Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = -1.72 * invT + 0.50321666580471969 * 524.79999999999995 * invT2;
+    dlnk0dT = -1.72 * invT + 0.50321666580471969 * (524.79999999999995) * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
@@ -4574,13 +4574,13 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[7];
     k_f = 1 * 295100000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 48430 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (48430) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  48430  * invT2;
     /* pressure-fall-off */
-    k_0 = 1.202e+17 * exp(0 * tc[0] - 0.50321666580471969 * 45500 * invT);
+    k_0 = 1.202e+17 * exp(0 * tc[0] - 0.50321666580471969 * (45500) * invT);
     Pr = 1e-6 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = 0 * invT + 0.50321666580471969 * 45500 * invT2;
+    dlnk0dT = 0 * invT + 0.50321666580471969 * (45500) * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
@@ -4667,7 +4667,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[0];
     k_f = 1.0000000000000002e-06 * 4.577e+19
-                * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * 104380 * invT);
+                * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * (104380) * invT);
     dlnkfdT = -1.3999999999999999 * invT + 0.50321666580471969 *  104380  * invT2;
     /* reverse */
     phi_r = pow(sc[3], 2.000000);
@@ -4724,7 +4724,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = pow(sc[4], 2.000000);
     k_f = 1.0000000000000002e-12 * 6165000000000000
-                * exp(-0.5 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(-0.5 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = -0.5 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1];
@@ -4785,7 +4785,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[4];
     k_f = 1.0000000000000002e-12 * 4.714e+18
-                * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(-1 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = -1 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[5];
@@ -4858,7 +4858,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[5];
     k_f = 1.0000000000000002e-12 * 3.8000000000000004e+22
-                * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(-2 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = -2 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[2];
@@ -4924,7 +4924,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[1]*sc[3];
     k_f = 1.0000000000000002e-06 * 3547000000000000
-                * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * 16599 * invT);
+                * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * (16599) * invT);
     dlnkfdT = -0.40600000000000003 * invT + 0.50321666580471969 *  16599  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[5];
@@ -4975,7 +4975,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[0]*sc[4];
     k_f = 1.0000000000000002e-06 * 50800
-                * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * 6290 * invT);
+                * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * (6290) * invT);
     dlnkfdT = 2.6699999999999999 * invT + 0.50321666580471969 *  6290  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[5];
@@ -5026,7 +5026,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[0]*sc[5];
     k_f = 1.0000000000000002e-06 * 216000000
-                * exp(1.51 * tc[0] - 0.50321666580471969 * 3430 * invT);
+                * exp(1.51 * tc[0] - 0.50321666580471969 * (3430) * invT);
     dlnkfdT = 1.51 * invT + 0.50321666580471969 *  3430  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[3];
@@ -5077,7 +5077,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[2]*sc[4];
     k_f = 1.0000000000000002e-06 * 2970000
-                * exp(2.02 * tc[0] - 0.50321666580471969 * 13400 * invT);
+                * exp(2.02 * tc[0] - 0.50321666580471969 * (13400) * invT);
     dlnkfdT = 2.02 * invT + 0.50321666580471969 *  13400  * invT2;
     /* reverse */
     phi_r = pow(sc[5], 2.000000);
@@ -5117,7 +5117,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[6];
     k_f = 1.0000000000000002e-06 * 16600000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 823 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (823) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  823  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[1];
@@ -5168,7 +5168,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[6];
     k_f = 1.0000000000000002e-06 * 70790000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 295 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (295) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  295  * invT2;
     /* reverse */
     phi_r = pow(sc[5], 2.000000);
@@ -5208,7 +5208,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[4]*sc[6];
     k_f = 1.0000000000000002e-06 * 32500000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[5];
@@ -5259,7 +5259,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[5]*sc[6];
     k_f = 1.0000000000000002e-06 * 28900000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * -497 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (-497) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  -497  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[2];
@@ -5310,7 +5310,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = pow(sc[6], 2.000000);
     k_f = 1.0000000000000002e-06 * 420000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 11982 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (11982) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  11982  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[7];
@@ -5350,7 +5350,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = pow(sc[6], 2.000000);
     k_f = 1.0000000000000002e-06 * 130000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * -1629.3 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (-1629.3) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  -1629.3  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[7];
@@ -5390,7 +5390,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[7];
     k_f = 1.0000000000000002e-06 * 24100000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 3970 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (3970) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  3970  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[5];
@@ -5441,7 +5441,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[3]*sc[7];
     k_f = 1.0000000000000002e-06 * 48200000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 7950 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (7950) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  7950  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[6];
@@ -5492,7 +5492,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[4]*sc[7];
     k_f = 1.0000000000000002e-06 * 9550000
-                * exp(2 * tc[0] - 0.50321666580471969 * 3970 * invT);
+                * exp(2 * tc[0] - 0.50321666580471969 * (3970) * invT);
     dlnkfdT = 2 * invT + 0.50321666580471969 *  3970  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[6];
@@ -5543,7 +5543,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[5]*sc[7];
     k_f = 1.0000000000000002e-06 * 1000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[6];
@@ -5594,7 +5594,7 @@ void aJacobian(double * J, double * sc, double T, int consP)
     /* forward */
     phi_f = sc[5]*sc[7];
     k_f = 1.0000000000000002e-06 * 580000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 9557 * invT);
+                * exp(0 * tc[0] - 0.50321666580471969 * (9557) * invT);
     dlnkfdT = 0 * invT + 0.50321666580471969 *  9557  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[6];
@@ -7001,13 +7001,13 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[1]*sc[3];
     k_f = 1.0000000000000002e-06 * 1475000000000
-                * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = 0.59999999999999998 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(0.59999999999999998 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = 0.59999999999999998 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* pressure-fall-off */
-    k_0 = 6.366e+20 * exp(-1.72 * tc[0] - 0.50321666580471969 * 524.79999999999995 * invT);
+    k_0 = 6.366e+20 * exp(-1.72 * tc[0] - 0.50321666580471969 * (524.79999999999995) * invT);
     Pr = 1e-12 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = -1.72 * invT + 0.50321666580471969 * 524.79999999999995 * invT2;
+    dlnk0dT = -1.72 * invT + 0.50321666580471969 * (524.79999999999995) * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
@@ -7078,13 +7078,13 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[7];
     k_f = 1 * 295100000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 48430 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  48430  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (48430) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (48430)  * invT2;
     /* pressure-fall-off */
-    k_0 = 1.202e+17 * exp(0 * tc[0] - 0.50321666580471969 * 45500 * invT);
+    k_0 = 1.202e+17 * exp(0 * tc[0] - 0.50321666580471969 * (45500) * invT);
     Pr = 1e-6 * alpha / k_f * k_0;
     fPr = Pr / (1.0+Pr);
-    dlnk0dT = 0 * invT + 0.50321666580471969 * 45500 * invT2;
+    dlnk0dT = 0 * invT + 0.50321666580471969 * (45500) * invT2;
     dlogPrdT = log10e*(dlnk0dT - dlnkfdT);
     dlogfPrdT = dlogPrdT / (1.0+Pr);
     /* Troe form */
@@ -7151,8 +7151,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[0];
     k_f = 1.0000000000000002e-06 * 4.577e+19
-                * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * 104380 * invT);
-    dlnkfdT = -1.3999999999999999 * invT + 0.50321666580471969 *  104380  * invT2;
+                * exp(-1.3999999999999999 * tc[0] - 0.50321666580471969 * (104380) * invT);
+    dlnkfdT = -1.3999999999999999 * invT + 0.50321666580471969 *  (104380)  * invT2;
     /* reverse */
     phi_r = pow(sc[3], 2.000000);
     Kc = refC * exp(g_RT[0] - g_RT[3] - g_RT[3]);
@@ -7192,8 +7192,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = pow(sc[4], 2.000000);
     k_f = 1.0000000000000002e-12 * 6165000000000000
-                * exp(-0.5 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = -0.5 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(-0.5 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = -0.5 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* reverse */
     phi_r = sc[1];
     Kc = refCinv * exp(-g_RT[1] + g_RT[4] + g_RT[4]);
@@ -7233,8 +7233,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[4];
     k_f = 1.0000000000000002e-12 * 4.714e+18
-                * exp(-1 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = -1 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(-1 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = -1 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* reverse */
     phi_r = sc[5];
     Kc = refCinv * exp(g_RT[3] + g_RT[4] - g_RT[5]);
@@ -7277,8 +7277,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[5];
     k_f = 1.0000000000000002e-12 * 3.8000000000000004e+22
-                * exp(-2 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = -2 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(-2 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = -2 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* reverse */
     phi_r = sc[2];
     Kc = refCinv * exp(-g_RT[2] + g_RT[3] + g_RT[5]);
@@ -7319,8 +7319,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[1]*sc[3];
     k_f = 1.0000000000000002e-06 * 3547000000000000
-                * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * 16599 * invT);
-    dlnkfdT = -0.40600000000000003 * invT + 0.50321666580471969 *  16599  * invT2;
+                * exp(-0.40600000000000003 * tc[0] - 0.50321666580471969 * (16599) * invT);
+    dlnkfdT = -0.40600000000000003 * invT + 0.50321666580471969 *  (16599)  * invT2;
     /* reverse */
     phi_r = sc[4]*sc[5];
     Kc = exp(g_RT[1] + g_RT[3] - g_RT[4] - g_RT[5]);
@@ -7370,8 +7370,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[0]*sc[4];
     k_f = 1.0000000000000002e-06 * 50800
-                * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * 6290 * invT);
-    dlnkfdT = 2.6699999999999999 * invT + 0.50321666580471969 *  6290  * invT2;
+                * exp(2.6699999999999999 * tc[0] - 0.50321666580471969 * (6290) * invT);
+    dlnkfdT = 2.6699999999999999 * invT + 0.50321666580471969 *  (6290)  * invT2;
     /* reverse */
     phi_r = sc[3]*sc[5];
     Kc = exp(g_RT[0] - g_RT[3] + g_RT[4] - g_RT[5]);
@@ -7421,8 +7421,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[0]*sc[5];
     k_f = 1.0000000000000002e-06 * 216000000
-                * exp(1.51 * tc[0] - 0.50321666580471969 * 3430 * invT);
-    dlnkfdT = 1.51 * invT + 0.50321666580471969 *  3430  * invT2;
+                * exp(1.51 * tc[0] - 0.50321666580471969 * (3430) * invT);
+    dlnkfdT = 1.51 * invT + 0.50321666580471969 *  (3430)  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[3];
     Kc = exp(g_RT[0] - g_RT[2] - g_RT[3] + g_RT[5]);
@@ -7472,8 +7472,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[2]*sc[4];
     k_f = 1.0000000000000002e-06 * 2970000
-                * exp(2.02 * tc[0] - 0.50321666580471969 * 13400 * invT);
-    dlnkfdT = 2.02 * invT + 0.50321666580471969 *  13400  * invT2;
+                * exp(2.02 * tc[0] - 0.50321666580471969 * (13400) * invT);
+    dlnkfdT = 2.02 * invT + 0.50321666580471969 *  (13400)  * invT2;
     /* reverse */
     phi_r = pow(sc[5], 2.000000);
     Kc = exp(g_RT[2] + g_RT[4] - g_RT[5] - g_RT[5]);
@@ -7512,8 +7512,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[6];
     k_f = 1.0000000000000002e-06 * 16600000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 823 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  823  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (823) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (823)  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[1];
     Kc = exp(-g_RT[0] - g_RT[1] + g_RT[3] + g_RT[6]);
@@ -7563,8 +7563,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[6];
     k_f = 1.0000000000000002e-06 * 70790000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 295 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  295  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (295) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (295)  * invT2;
     /* reverse */
     phi_r = pow(sc[5], 2.000000);
     Kc = exp(g_RT[3] - g_RT[5] - g_RT[5] + g_RT[6]);
@@ -7603,8 +7603,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[4]*sc[6];
     k_f = 1.0000000000000002e-06 * 32500000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[5];
     Kc = exp(-g_RT[1] + g_RT[4] - g_RT[5] + g_RT[6]);
@@ -7654,8 +7654,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[5]*sc[6];
     k_f = 1.0000000000000002e-06 * 28900000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * -497 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  -497  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (-497) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (-497)  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[2];
     Kc = exp(-g_RT[1] - g_RT[2] + g_RT[5] + g_RT[6]);
@@ -7705,8 +7705,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = pow(sc[6], 2.000000);
     k_f = 1.0000000000000002e-06 * 420000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 11982 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  11982  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (11982) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (11982)  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[7];
     Kc = exp(-g_RT[1] + g_RT[6] + g_RT[6] - g_RT[7]);
@@ -7745,8 +7745,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = pow(sc[6], 2.000000);
     k_f = 1.0000000000000002e-06 * 130000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * -1629.3 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  -1629.3  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (-1629.3) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (-1629.3)  * invT2;
     /* reverse */
     phi_r = sc[1]*sc[7];
     Kc = exp(-g_RT[1] + g_RT[6] + g_RT[6] - g_RT[7]);
@@ -7785,8 +7785,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[7];
     k_f = 1.0000000000000002e-06 * 24100000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 3970 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  3970  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (3970) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (3970)  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[5];
     Kc = exp(-g_RT[2] + g_RT[3] - g_RT[5] + g_RT[7]);
@@ -7836,8 +7836,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[3]*sc[7];
     k_f = 1.0000000000000002e-06 * 48200000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 7950 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  7950  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (7950) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (7950)  * invT2;
     /* reverse */
     phi_r = sc[0]*sc[6];
     Kc = exp(-g_RT[0] + g_RT[3] - g_RT[6] + g_RT[7]);
@@ -7887,8 +7887,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[4]*sc[7];
     k_f = 1.0000000000000002e-06 * 9550000
-                * exp(2 * tc[0] - 0.50321666580471969 * 3970 * invT);
-    dlnkfdT = 2 * invT + 0.50321666580471969 *  3970  * invT2;
+                * exp(2 * tc[0] - 0.50321666580471969 * (3970) * invT);
+    dlnkfdT = 2 * invT + 0.50321666580471969 *  (3970)  * invT2;
     /* reverse */
     phi_r = sc[5]*sc[6];
     Kc = exp(g_RT[4] - g_RT[5] - g_RT[6] + g_RT[7]);
@@ -7938,8 +7938,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[5]*sc[7];
     k_f = 1.0000000000000002e-06 * 1000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 0 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  0  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (0) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (0)  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[6];
     Kc = exp(-g_RT[2] + g_RT[5] - g_RT[6] + g_RT[7]);
@@ -7989,8 +7989,8 @@ AMREX_GPU_HOST_DEVICE void aJacobian_precond(double *  J, double *  sc, double T
     /* forward */
     phi_f = sc[5]*sc[7];
     k_f = 1.0000000000000002e-06 * 580000000000000
-                * exp(0 * tc[0] - 0.50321666580471969 * 9557 * invT);
-    dlnkfdT = 0 * invT + 0.50321666580471969 *  9557  * invT2;
+                * exp(0 * tc[0] - 0.50321666580471969 * (9557) * invT);
+    dlnkfdT = 0 * invT + 0.50321666580471969 *  (9557)  * invT2;
     /* reverse */
     phi_r = sc[2]*sc[6];
     Kc = exp(-g_RT[2] + g_RT[5] - g_RT[6] + g_RT[7]);
