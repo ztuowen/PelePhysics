@@ -187,7 +187,7 @@ int react(realtype *rY_in, realtype *rY_src_in,
                 SPARSITY_PREPROC_SYST_SIMPLIFIED_CSR(user_data->csr_col_index_d, user_data->csr_row_count_d, &HP,1);
 	    } else {
 		SPARSITY_PREPROC_SYST_CSR(user_data->csr_col_index_d, user_data->csr_row_count_d, &HP, 1, 1); 
-		SPARSITY_PREPROC_SYST_CSR(SUNSparseMatrix_IndexValues(A), SUNSparseMatrix_IndexPointers(A), &HP, NCELLS, 0); 
+		SPARSITY_PREPROC_SYST_CSR((int *)(SUNSparseMatrix_IndexValues(A)), (int *)(SUNSparseMatrix_IndexPointers(A)), &HP, NCELLS, 0); 
 	    }
 	    BL_PROFILE_VAR_STOP(SparsityStuff);
 
@@ -348,20 +348,20 @@ int react(realtype *rY_in, realtype *rY_src_in,
 	        if(check_flag(&flag, "CVodeSetPreconditioner", 1)) return(1);
 	    }
 
-	} else if (user_data->isolve_type == sparse_cusolver_solve) {
+	} /*else if (user_data->isolve_type == sparse_cusolver_solve) {
 
             LS = SUNLinSol_cuSolverSp_batchQR(y, A, NCELLS, (NEQ+1) , user_data->NNZ);
 	    if(check_flag((void *)LS, "SUNLinSol_cuSolverSp_batchQR", 0)) return(1);
 
-            /* Set matrix and linear solver to Cvode */
+            // Set matrix and linear solver to Cvode 
             flag = CVodeSetLinearSolver(cvode_mem, LS, A);
             if(check_flag(&flag, "CVodeSetLinearSolver", 1)) return(1);
 
-	    /* Set the user-supplied Jacobian routine Jac */
+	    // Set the user-supplied Jacobian routine Jac 
             flag = CVodeSetJacFn(cvode_mem, cJac);
 	    if(check_flag(&flag, "CVodeSetJacFn", 1)) return(1); 
 
-        } else if (user_data->isolve_type == sparse_solve) {
+        }*/ else if (user_data->isolve_type == sparse_solve) {
 
 	    /* Create dense SUNLinearSolver object for use by CVode */ 
 	    LS = SUNLinSol_dense_custom(y, A, NCELLS, (NEQ+1), user_data->NNZ, stream);
@@ -648,7 +648,7 @@ static int cJac(realtype t, N_Vector y_in, N_Vector fy, SUNMatrix J,
         } else {
             consP = 1;
         }
-	SPARSITY_PREPROC_SYST_CSR(SUNSparseMatrix_IndexValues(J), SUNSparseMatrix_IndexPointers(J), 
+	SPARSITY_PREPROC_SYST_CSR((int *)(SUNSparseMatrix_IndexValues(J)), (int *)(SUNSparseMatrix_IndexPointers(J)), 
                                      &consP, udata->ncells_d[0], 0); 
 	BL_PROFILE_VAR_STOP(cJacSparsityStuff);
 	
@@ -745,11 +745,11 @@ fKernelSpec(int icell, void *user_data,
       /* UV REACTOR */
       eos.eos_EY2T(massfrac.arr, nrg_pt, temp_pt);
       eos.eos_T2EI(temp_pt, ei_pt.arr);
-      eos.eos_TY2Cv(temp_pt, massfrac.arr, &Cv_pt);
+      eos.eos_TY2Cv(temp_pt, massfrac.arr, Cv_pt);
   }else {
       /* HP REACTOR */
       eos.eos_HY2T(massfrac.arr, nrg_pt, temp_pt);
-      eos.eos_TY2Cp(temp_pt, massfrac.arr, &Cv_pt);
+      eos.eos_TY2Cp(temp_pt, massfrac.arr, Cv_pt);
       eos.eos_T2HI(temp_pt, ei_pt.arr);
   }
 

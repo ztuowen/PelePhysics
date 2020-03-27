@@ -7,12 +7,22 @@
 
 AMREX_GPU_DEVICE_MANAGED  int eint_rho = 1; // in/out = rhoE/rhoY
 AMREX_GPU_DEVICE_MANAGED  int enth_rho = 2; // in/out = rhoH/rhoY 
-
+AMREX_GPU_DEVICE_MANAGED int use_erkode=0;
 
 /******************************************************************************************/
 /* Initialization routine, called once at the begining of the problem */
 int reactor_info(const int* reactor_type, const int* Ncells)
 {
+    amrex::ParmParse pp("ode");
+    pp.query("use_erkode", use_erkode);
+    if(use_erkode==1)
+    {
+        amrex::Print()<<"Using ERK ODE\n";
+    }
+    else
+    {
+        amrex::Print()<<"Using ARK ODE\n";
+    }
     return(0);
 }
 /******************************************************************************************/
@@ -49,8 +59,6 @@ int react(realtype *rY_in, realtype *rY_src_in,
     y = N_VNewManaged_Cuda(neq_tot);
     N_VSetCudaStream_Cuda(y, &stream);
 
-    arkode_mem = ERKStepCreate(cF_RHS, *time, y);
-    flag = ERKStepSetUserData(arkode_mem, static_cast<void*>(user_data));
 
     BL_PROFILE_VAR_START(AllocsARKODE);
     /* Define vectors to be used later in creact */
@@ -75,11 +83,22 @@ int react(realtype *rY_in, realtype *rY_src_in,
     /* Initial time and time to reach after integration */
     time_init = *time;
     time_out  = *time + (*dt_react);
-
-    flag = ERKStepSStolerances(arkode_mem, reltol, reltol); 
-
-
-    flag = ERKStepEvolve(arkode_mem, time_out, y, &time_init, ARK_NORMAL);      /* call integrator */
+    
+    if(use_erkode == 0)
+    {
+       arkode_mem = ARKStepCreate(cF_RHS, NULL, *time, y);
+        flag = ARKStepSetUserData(arkode_mem, static_cast<void*>(user_data));
+        flag = ARKStepSStolerances(arkode_mem, reltol, abstol); 
+        flag = ARKStepResStolerance(arkode_mem, abstol);
+        flag = ARKStepEvolve(arkode_mem, time_out, y, &time_init, ARK_NORMAL);      /* call integrator */
+    }
+    else
+    {
+       arkode_mem = ERKStepCreate(cF_RHS, *time, y);
+       flag = ERKStepSetUserData(arkode_mem, static_cast<void*>(user_data));
+       flag = ERKStepSStolerances(arkode_mem, reltol, abstol); 
+       flag = ERKStepEvolve(arkode_mem, time_out, y, &time_init, ARK_NORMAL);      /* call integrator */
+    }
 
 #ifdef MOD_REACTOR
     /* If reactor mode is activated, update time */
@@ -87,22 +106,36 @@ int react(realtype *rY_in, realtype *rY_src_in,
     *time  = time_init + (*dt_react);
 #endif
     /* Pack data to return in main routine external */
-    BL_PROFILE_VAR_START(AsyncCpy)
-        cudaMemcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost);
+    BL_PROFILE_VAR_START(AsyncCpy);
+    cudaMemcpy(rY_in, yvec_d, ((NEQ+1)*NCELLS)*sizeof(realtype), cudaMemcpyDeviceToHost);
 
     for  (int i = 0; i < NCELLS; i++) {
         rX_in[i] = rX_in[i] + (*dt_react) * rX_src_in[i];
     }
-    BL_PROFILE_VAR_STOP(AsyncCpy)
+    BL_PROFILE_VAR_STOP(AsyncCpy);
 
 
-        /* Get estimate of how hard the integration process was */
-        long int nfe;
-    flag = ERKStepGetNumRhsEvals(arkode_mem, &nfe);
+    /* Get estimate of how hard the integration process was */
+    long int nfe,nfi;
+    if(use_erkode==0)
+    {
+        flag = ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
+    }
+    else
+    {
+        flag = ERKStepGetNumRhsEvals(arkode_mem, &nfe);
+    }
 
     //cleanup
     N_VDestroy(y);          /* Free the y vector */
-    ERKStepFree(&arkode_mem);
+    if(use_erkode==0)
+    {
+        ARKStepFree(&arkode_mem);
+    }
+    else
+    {
+        ERKStepFree(&arkode_mem);
+    }
 
     cudaFree(user_data->rhoe_init);
     cudaFree(user_data->rhoesrc_ext);
@@ -161,7 +194,7 @@ fKernelSpec(int icell, void *user_data,
 
     EOS eos;
 
-    amrex::Real mw[NUM_SPECIES];
+    amrex::GpuArray<amrex::Real,NUM_SPECIES> mw;
     amrex::GpuArray<amrex::Real,NUM_SPECIES> massfrac;
     amrex::GpuArray<amrex::Real,NUM_SPECIES> ei_pt;
     amrex::GpuArray<amrex::Real,NUM_SPECIES> cdots_pt;
@@ -170,7 +203,7 @@ fKernelSpec(int icell, void *user_data,
     int offset = icell * (NUM_SPECIES + 1); 
 
     /* MW CGS */
-    get_mw(mw);
+    get_mw(mw.arr);
 
     /* rho */ 
     rho_pt = 0.0;
@@ -211,4 +244,10 @@ fKernelSpec(int icell, void *user_data,
         ydot_d[offset + NUM_SPECIES] = ydot_d[offset + NUM_SPECIES]  - ydot_d[offset + i] * ei_pt[i];
     }
     ydot_d[offset + NUM_SPECIES] = ydot_d[offset + NUM_SPECIES] /(rho_pt * Cv_pt);
+    
+    /* Fill ydot vect */
+    /*ydot_d[offset + NUM_SPECIES] = 1e6;
+    for (int i = 0; i < NUM_SPECIES; i++){
+        ydot_d[offset + i]           = 0.0;
+    }*/
 }

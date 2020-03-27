@@ -106,12 +106,17 @@ main (int   argc,
     //}
 
     amrex::Print() << "Integration method: ";
+  #ifdef USE_ARKODE_PP
+        amrex::Print() << "using arkode";
+        amrex::Print() << std::endl;
+  #else
         amrex::Print() << "BDF (stiff)";
-    amrex::Print() << std::endl;
-
-    amrex::Print() << "Integration iteration method: ";
+        amrex::Print() << std::endl;
+        amrex::Print() << "Integration iteration method: ";
         amrex::Print() << "Newton";
-    amrex::Print() << std::endl;
+        amrex::Print() << std::endl;
+   #endif
+
 
     amrex::Print() << "Type of reactor: ";
         amrex::Print() << cvode_iE;
