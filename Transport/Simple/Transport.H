@@ -232,7 +232,7 @@ transport(
   }
 }
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void
 get_transport_coeffs_pt(
   amrex::Real Y_in[],
