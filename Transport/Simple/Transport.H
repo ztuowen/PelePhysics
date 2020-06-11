@@ -29,6 +29,33 @@ void get_transport_coeffs(
   amrex::Array4<amrex::Real> const& xi_out,
   amrex::Array4<amrex::Real> const& lam_out);
 
+AMREX_GPU_DEVICE
+void
+get_transport_coeffs_pt(
+  amrex::Real Y_in[],
+  amrex::Real T_in,
+  amrex::Real Rho_in,
+  amrex::Real D_out[],
+  amrex::Real &mu_out,
+  amrex::Real &xi_out,
+  amrex::Real &lam_out)
+{
+  bool wtr_get_xi, wtr_get_mu, wtr_get_lam, wtr_get_Ddiag;
+
+  wtr_get_xi    = true;
+  wtr_get_mu    = true;
+  wtr_get_lam   = true;
+  wtr_get_Ddiag = true;
+
+  amrex::Real muloc, xiloc, lamloc;
+  amrex::Real Ddiag[NUM_SPECIES];
+
+  transport(
+      wtr_get_xi, wtr_get_mu, wtr_get_lam, wtr_get_Ddiag, T_in, Rho_in, Y_in,
+      D_out, mu_out, xi_out, lam_out);
+
+}
+
 using namespace transport_params;
 
 AMREX_GPU_HOST_DEVICE
