@@ -10,7 +10,7 @@
 #include <GPU_misc.H>
 
 #include <main_F.H>
-#include <PlotFileFromMF.H>
+//#include <PlotFileFromMF.H>
 
 /* CUDA cuSolver */
 #include <cuda_runtime.h>
@@ -105,11 +105,11 @@ main (int   argc,
 
       std::string pltfile0("MF");  
       std::string outfile = amrex::Concatenate(pltfile0,0); // Need a number other than zero for reg test to pass
-      PlotFileFromMF(mass_frac,outfile);
+      // PlotFileFromMF(mass_frac,outfile);
 
       std::string pltfile1("TEMP");  
       outfile = amrex::Concatenate(pltfile1,0); // Need a number other than zero for reg test to pass
-      PlotFileFromMF(temperature,outfile);
+      // PlotFileFromMF(temperature,outfile);
 
       Real time = 0.; pp.query("time",time);
       Real dt=1.e-07; pp.query("dt",dt);
@@ -277,8 +277,11 @@ main (int   argc,
 	        int newton_ite = 0;
 	        //while (!newton_solved) {
 	        while (newton_ite < 10) {
+            BL_PROFILE("NEWTON_LOOP");
                         //printf("Ite number %d \n", newton_ite);
 	        	newton_ite += 1;
+            {
+              BL_PROFILE("INITIAL JAC");
 	                /* Compute initial newton_update (delta q_k+1) */
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -315,26 +318,11 @@ main (int   argc,
 	                	gpu_J2SYSJ(i, j, k, icell, deltas, sJ, csr_val);
 	                    }
 	                });
+            }
 
+            {
+              BL_PROFILE("SOLVE");
 	                /* SOLVE LINEAR SYSTEM */
-                        /* allocate working space */
-                        cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,
-                                                                        num_spec+1,
-                                                                        num_spec+1,
-                                                                        (num_spec+1)*(num_spec+1),
-                                                                        descrA,
-                                                                        csr_val,
-                                                                        csr_row_count,
-                                                                        csr_col_index,
-                                                                        box.numPts(),
-                                                                        info,
-                                                                        &internalDataInBytes,
-                                                                        &workspaceInBytes);
-                        assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
-
-                        //cudaStat1 = cudaMalloc((void**)&buffer_qr, workspaceInBytes);
-                        //assert(cudaStat1 == cudaSuccess);
-
                         cusolver_status = cusolverSpDcsrqrsvBatched(cusolverHandle,
                                                                         num_spec+1,
                                                                         num_spec+1,
@@ -348,7 +336,10 @@ main (int   argc,
                                                                         box.numPts(),
                                                                         info,
                                                                         buffer_qr);
+            }
 
+            {
+              BL_PROFILE("UPDATE");
 	                /* UPDATE SOLUTION update q_tmp, it becomes q_(k+1, m+1)*/
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -393,6 +384,7 @@ main (int   argc,
 	                	gpu_NLRES(i, j, k, icell, rho, temp, mf, rhs, res_nl, csr_b);
 	                    }
 	                });
+            }
 
 	                ///* COMPUTE NORM OF RES */
 
@@ -414,11 +406,11 @@ main (int   argc,
 
       //std::string pltfile0("MF");  
       outfile = amrex::Concatenate(pltfile0,1); // Need a number other than zero for reg test to pass
-      PlotFileFromMF(mass_frac,outfile);
+      // PlotFileFromMF(mass_frac,outfile);
 
       //std::string pltfile1("TEMP");  
       outfile = amrex::Concatenate(pltfile1,1); // Need a number other than zero for reg test to pass
-      PlotFileFromMF(temperature,outfile);
+      // PlotFileFromMF(temperature,outfile);
 
       //std::string pltfile1("CDOTS");  
       //outfile = amrex::Concatenate(pltfile1,1); // Need a number other than zero for reg test to pass

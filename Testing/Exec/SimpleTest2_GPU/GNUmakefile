@@ -14,6 +14,11 @@ USE_OMP    = FALSE
 FUEGO_GAS  = TRUE
 
 USE_CUDA   = TRUE
+CUDA_ARCH  = 75
+
+TINY_PROFILE = TRUE
+
+LIBRARIES = -lcusparse -lcusolver
 
 # define the location of the PELE_PHYSICS top directory
 PELE_PHYSICS_HOME    := ../../..
