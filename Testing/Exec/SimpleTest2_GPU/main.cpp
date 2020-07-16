@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-
 #include <AMReX_MultiFab.H>
 #include <AMReX_Print.H>
 #include <AMReX_VisMF.H>
@@ -210,18 +209,24 @@ main (int   argc,
         assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
         /* allocate working space */
-        cusolver_status = cusolverSpDcsrqrBufferInfoBatched(cusolverHandle,
-                                                        num_spec+1,
-                                                        num_spec+1,
-                                                        (num_spec+1)*(num_spec+1),
-                                                        descrA,
-                                                        csr_val,
-                                                        csr_row_count,
-                                                        csr_col_index,
-                                                        box.numPts(),
-                                                        info,
-                                                        &internalDataInBytes,
-                                                        &workspaceInBytes);
+        cusolver_status = 
+#ifdef BL_USE_FLOAT
+            cusolverSpScsrqrBufferInfoBatched
+#else
+            cusolverSpDcsrqrBufferInfoBatched
+#endif
+              (cusolverHandle,
+               num_spec+1,
+               num_spec+1,
+               (num_spec+1)*(num_spec+1),
+               descrA,
+               csr_val,
+               csr_row_count,
+               csr_col_index,
+               box.numPts(),
+               info,
+               &internalDataInBytes,
+               &workspaceInBytes);
         assert(cusolver_status == CUSOLVER_STATUS_SUCCESS);
 
         cudaStat1 = cudaMalloc((void**)&buffer_qr, workspaceInBytes);
@@ -267,6 +272,7 @@ main (int   argc,
 	        	gpu_NLRES(i, j, k, icell, rho, temp, mf, rhs, res_nl, csr_b);
 	            }
 	        });
+            cudaDeviceSynchronize();
 
 	        /* TODO COMPUTE NORM OF RES */
 
@@ -277,11 +283,10 @@ main (int   argc,
 	        int newton_ite = 0;
 	        //while (!newton_solved) {
 	        while (newton_ite < 10) {
-            BL_PROFILE("NEWTON_LOOP");
                         //printf("Ite number %d \n", newton_ite);
 	        	newton_ite += 1;
-            {
-              BL_PROFILE("INITIAL JAC");
+                    {
+                      BL_PROFILE("resetNU");
 	                /* Compute initial newton_update (delta q_k+1) */
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -296,14 +301,22 @@ main (int   argc,
 	                	gpu_resetNU(i, j, k, icell, csr_x);
 	                    }
 	                });
+                    cudaDeviceSynchronize();
+                    }
 
+                    {
+                      BL_PROFILE("JAC");
 	                /* Jac chemistry */
 	                amrex::ParallelFor(box,
 	                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
 	                    {
 	                	gpu_JAC(i, j, k, rho_tmp, temp_tmp, mf_tmp, sJ);
 	                    });
+                    cudaDeviceSynchronize();
+                    }
 
+                    {
+                      BL_PROFILE("J2SYSJ");
 	                /* Jac System */
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -318,28 +331,36 @@ main (int   argc,
 	                	gpu_J2SYSJ(i, j, k, icell, deltas, sJ, csr_val);
 	                    }
 	                });
-            }
+                    cudaDeviceSynchronize();
+                }
 
             {
               BL_PROFILE("SOLVE");
 	                /* SOLVE LINEAR SYSTEM */
-                        cusolver_status = cusolverSpDcsrqrsvBatched(cusolverHandle,
-                                                                        num_spec+1,
-                                                                        num_spec+1,
-                                                                        (num_spec+1)*(num_spec+1),
-                                                                        descrA,
-                                                                        csr_val,
-                                                                        csr_row_count,
-                                                                        csr_col_index,
-                                                                        csr_b,
-                                                                        csr_x,
-                                                                        box.numPts(),
-                                                                        info,
-                                                                        buffer_qr);
+                        cusolver_status = 
+#ifdef BL_USE_FLOAT
+                            cusolverSpScsrqrsvBatched
+#else
+                            cusolverSpDcsrqrsvBatched
+#endif
+                                (cusolverHandle,
+                                 num_spec+1,
+                                 num_spec+1,
+                                 (num_spec+1)*(num_spec+1),
+                                 descrA,
+                                 csr_val,
+                                 csr_row_count,
+                                 csr_col_index,
+                                 csr_b,
+                                 csr_x,
+                                 box.numPts(),
+                                 info,
+                                 buffer_qr);
+                        cudaDeviceSynchronize();
             }
 
             {
-              BL_PROFILE("UPDATE");
+              BL_PROFILE("UPDATETMP");
 	                /* UPDATE SOLUTION update q_tmp, it becomes q_(k+1, m+1)*/
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -354,22 +375,33 @@ main (int   argc,
 	                	gpu_UPDATETMP(i, j, k, icell, rho_tmp, temp_tmp, mf_tmp, csr_x);
 	                    }
 	                });
+            cudaDeviceSynchronize();
+            }
 
-
+            {
+              BL_PROFILE("RTY2W");
 	                /* Estimate wdot for q_k */
 	                amrex::ParallelFor(box,
 	                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
 	                    {
 	        	        gpu_RTY2W(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, cdots);
 	                    });
+            cudaDeviceSynchronize();
+            }
 
+            {
+              BL_PROFILE("RHS");
 	                /* Estimate RHS for q_k */
 	                amrex::ParallelFor(box,
 	                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
 	                    {
 	                	gpu_RHS(i, j, k, rho_tmp, temp_tmp, mf_tmp, cdots, deltas, rhs);
 	                    });
+            cudaDeviceSynchronize();
+            }
 
+            {
+              BL_PROFILE("NLRES");
 	                /* Compute Newton nl residual */
 	                amrex::launch_global<<<ec.numBlocks, ec.numThreads, ec.sharedMem, amrex::Gpu::gpuStream()>>>(
 	                [=] AMREX_GPU_DEVICE () noexcept {
@@ -384,6 +416,7 @@ main (int   argc,
 	                	gpu_NLRES(i, j, k, icell, rho, temp, mf, rhs, res_nl, csr_b);
 	                    }
 	                });
+            cudaDeviceSynchronize();
             }
 
 	                ///* COMPUTE NORM OF RES */
@@ -400,6 +433,7 @@ main (int   argc,
 	            {
 	        	gpu_CopyTMP2ORI(i, j, k, rho_tmp, temp_tmp, nrgy_tmp, mf_tmp, rho, temp, nrgy, mf);
 	            });
+            cudaDeviceSynchronize();
         }
 
       }

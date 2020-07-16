@@ -26,8 +26,9 @@ module eos_module
 
   interface
      subroutine amrex_array_init_snan (p, nelem) bind(C,name="amrex_array_init_snan")
-       use iso_c_binding, only : c_double, c_size_t
-       real(c_double),intent(inout) :: p
+       use amrex_fort_module, only : amrex_real
+       use iso_c_binding, only : c_size_t
+       real(amrex_real),intent(inout) :: p
        integer (kind=c_size_t),intent(in),value :: nelem
      end subroutine amrex_array_init_snan
   end interface
@@ -193,8 +194,8 @@ contains
 
     implicit none
 
-    double precision, intent(in), dimension(1:Nsp) :: Y
-    double precision, intent(out), dimension(1:Nsp) :: X
+    real(amrex_real), intent(in), dimension(1:Nsp) :: Y
+    real(amrex_real), intent(out), dimension(1:Nsp) :: X
     integer, intent(in) :: Nsp
 
     call ckytx(Y(:),X(:))
@@ -209,8 +210,8 @@ contains
     integer, intent(in) :: xlo(3), xhi(3)    
     integer, intent(in) :: lo(3), hi(3)
     integer, intent(in) :: Nsp
-    double precision, intent(in), dimension(ylo(1)-1:yhi(1)+1, ylo(2)-1:yhi(2)+1, ylo(3)-1:yhi(3)+1, 1:Nsp) :: Y
-    double precision, intent(out), dimension(xlo(1)-1:xhi(1)+1, xlo(2)-1:xhi(2)+1, xlo(3)-1:xhi(3)+1, 1:Nsp) :: X
+    real(amrex_real), intent(in), dimension(ylo(1)-1:yhi(1)+1, ylo(2)-1:yhi(2)+1, ylo(3)-1:yhi(3)+1, 1:Nsp) :: Y
+    real(amrex_real), intent(out), dimension(xlo(1)-1:xhi(1)+1, xlo(2)-1:xhi(2)+1, xlo(3)-1:xhi(3)+1, 1:Nsp) :: X
 
     integer :: j, k
     integer :: npts
@@ -248,9 +249,9 @@ contains
 
     implicit none
 
-    double precision, intent(in) :: T
+    real(amrex_real), intent(in) :: T
     integer, intent(in)          :: Nsp
-    double precision, intent(inout), dimension(1:Nsp) :: hi
+    real(amrex_real), intent(inout), dimension(1:Nsp) :: hi
 
     call ckhms(T,hi(:))
 
@@ -266,9 +267,9 @@ contains
     integer, intent(in) :: low(3), high(3)    
     integer, intent(in) :: Nsp
 
-    double precision, intent(in), dimension(masslo(1)-1:masshi(1)+1, masslo(2)-1:masshi(2)+1, masslo(3)-1:masshi(3)+1, 1:Nsp) :: mass
-    double precision, intent(in), dimension(Tlo(1)-1:Thi(1)+1, Tlo(2)-1:Thi(2)+1, Tlo(3)-1:Thi(3)+1 ) :: T
-    double precision, intent(out), dimension(hilo(1)-1:hihi(1)+1, hilo(2)-1:hihi(2)+1, hilo(3)-1:hihi(3)+1, 1:Nsp) :: hi
+    real(amrex_real), intent(in), dimension(masslo(1)-1:masshi(1)+1, masslo(2)-1:masshi(2)+1, masslo(3)-1:masshi(3)+1, 1:Nsp) :: mass
+    real(amrex_real), intent(in), dimension(Tlo(1)-1:Thi(1)+1, Tlo(2)-1:Thi(2)+1, Tlo(3)-1:Thi(3)+1 ) :: T
+    real(amrex_real), intent(out), dimension(hilo(1)-1:hihi(1)+1, hilo(2)-1:hihi(2)+1, hilo(3)-1:hihi(3)+1, 1:Nsp) :: hi
     
     integer :: j, k
     integer :: npts
@@ -329,7 +330,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    double precision :: Cvx
+    real(amrex_real) :: Cvx
 
     call ckytcr(state%rho, state % T, state % massfrac, state % Acti)
           
@@ -345,7 +346,7 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    double precision :: Cvx
+    real(amrex_real) :: Cvx
 
     call ckytcr(state%rho, state % T, state % massfrac, state % Acti)
           
