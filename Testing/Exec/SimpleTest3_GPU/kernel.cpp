@@ -856,12 +856,12 @@ void kinit()
     for (int i=0; i<84; ++i) {
       size_t offset = max_nu * i;
       for (int j=0; j<nuv[i].size(); ++j) {
-        nu2D[offset+j] = nuv[i][j];
-        ki2D[offset+j] = kiv[i][j];
+        nu2D[j*max_nu + i] = nuv[i][j];
+        ki2D[j*max_nu + i] = kiv[i][j];
       }
       for (int j=nuv[i].size(); j<max_nu; ++j) {
-        nu2D[offset+j] = 0;
-        ki2D[offset+j] = 0;
+        nu2D[j * max_nu + i] = 0;
+        ki2D[j * max_nu + i] = 0;
       }
     }
 }
@@ -896,6 +896,7 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
 {
   __shared__ Real Q_s[84];
   __shared__ Real C_s[21];
+  __shared__ Real wdot_s[21];
 
   int idx = threadIdx.x;
   double tc[] = { log(T), T, T*T, T*T*T, T*T*T*T }; /*temperature cache */
@@ -909,11 +910,11 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
 
   Q_s[idx] = prefactor_units[idx] * fwd_A[idx] * exp(fwd_beta[idx] * tc[0] - activation_units[idx] * fwd_Ea[idx] * invT);
   {
-    size_t offset = idx*5;
+    size_t offset = idx;
     for (int j=0; j<5; ++j) {
-      int nu = nu2D[offset+j];
+      int nu = nu2D[offset+j * 84];
       if (nu<0) {
-        int ki = ki2D[offset+j];
+        int ki = ki2D[offset+j * 84];
         switch (-nu) {
           case 1:
             Q_s[idx] *= C_s[ki];
@@ -931,21 +932,19 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
     }
   }
 
+  wdot_s[idx] = 0;
   __syncthreads();
 
-  if (idx<21) {
-    *wdot = 0;
-    for (int i=0; i<84; ++i) {
-      size_t offset = i*5;
-      for (int j=0; j<5; ++j) {
-        int nu = nu2D[offset+j];
-        int ki = ki2D[offset+j];
-        if (nu<0 && ki==idx) {
-          *wdot += Q_s[i] * nu;
-        }
-      }
-    }
+  size_t offset = idx;
+  for (int j=0; j<5; ++j) {
+    int nu = nu2D[offset+j * 84];
+    int ki = ki2D[offset+j * 84];
+    if (nu<0)
+      atomicAdd(&wdot_s[idx], Q_s[idx] * nu);
   }
+
+  if (idx < 21)
+    *wdot = wdot_s[idx];
 }
 
 
