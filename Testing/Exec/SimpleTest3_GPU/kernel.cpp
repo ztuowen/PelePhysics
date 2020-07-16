@@ -940,7 +940,7 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
     int nu = nu2D[offset+j * 84];
     int ki = ki2D[offset+j * 84];
     if (nu<0)
-      atomicAdd(&wdot_s[idx], Q_s[idx] * nu);
+      atomicAdd(&wdot_s[ki], Q_s[idx] * nu);
   }
 
   if (idx < 21)
