@@ -932,7 +932,8 @@ AMREX_GPU_DEVICE void W_spec_d(Real rho,
     }
   }
 
-  wdot_s[idx] = 0;
+  if (idx < 21)
+    wdot_s[idx] = 0;
   __syncthreads();
 
   size_t offset = idx;
